@@ -42,6 +42,13 @@ library(kableExtra) # Enhanced tables for knitr (HTML/PDF styling)
 library(knitr) # Engine for dynamic report generation (R Markdown / Quarto)
 rm(list = ls()) 
 
+options(survey.lonely.psu = "adjust")
+options(scipen = 999)
+theme_gtsummary_language(
+  language = "en"
+)
+
+
 # --------------------------------------------------------------------------------------------------------
 
 # PART 1
@@ -52,6 +59,8 @@ rm(list = ls())
 source(here("script", "mexico_data_benedetto_rocchi.R"))
 
 # --------------------------------------------------------------------------------------------------------
+
+rm(list = ls()) 
 
 # PART 2
 ######################################################
