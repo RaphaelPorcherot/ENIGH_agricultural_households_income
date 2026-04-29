@@ -5,15 +5,9 @@
 
 #AGROPRODUCTO
 #############
-
-#working directory
-setwd(
-  "C:/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/agroproductos_enigh2022_ns/conjunto_de_datos"
-)
-#setwd("D:/backup 20251128/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/agroproductos_enigh2022_ns/conjunto_de_datos")
-
+wd <- "conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_agroproductos_enigh2022_ns/conjunto_de_datos/" 
 #loading original data and selecting variables
-table <- read.csv("conjunto_de_datos_agroproductos_enigh2022_ns.csv", header = TRUE, sep =",")
+table <- read.csv(here("src",wd, "conjunto_de_datos_agroproductos_enigh2022_ns.csv"), header = TRUE, sep =",")
 data <- table[c("folioviv","foliohog","tipoact","codigo","cosecha","cantidad","cant_venta","valor","preciokg","val_venta")]
 
 #Variable to identify households
@@ -129,19 +123,23 @@ agroproductos$n_tipo_prod[( val_agr+val_ani+val_prodani==0) & val_tot>0] <- 5 #p
 detach(agroproductos)
 
 #saving data
-save(agroproductos,file = "agroproductos.Rdata")
-write.table(agroproductos,file = "agroproductos.csv", sep = ";" , col.names = TRUE, row.names = FALSE)
+# paste0(output_file, ".Rdata")
+# paste0(output_file, ".csv")
+output_file <- here("output","data", "agroproductos")
+save(agroproductos,file = paste0(output_file, ".Rdata"))
+write.table(agroproductos,file = paste0(output_file, ".csv"), sep = ";" , col.names = TRUE, row.names = FALSE)
 rm(table,data)
 
 #AGROCONSUMO
 ############
 
 #working directory
-setwd("C:/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/agroconsumo_enigh2022_ns/conjunto_de_datos")
-#setwd("D:/backup 20251128/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/agroconsumo_enigh2022_ns/conjunto_de_datos")
+wd <- "conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_agroconsumo_enigh2022_ns/conjunto_de_datos/"
+
+table <- read.csv(here("src",wd, "conjunto_de_datos_agroconsumo_enigh2022_ns.csv"), header = TRUE, sep =",")
 
 #loading original data and selecting variables
-table <- read.csv("conjunto_de_datos_agroconsumo_enigh2022_ns.csv", header = TRUE, sep =",")
+# table <- read.csv("conjunto_de_datos_agroconsumo_enigh2022_ns.csv", header = TRUE, sep =",")
 data <- table[c("folioviv","foliohog","codigo","destino","valestim")]
 
 #Variable to identify households
@@ -232,19 +230,18 @@ agroconsumo$valestim <- val_agr+val_ani+val_prodani+val_for+val_fis+val_hun
 detach(agroconsumo)
 
 #saving data
-save(agroconsumo,file = "agroconsumo.Rdata")
-write.table(agroconsumo,file = "agroconsumo.csv", sep = ";" , col.names = TRUE, row.names = FALSE)
+output_file <- here("output","data", "agroconsumo")
+save(agroconsumo,file = paste0(output_file, ".Rdata"))
+write.table(agroconsumo,file = paste0(output_file, ".csv"), sep = ";" , col.names = TRUE, row.names = FALSE)
 rm(table,data)
 
 #AGRO
 #####
 
 #working directory
-setwd("C:/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/agro_enigh2022_ns/conjunto_de_datos")
-#setwd("D:/backup 20251128/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/agro_enigh2022_ns/conjunto_de_datos")
-
+wd <- "/conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_agro_enigh2022_ns/conjunto_de_datos"
 #loading original data and selecting variables
-table <- read.csv("conjunto_de_datos_agro_enigh2022_ns.csv", header = TRUE, sep =",")
+table <- read.csv(here("src", wd, "conjunto_de_datos_agro_enigh2022_ns.csv"), header = TRUE, sep =",")
 data <- table #when  using the original file
 #data <- table[c("folioviv","foliohog","codigo","destino","valestim")]
 
@@ -378,19 +375,17 @@ agro$n_size_val2 <- agro$n_size_val - agro$auto_tri*4 + agro$valestim
 agro$n_autoconsumo2 <-agro$valestim/agro$n_size_val2
 
 #saving data
-save(agro,file = "agro.Rdata")
-write.table(agro,file = "agro.csv", sep = ";" , col.names = TRUE, row.names = FALSE)
+output_file <- here("output","data", "agro")
+save(agro,file = paste0(output_file, ".Rdata"))
+write.table(agro,file = paste0(output_file, ".csv"), sep = ";" , col.names = TRUE, row.names = FALSE)
 rm(table,data)
 
 #ETNIA
 ######
-
 #working directory
-setwd("C:/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/poblacion_enigh2022_ns/conjunto_de_datos")
-#setwd("D:/backup 20251128/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/poblacion_enigh2022_ns/conjunto_de_datos")
-
+wd <- "conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_poblacion_enigh2022_ns/conjunto_de_datos/" 
 #loading original data and selecting variables
-table <- read.csv("conjunto_de_datos_poblacion_enigh2022_ns.csv", header = TRUE, sep =",")
+table <- read.csv(here("src",wd, "conjunto_de_datos_poblacion_enigh2022_ns.csv"), header = TRUE, sep =",")
 data <- table[c("folioviv","foliohog","parentesco","etnia")]
 data <- data[which(data$parentesco=="101"),]# including only Jefe
 
@@ -400,18 +395,17 @@ etnia <- data
 colnames(etnia)[4] <- "n_etnia"
 
 #saving data
-save(etnia,file = "etnia.Rdata")
-write.table(etnia,file = "etnia.csv", sep = ";" , col.names = TRUE, row.names = FALSE)
+output_file <- here("output","data", "etnia")
+save(etnia,file = paste0(output_file, ".Rdata"))
+write.table(etnia,file = paste0(output_file, ".csv"), sep = ";" , col.names = TRUE, row.names = FALSE)
 rm(table,data)
 
 #CONCERN FOR FOOD
 #################
 #working directory
-setwd("C:/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/hogares_enigh2022_ns/conjunto_de_datos")
-#setwd("D:/backup 20251128/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/hogares_enigh2022_ns/conjunto_de_datos")
-
+wd <- "conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_hogares_enigh2022_ns/conjunto_de_datos"
 #loading original data and selecting variables
-table <- read.csv("conjunto_de_datos_hogares_enigh2022_ns.csv", header = TRUE, sep =",")
+table <- read.csv(here("src",wd, "conjunto_de_datos_hogares_enigh2022_ns.csv"), header = TRUE, sep =",")
 data <- table[c("folioviv","foliohog","acc_alim1")]
 
 #Variable to identify households
@@ -421,19 +415,19 @@ alim <- data
 colnames(alim)[3] <- "n_acc_alim1"
 
 #saving data
-save(alim,file = "alim.Rdata")
-write.table(alim,file = "alim.csv", sep = ";" , col.names = TRUE, row.names = FALSE)
+output_file <- here("output","data", "alim")
+save(alim,file = paste0(output_file, ".Rdata"))
+write.table(alim,file = paste0(output_file, ".csv"), sep = ";" , col.names = TRUE, row.names = FALSE)
 rm(table,data)
 
 #NOAGRO
 #######
 
 #working directory
-setwd("C:/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/conjunto_de_datos_noagro_enigh2022_ns/conjunto_de_datos")
-#setwd("D:/backup 20251128/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/conjunto_de_datos_noagro_enigh2022_ns/conjunto_de_datos")
-
+wd <- "conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_noagro_enigh2022_ns/conjunto_de_datos"
 #loading original data and selecting variables
-table <- read.csv("conjunto_de_datos_noagro_enigh2022_ns.csv", header = TRUE, sep =",")
+table <- read.csv(here("src",wd, "conjunto_de_datos_noagro_enigh2022_ns.csv"), header = TRUE, sep =",")
+#loading original data and selecting variables
 data <- table[c("folioviv","foliohog","ing_tri","ero_tri")]
 
 #Variable to identify households
@@ -448,18 +442,17 @@ noagro <- data%>%
   summarise(n_ingr_noagr=sum(n_ingr_noagr))
 
 #saving data
-save(noagro,file = "noagro.Rdata")
-write.table(agro,file = "noagro.csv", sep = ";" , col.names = TRUE, row.names = FALSE)
+output_file <- here("output","data", "noagro")
+save(noagro,file = paste0(output_file, ".Rdata"))
+write.table(noagro,file = paste0(output_file, ".csv"), sep = ";" , col.names = TRUE, row.names = FALSE)
 rm(table,data)
 
 #CONCENTRADOHOGAR
 #################
 #working directory
-setwd("C:/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/concentradohogar_enigh2022_ns/conjunto_de_datos")
-#setwd("D:/backup 20251128/io/lavori in corso/OECD 2024/Dati/MEXICO/encuesta nacional de ingresos y gastos de los hogares 2022/dati/concentradohogar_enigh2022_ns/conjunto_de_datos")
-
+wd <- "/conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_concentradohogar_enigh2022_ns/conjunto_de_datos" 
 #loading original data and selecting variables
-table <- read.csv("conjunto_de_datos_concentradohogar_enigh2022_ns.csv", header = TRUE, sep =",")
+table <- read.csv(here("src", wd, "conjunto_de_datos_concentradohogar_enigh2022_ns.csv"), header = TRUE, sep =",")
 data <- table[c("folioviv","foliohog","trabajo","rentas","transfer","estim_alqu","otros_ing")]
 
 #Variable to identify households
@@ -505,63 +498,64 @@ table$hogar<-str_c(table$folioviv,table$foliohog)
 concentradohogar <- left_join(table,data,by="hogar")
 rm(data,table)
 
-#INCOME DECILES AND QUINTILES
+#INCOME DECILES AND QUINTILES (we will do that in part 2)
 #############################
 
-#selecting variables
-data <- concentradohogar[c("hogar","factor","tot_integ",
-                           "n_ing_cor","n_fni","n_ingr_noagr","n_trabajo","n_rentas","n_transfer","n_estim_alqu","n_otros_ing")]
-
-#replacing negative income values
-quantiles <- wtd.quantile(data$n_fni[data$n_fni > 0], weights = data$factor, na.rm = TRUE)
-lower_quartile_fni <- quantiles[2]
-quantiles <- wtd.quantile(data$n_ingr_noagr[data$n_ingr_noagr > 0], weights = data$factor, na.rm = TRUE)
-lower_quartile_ingr_noagr <-quantiles[2]
-rm(quantiles)
-data$neg_idx <- ifelse(data$n_fni < 0,1,0)
-data$nn_fni <- ifelse(data$neg_idx == 1,runif(n=sum(!is.na(data$n_fni)&data$n_fni<0), min = 0, max = lower_quartile_fni[1]),data$n_fni)
-data$neg_idx <- ifelse(data$n_ingr_noagr < 0,1,0)
-data$nn_ingr_noagr <- ifelse(data$neg_idx == 1 , runif(n=sum(!is.na(data$n_ingr_noagr)&data$n_ingr_noagr<0), min = 0, max = lower_quartile_ingr_noagr[1]),data$n_ingr_noagr)
-data$nn_fni <- ifelse(is.na(data$n_fni),0,data$nn_fni)
-data$nn_ingr_noagr <- ifelse(is.na(data$n_ingr_noagr),0,data$nn_ingr_noagr)
-data$neg_idx <- NULL
-summary(data$nn_fni)
-summary(data$nn_ingr_noagr)
-
-data$nn_ingr_corr <- data$nn_fni+data$nn_ingr_noagr+data$n_trabajo+data$n_rentas+data$n_transfer+data$n_estim_alqu+data$n_otros_ing
-summary(data$nn_ingr_corr)
-data$equiv_integ <- sqrt(data$tot_integ)#equivalence scale square root
-data$epc_ingr_cor <- data$nn_ingr_corr/data$equiv_integ#per capita equivalent income using the square root equivalence scale
-summary(data$epc_ingr_cor)
-summary(data$equiv_integ)
-
-#income deciles
-dec <- as.vector(weightedQuantile(data$epc_ingr_cor,weights = data$factor, probs = seq(0,1,0.1), sorted = FALSE,na.rm = TRUE))
-data$decile <- 0
-data$decile <- ifelse(data$epc_ingr_cor < dec[2],1,data$decile)
-data$decile <- ifelse(data$epc_ingr_cor>= dec[2]& data$epc_ingr_cor<dec[3],2,data$decile)
-data$decile <- ifelse(data$epc_ingr_cor>= dec[3]& data$epc_ingr_cor<dec[4],3,data$decile)
-data$decile <- ifelse(data$epc_ingr_cor>= dec[4]& data$epc_ingr_cor<dec[5],4,data$decile)
-data$decile <- ifelse(data$epc_ingr_cor>= dec[5]& data$epc_ingr_cor<dec[6],5,data$decile)
-data$decile <- ifelse(data$epc_ingr_cor>= dec[6]& data$epc_ingr_cor<dec[7],6,data$decile)
-data$decile <- ifelse(data$epc_ingr_cor>= dec[7]& data$epc_ingr_cor<dec[8],7,data$decile)
-data$decile <- ifelse(data$epc_ingr_cor>= dec[8]& data$epc_ingr_cor<dec[9],8,data$decile)
-data$decile <- ifelse(data$epc_ingr_cor>= dec[9]& data$epc_ingr_cor<dec[10],9,data$decile)
-data$decile <- ifelse(data$epc_ingr_cor>= dec[10],10,data$decile)
-
-#income quintile
-data$quintile <- 0
-data$quintile <- ifelse(data$decile==1 | data$decile==2,1,data$quintile)
-data$quintile <- ifelse(data$decile==3 | data$decile==4,2,data$quintile)
-data$quintile <- ifelse(data$decile==5 | data$decile==6,3,data$quintile)
-data$quintile <- ifelse(data$decile==7 | data$decile==8,4,data$quintile)
-data$quintile <- ifelse(data$decile==9 | data$decile==10,5,data$quintile)
-
-data <- data[c("hogar","decile","quintile")]
-concentradohogar <- left_join(concentradohogar,data,by="hogar")
-
-#saving data
-save(concentradohogar,file = "concentradohogar_rev8.Rdata")
-write.table(concentradohogar,file = "concentradohogar_rev8.csv", sep = ";" , col.names = TRUE, row.names = FALSE)
-rm(data)
+# #selecting variables
+# data <- concentradohogar[c("hogar","factor","tot_integ",
+#                            "n_ing_cor","n_fni","n_ingr_noagr","n_trabajo","n_rentas","n_transfer","n_estim_alqu","n_otros_ing")]
+# #replacing negative income values
+# quantiles <- Hmisc::wtd.quantile(data$n_fni[data$n_fni > 0], weights = data$factor, na.rm = TRUE)
+# lower_quartile_fni <- quantiles[2]
+# quantiles <- wtd.quantile(data$n_ingr_noagr[data$n_ingr_noagr > 0], weights = data$factor, na.rm = TRUE)
+# lower_quartile_ingr_noagr <-quantiles[2]
+# rm(quantiles)
+# data$neg_idx <- ifelse(data$n_fni < 0,1,0)
+# data$nn_fni <- ifelse(data$neg_idx == 1,runif(n=sum(!is.na(data$n_fni)&data$n_fni<0), min = 0, max = lower_quartile_fni[1]),data$n_fni)
+# data$neg_idx <- ifelse(data$n_ingr_noagr < 0,1,0)
+# data$nn_ingr_noagr <- ifelse(data$neg_idx == 1 , runif(n=sum(!is.na(data$n_ingr_noagr)&data$n_ingr_noagr<0), min = 0, max = lower_quartile_ingr_noagr[1]),data$n_ingr_noagr)
+# data$nn_fni <- ifelse(is.na(data$n_fni),0,data$nn_fni)
+# data$nn_ingr_noagr <- ifelse(is.na(data$n_ingr_noagr),0,data$nn_ingr_noagr)
+# data$neg_idx <- NULL
+# summary(data$nn_fni)
+# summary(data$nn_ingr_noagr)
+#
+# data$nn_ingr_corr <- data$nn_fni+data$nn_ingr_noagr+data$n_trabajo+data$n_rentas+data$n_transfer+data$n_estim_alqu+data$n_otros_ing
+# summary(data$nn_ingr_corr)
+# data$equiv_integ <- sqrt(data$tot_integ)#equivalence scale square root
+# data$epc_ingr_cor <- data$nn_ingr_corr/data$equiv_integ#per capita equivalent income using the square root equivalence scale
+# summary(data$epc_ingr_cor)
+# summary(data$equiv_integ)
+#
+# #income deciles
+# dec <- as.vector(weightedQuantile(data$epc_ingr_cor,weights = data$factor, probs = seq(0,1,0.1), sorted = FALSE,na.rm = TRUE))
+# data$decile <- 0
+# data$decile <- ifelse(data$epc_ingr_cor < dec[2],1,data$decile)
+# data$decile <- ifelse(data$epc_ingr_cor>= dec[2]& data$epc_ingr_cor<dec[3],2,data$decile)
+# data$decile <- ifelse(data$epc_ingr_cor>= dec[3]& data$epc_ingr_cor<dec[4],3,data$decile)
+# data$decile <- ifelse(data$epc_ingr_cor>= dec[4]& data$epc_ingr_cor<dec[5],4,data$decile)
+# data$decile <- ifelse(data$epc_ingr_cor>= dec[5]& data$epc_ingr_cor<dec[6],5,data$decile)
+# data$decile <- ifelse(data$epc_ingr_cor>= dec[6]& data$epc_ingr_cor<dec[7],6,data$decile)
+# data$decile <- ifelse(data$epc_ingr_cor>= dec[7]& data$epc_ingr_cor<dec[8],7,data$decile)
+# data$decile <- ifelse(data$epc_ingr_cor>= dec[8]& data$epc_ingr_cor<dec[9],8,data$decile)
+# data$decile <- ifelse(data$epc_ingr_cor>= dec[9]& data$epc_ingr_cor<dec[10],9,data$decile)
+# data$decile <- ifelse(data$epc_ingr_cor>= dec[10],10,data$decile)
+#
+# #income quintile
+# data$quintile <- 0
+# data$quintile <- ifelse(data$decile==1 | data$decile==2,1,data$quintile)
+# data$quintile <- ifelse(data$decile==3 | data$decile==4,2,data$quintile)
+# data$quintile <- ifelse(data$decile==5 | data$decile==6,3,data$quintile)
+# data$quintile <- ifelse(data$decile==7 | data$decile==8,4,data$quintile)
+# data$quintile <- ifelse(data$decile==9 | data$decile==10,5,data$quintile)
+#
+# data <- data[c("hogar","decile","quintile")]
+# concentradohogar <- left_join(concentradohogar,data,by="hogar")
+#
+# #saving data
+ rev_nb <- "_rev8"
+ output_file <- here("output","data", "concentradohogar")
+ save(concentradohogar,file = paste0(output_file, rev_nb, ".Rdata"))
+ write.table(concentradohogar,file = paste0(output_file, rev_nb, ".csv"), sep = ";" , col.names = TRUE, row.names = FALSE)
+ rm(data)
 
