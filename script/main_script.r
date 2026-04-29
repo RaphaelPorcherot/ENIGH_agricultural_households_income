@@ -49,26 +49,17 @@ rm(list = ls())
 #PREPARING THE DATABASE FOR THE PILOT STUDY ON MEXICO#
 #April 2026                                          #
 ######################################################
-source("mexico_data_benedetto_rocchi.R")
+source(here("script", "mexico_data_benedetto_rocchi.R"))
 
 # --------------------------------------------------------------------------------------------------------
 
 # PART 2
-
 ######################################################
 #STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO#
 #April 2026                                          #
 ######################################################
-source("mexico_stat_raphael_porcherot.R")
+source(here("script", "mexico_stat_raphael_porcherot.R"))
 
-
-
-# - la versione aggiornata del databaseper l'analisi (concentradohogar_rev8 in due formati: csv e Rdata);
-# - lo script di R per preparare le nuove variabili a partire dai dati originali e che sostituisce i miei file excel (mexico_data.R) e che ti permettere di sapere esattamente come le ho costruite;
-# - il file con la descrizione delle nuove variabili (nuove_variabili_concentradohogar_rev8.xlsx): in questo file ho evidenziato in rosso le novità rispetto alla versione precedente del database.
-#
-# Tutte le variabili aggiuntive (con il suffisso n_) hanno lo stesso nome che avevano in precedenza (qiuindi i tuoi script dovrebbero girare allo stesso modo.
-#
 # Le novità sono poche:
 #
 # - la variabile n_tipo_prod classifica le aziende gestite dalle famiglie agricole (in senso ampio) in 5 gruppi invece che tre: come vedrai dalla descrizione dei gruppi si tiene conto anche delle attività forestali, di pesca, di caccia e di raccolta e della loro importanza relativa
