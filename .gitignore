@@ -1,4 +1,6 @@
-/src/
+src/*
+!src/.gitkeep
+!src/filelist.md
 
 .Rhistory
 .RData
