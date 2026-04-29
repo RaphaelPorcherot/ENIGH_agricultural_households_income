@@ -1,0 +1,8 @@
+1. conjunto_de_datos_agroproductos_enigh2022_ns.csv 
+2. conjunto_de_datos_agroconsumo_enigh2022_ns.csv
+3. conjunto_de_datos_agro_enigh2022_ns.csv
+4. conjunto_de_datos_poblacion_enigh2022_ns.csv
+5. conjunto_de_datos_hogares_enigh2022_ns.csv
+6. conjunto_de_datos_noagro_enigh2022_ns.csv
+7. conjunto_de_datos_concentradohogar_enigh2022_ns.csv
+
