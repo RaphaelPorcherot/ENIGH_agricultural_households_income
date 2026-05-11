@@ -1,6 +1,10 @@
+# --- FUNCTIONS ---
+
 # Calcul des proportions et IC exacts beta pour tous les niveaux de target_var
 # stratifiés par strat_var, avec filtre optionnel.
 # Utile car svyby/svymean ne gèrent pas facilement toutes les combinaisons ni les filtres dynamiques.
+
+
 get_proportion_IC_all <- function(
   design,
   strat_var,
@@ -21,7 +25,7 @@ get_proportion_IC_all <- function(
   # fonction interne pour un couple
   calc_prop <- function(strat_level, target_level) {
     # sous-design dynamique
-    if (!is.null(filter_var) & !is.null(filter_value)) {
+    if (!is.null(filter_var) && !is.null(filter_value)) {
       design_sub <- subset(
         design,
         get(filter_var) == filter_value & get(strat_var) == strat_level
@@ -61,11 +65,11 @@ get_proportion_IC_all <- function(
   }
 
   # appliquer à tous les couples
-  results <- params %>%
+  results <- params |>
     pmap_dfr(~ calc_prop(..1, ..2))
 
   # renommer les colonnes pour refléter les noms réels des variables
-  results <- results %>%
+  results <- results |>
     rename(
       !!strat_var := strat_var,
       !!target_var := target_var
@@ -74,7 +78,6 @@ get_proportion_IC_all <- function(
   return(results)
 }
 
-# ---------------------------------------------------------------------------------------------------------------------
 # Saving output in output/
 QMD_NAME <- ""
 
@@ -99,3 +102,5 @@ save_csv <- function(data, filename, qmd = QMD_NAME) {
   message("✅ Sauvegardé: ", output_path)
   invisible(output_path)
 }
+
+
