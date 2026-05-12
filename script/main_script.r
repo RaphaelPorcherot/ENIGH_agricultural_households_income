@@ -1,17 +1,17 @@
 # PART 1 PKG
-library(reshape) # Data reshaping (old package: melt/cast)
-library(reshape2) # Improved version of reshape (still legacy, replaced by tidyr)
-library(car) # Companion to Applied Regression (statistical tests, recoding, diagnostics)
-library(e1071) # Misc statistical functions (skewness, kurtosis, SVM, etc.)
-library(gridExtra) # Arrange multiple ggplot2 plots on the same page
-library(openxlsx) # Read/write Excel files without Java dependency
-library(pivottabler) # Create pivot tables (Excel-like summaries)
-library(foreign) # Import/export data from other statistical software (SPSS,eStata, etc.)
-library(Hmisc) # Misc tools (data description, imputation, weighted stats, etc.)
-library(ineq) # Inequality measures (Gini, Theil, etc.)
-library(wINEQ) # Weighted inequality measures
-# PART 2 PKG
-library(vroom) # Fast data import (alternative to readr for large files)
+# library(reshape) # Data reshaping (old package: melt/cast)
+# library(reshape2) # Improved version of reshape (still legacy, replaced by tidyr)
+# library(car) # Companion to Applied Regression (statistical tests, recoding, diagnostics)
+# library(e1071) # Misc statistical functions (skewness, kurtosis, SVM, etc.)
+# library(gridExtra) # Arrange multiple ggplot2 plots on the same page
+# library(openxlsx) # Read/write Excel files without Java dependency
+# library(pivottabler) # Create pivot tables (Excel-like summaries)
+# library(foreign) # Import/export data from other statistical software (SPSS,eStata, etc.)
+# library(Hmisc) # Misc tools (data description, imputation, weighted stats, etc.)
+# library(ineq) # Inequality measures (Gini, Theil, etc.)
+# library(wINEQ) # Weighted inequality measures
+# # PART 2 PKG
+# library(vroom) # Fast data import (alternative to readr for large files)
 library(skimr) # Quick and clean data summaries
 library(survey) # Analyse d’enquêtes complexes (pondérations, stratification, etc.)
 library(srvyr) # Tidyverse wrapper for survey

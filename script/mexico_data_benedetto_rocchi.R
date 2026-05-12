@@ -1,1030 +1,807 @@
-######################################################
+#q#####################################################
 #PREPARING THE DATABASE FOR THE PILOT STUDY ON MEXICO#
 #April 2026                                          #
 ######################################################
 
-#AGROPRODUCTO
-#############
-wd <- "conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_agroproductos_enigh2022_ns/conjunto_de_datos/"
-#loading original data and selecting variables
-table <- read.csv(
-  here("src", wd, "conjunto_de_datos_agroproductos_enigh2022_ns.csv"),
-  header = TRUE,
-  sep = ","
-)
-data <- table[c(
-  "folioviv",
-  "foliohog",
-  "tipoact",
-  "codigo",
-  "cosecha",
-  "cantidad",
-  "cant_venta",
-  "valor",
-  "preciokg",
-  "val_venta"
-)]
-
-#Variable to identify households
-data$hogar <- str_c(data$folioviv, data$foliohog)
-data$count_prod <- 1
-
-#classifying products
-data$tipo[data$codigo < 230] <- 1 # 1 = crops
-data$tipo[data$codigo > 229 & data$codigo < 278] <- 2 # 2 = livestock
-data$tipo[data$codigo > 277 & data$codigo < 296] <- 3 # 3 = animal products
-data$tipo[data$codigo > 295 & data$codigo < 474] <- 4 # 4 = forest products
-data$tipo[data$codigo > 474 & data$codigo < 601] <- 5 # 5 = fishing products
-data$tipo[data$codigo > 600] <- 6 # 6 = hunting products
-
-#households' dataset
-agroproductos <- data |>
-  group_by(hogar) |>
-  summarise(n_prod = sum(count_prod))
-
-#datasets with households' total values for different primary activities
-data_agr <- data[data$tipo == 1 & !is.na(data$valor), ] #crops
-agroproductos1 <- data_agr |>
-  group_by(hogar) |>
-  summarise(
-    n_agr = sum(count_prod),
-    cant_agr = sum(cantidad),
-    cven_agr = sum(cant_venta),
-    val_agr = sum(valor),
-    ven_agr = sum(val_venta)
+# AGROPRODUCTOS
+{
+  agroproductos_raw <- readr::read_csv(
+    here(
+      "src",
+      "conjunto_de_datos_enigh_ns_2022_csv",
+      "conjunto_de_datos_agroproductos_enigh2022_ns",
+      "conjunto_de_datos",
+      "conjunto_de_datos_agroproductos_enigh2022_ns.csv"
+    )
   )
-rm(data_agr)
-data_ani <- data[data$tipo == 2 & !is.na(data$valor), ] #livestock
-agroproductos2 <- data_ani |>
-  group_by(hogar) |>
-  summarise(
-    n_ani = sum(count_prod),
-    cant_ani = sum(cantidad),
-    cven_ani = sum(cant_venta),
-    val_ani = sum(valor),
-    ven_ani = sum(val_venta)
-  )
-rm(data_ani)
-data_prodani <- data[data$tipo == 3 & !is.na(data$valor), ] #animal products
-agroproductos3 <- data_prodani |>
-  group_by(hogar) |>
-  summarise(
-    n_prodani = sum(count_prod),
-    cant_prodani = sum(cantidad),
-    cven_prodani = sum(cant_venta),
-    val_prodani = sum(valor),
-    ven_prodani = sum(val_venta)
-  )
-rm(data_prodani)
-data_for <- data[data$tipo == 4 & !is.na(data$valor), ] #forest products
-agroproductos4 <- data_for |>
-  group_by(hogar) |>
-  summarise(
-    n_for = sum(count_prod),
-    cant_for = sum(cantidad),
-    cven_for = sum(cant_venta),
-    val_for = sum(valor),
-    ven_for = sum(val_venta)
-  )
-rm(data_for)
-data_fis <- data[data$tipo == 5 & !is.na(data$valor), ] #fishing products
-agroproductos5 <- data_fis |>
-  group_by(hogar) |>
-  summarise(
-    n_fis = sum(count_prod),
-    cant_fis = sum(cantidad),
-    cven_fis = sum(cant_venta),
-    val_fis = sum(valor),
-    ven_fis = sum(val_venta)
-  )
-rm(data_fis)
-data_hun <- data[data$tipo == 6 & !is.na(data$valor), ] #hunting products
-agroproductos6 <- data_hun |>
-  group_by(hogar) |>
-  summarise(
-    n_hun = sum(count_prod),
-    cant_hun = sum(cantidad),
-    cven_hun = sum(cant_venta),
-    val_hun = sum(valor),
-    ven_hun = sum(val_venta)
-  )
-rm(data_hun)
+  spec(agroproductos_raw)
 
-#merging new variables in the households dataset - setting NA to 0
-agroproductos <- left_join(agroproductos, agroproductos1, by = "hogar")
-agroproductos$n_agr <- ifelse(
-  is.na(agroproductos$n_agr),
-  0,
-  agroproductos$n_agr
-)
-agroproductos$cant_agr <- ifelse(
-  is.na(agroproductos$cant_agr),
-  0,
-  agroproductos$cant_agr
-)
-agroproductos$cven_agr <- ifelse(
-  is.na(agroproductos$cven_agr),
-  0,
-  agroproductos$cven_agr
-)
-agroproductos$val_agr <- ifelse(
-  is.na(agroproductos$val_agr),
-  0,
-  agroproductos$val_agr
-)
-agroproductos$ven_agr <- ifelse(
-  is.na(agroproductos$ven_agr),
-  0,
-  agroproductos$ven_agr
-)
+  # ---------------------------------------------------------
+  # Clean + classify products
+  # ---------------------------------------------------------
 
-agroproductos <- left_join(agroproductos, agroproductos2, by = "hogar")
-agroproductos$n_ani <- ifelse(
-  is.na(agroproductos$n_ani),
-  0,
-  agroproductos$n_ani
-)
-agroproductos$cant_ani <- ifelse(
-  is.na(agroproductos$cant_ani),
-  0,
-  agroproductos$cant_ani
-)
-agroproductos$cven_ani <- ifelse(
-  is.na(agroproductos$cven_ani),
-  0,
-  agroproductos$cven_ani
-)
-agroproductos$val_ani <- ifelse(
-  is.na(agroproductos$val_ani),
-  0,
-  agroproductos$val_ani
-)
-agroproductos$ven_ani <- ifelse(
-  is.na(agroproductos$ven_ani),
-  0,
-  agroproductos$ven_ani
-)
+  agroproductos_clean <- agroproductos_raw |>
+    select(
+      folioviv,
+      foliohog,
+      tipoact,
+      codigo,
+      cosecha,
+      cantidad, #Total de la cosecha en kilogramos
+      cant_venta,
+      valor,
+      preciokg,
+      val_venta
+    ) |>
+    mutate(
+      hogar = stringr::str_c(folioviv, foliohog),
+      #NOTE: some codes are missing for instance 473 does not exist in original database
+      tipo = case_when(
+        codigo < 230 ~ "agr", # 1 = crops
+        codigo < 278 ~ "ani", # 2 = livestock
+        codigo < 296 ~ "prodani", # 3 = animal products
+        codigo < 474 ~ "for", # 4 = forest products
+        codigo < 601 ~ "fis", # 5 = fishing products
+        codigo >= 601 ~ "hun" # 6 = hunting products
+      ),
 
-agroproductos <- left_join(agroproductos, agroproductos3, by = "hogar")
-agroproductos$n_prodani <- ifelse(
-  is.na(agroproductos$n_prodani),
-  0,
-  agroproductos$n_prodani
-)
-agroproductos$cant_prodani <- ifelse(
-  is.na(agroproductos$cant_prodani),
-  0,
-  agroproductos$cant_prodani
-)
-agroproductos$cven_prodani <- ifelse(
-  is.na(agroproductos$cven_prodani),
-  0,
-  agroproductos$cven_prodani
-)
-agroproductos$val_prodani <- ifelse(
-  is.na(agroproductos$val_prodani),
-  0,
-  agroproductos$val_prodani
-)
-agroproductos$ven_prodani <- ifelse(
-  is.na(agroproductos$ven_prodani),
-  0,
-  agroproductos$ven_prodani
-)
+      count_prod = 1
+    )
 
-agroproductos <- left_join(agroproductos, agroproductos4, by = "hogar")
-agroproductos$n_for <- ifelse(
-  is.na(agroproductos$n_for),
-  0,
-  agroproductos$n_for
-)
-agroproductos$cant_for <- ifelse(
-  is.na(agroproductos$cant_for),
-  0,
-  agroproductos$cant_for
-)
-agroproductos$cven_for <- ifelse(
-  is.na(agroproductos$cven_for),
-  0,
-  agroproductos$cven_for
-)
-agroproductos$val_for <- ifelse(
-  is.na(agroproductos$val_for),
-  0,
-  agroproductos$val_for
-)
-agroproductos$ven_for <- ifelse(
-  is.na(agroproductos$ven_for),
-  0,
-  agroproductos$ven_for
-)
+  # ---------------------------------------------------------
+  # Household totals by product type
+  # ---------------------------------------------------------
 
-agroproductos <- left_join(agroproductos, agroproductos5, by = "hogar")
-agroproductos$n_fis <- ifelse(
-  is.na(agroproductos$n_fis),
-  0,
-  agroproductos$n_fis
-)
-agroproductos$cant_fis <- ifelse(
-  is.na(agroproductos$cant_fis),
-  0,
-  agroproductos$cant_fis
-)
-agroproductos$cven_fis <- ifelse(
-  is.na(agroproductos$cven_fis),
-  0,
-  agroproductos$cven_fis
-)
-agroproductos$val_fis <- ifelse(
-  is.na(agroproductos$val_fis),
-  0,
-  agroproductos$val_fis
-)
-agroproductos$ven_fis <- ifelse(
-  is.na(agroproductos$ven_fis),
-  0,
-  agroproductos$ven_fis
-)
+  agroproductos_summary <- agroproductos_clean |>
+    filter(!is.na(valor)) |>
+    group_by(hogar, tipo) |>
+    summarise(
+      n = sum(count_prod, na.rm = TRUE), # number of subtypes by production type
+      cant = sum(cantidad, na.rm = TRUE), # volume of production
+      cven = sum(cant_venta, na.rm = TRUE), # production sold
+      val = sum(valor, na.rm = TRUE), # value of production
+      ven = sum(val_venta, na.rm = TRUE), # value of sold production
+      .groups = "drop"
+    ) |>
+    pivot_wider(
+      names_from = tipo,
+      values_from = c(n, cant, cven, val, ven),
+      names_glue = "{.value}_{tipo}",
+      values_fill = 0
+    )
 
-agroproductos <- left_join(agroproductos, agroproductos6, by = "hogar")
-agroproductos$n_hun <- ifelse(
-  is.na(agroproductos$n_hun),
-  0,
-  agroproductos$n_hun
-)
-agroproductos$cant_hun <- ifelse(
-  is.na(agroproductos$cant_hun),
-  0,
-  agroproductos$cant_hun
-)
-agroproductos$cven_hun <- ifelse(
-  is.na(agroproductos$cven_hun),
-  0,
-  agroproductos$cven_hun
-)
-agroproductos$val_hun <- ifelse(
-  is.na(agroproductos$val_hun),
-  0,
-  agroproductos$val_hun
-)
-agroproductos$ven_hun <- ifelse(
-  is.na(agroproductos$ven_hun),
-  0,
-  agroproductos$ven_hun
-)
+  # ---------------------------------------------------------
+  # Add total number of products
+  # ---------------------------------------------------------
 
-rm(
-  agroproductos1,
-  agroproductos2,
-  agroproductos3,
-  agroproductos4,
-  agroproductos5,
-  agroproductos6
-)
+  agroproductos <- agroproductos_clean |>
+    group_by(hogar) |>
+    summarise(
+      n_prod = n(),
+      .groups = "drop"
+    ) |>
+    left_join(agroproductos_summary, by = "hogar")
 
-#total turnover and output
-attach(agroproductos)
-agroproductos$ven_tot <- ven_agr +
-  ven_ani +
-  ven_prodani +
-  ven_for +
-  ven_fis +
-  ven_hun
-agroproductos$val_tot <- val_agr +
-  val_ani +
-  val_prodani +
-  val_for +
-  val_fis +
-  val_hun
-detach(agroproductos)
+  # ---------------------------------------------------------
+  # Replace remaining NA with 0
+  # ---------------------------------------------------------
 
-#farm type and market orientation
-agroproductos$tipo_market <- ifelse(agroproductos$ven_tot > 0, 1, 0)
+  agroproductos <- agroproductos |>
+    mutate(
+      across(where(is.numeric), ~ coalesce(.x, 0))
+    )
 
-attach(agroproductos)
-agroproductos$n_tipo_prod[val_tot == 0] <- 0 #no production
-agroproductos$n_tipo_prod[val_agr >= val_tot * (2 / 3)] <- 1 #crop farms
-agroproductos$n_tipo_prod[val_ani + val_prodani >= val_tot * (2 / 3)] <- 2 #livestock farms
-agroproductos$n_tipo_prod[
-  (val_agr > 0 & val_ani + val_prodani > 0) &
-    val_agr + val_ani + val_prodani > val_tot * (2 / 3)
-] <- 3 #mixed crops-livestock farms
-agroproductos$n_tipo_prod[
-  (val_agr > 0 | val_ani + val_prodani > 0) &
-    val_agr + val_ani + val_prodani < val_tot * (2 / 3)
-] <- 4 #mixed farm-primary
-agroproductos$n_tipo_prod[
-  (val_agr + val_ani + val_prodani == 0) & val_tot > 0
-] <- 5 #primary non-farm
-detach(agroproductos)
+  # ---------------------------------------------------------
+  # Totals
+  # ---------------------------------------------------------
 
-#saving data
-# paste0(output_file, ".Rdata")
-# paste0(output_file, ".csv")
-output_file <- here("output", "data", "agroproductos")
-save(agroproductos, file = paste0(output_file, ".Rdata"))
-write.table(
-  agroproductos,
-  file = paste0(output_file, ".csv"),
-  sep = ";",
-  col.names = TRUE,
-  row.names = FALSE
-)
-rm(table, data)
+  agroproductos <- agroproductos |>
+    mutate(
+      ven_tot = ven_agr +
+        ven_ani +
+        ven_prodani +
+        ven_for +
+        ven_fis +
+        ven_hun,
 
-#AGROCONSUMO
-############
+      val_tot = val_agr +
+        val_ani +
+        val_prodani +
+        val_for +
+        val_fis +
+        val_hun
+    )
 
-#working directory
-wd <- "conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_agroconsumo_enigh2022_ns/conjunto_de_datos/"
+  # ---------------------------------------------------------
+  # Totals
+  # ---------------------------------------------------------
 
-table <- read.csv(
-  here("src", wd, "conjunto_de_datos_agroconsumo_enigh2022_ns.csv"),
-  header = TRUE,
-  sep = ","
-)
+  agroproductos <- agroproductos |>
+    mutate(
+      ven_tot = ven_agr +
+        ven_ani +
+        ven_prodani +
+        ven_for +
+        ven_fis +
+        ven_hun,
 
-#loading original data and selecting variables
-# table <- read.csv("conjunto_de_datos_agroconsumo_enigh2022_ns.csv", header = TRUE, sep =",")
-data <- table[c("folioviv", "foliohog", "codigo", "destino", "valestim")]
+      val_tot = val_agr +
+        val_ani +
+        val_prodani +
+        val_for +
+        val_fis +
+        val_hun
+    )
 
-#Variable to identify households
-data$hogar <- str_c(data$folioviv, data$foliohog)
-data$count_prod <- 1
+  # ---------------------------------------------------------
+  # Market orientation
+  # ---------------------------------------------------------
+  agroproductos <- agroproductos |>
+    mutate(
+      tipo_market = if_else(ven_tot > 0, 1, 0)
+    )
 
-#classifying products
-data$tipo[data$codigo < 230] <- 1 # 1 = crops
-data$tipo[data$codigo > 229 & data$codigo < 278] <- 2 # 2 = livestock
-data$tipo[data$codigo > 277 & data$codigo < 296] <- 3 # 3 = animal products
-data$tipo[data$codigo > 295 & data$codigo < 474] <- 4 # 4 = forest products
-data$tipo[data$codigo > 474 & data$codigo < 601] <- 5 # 5 = fishing products
-data$tipo[data$codigo > 600] <- 6 # 6 = hunting products
+  # ---------------------------------------------------------
+  # Farm typology
+  # ---------------------------------------------------------
 
-#selecting self-consumption use only
-data <- data[
-  data$destino == 1 | #households' consumption
-    data$destino == 3 | #household's debt repayment
-    data$destino > 5,
-] #household's gifts and products exchanges
+  tres_agri_spe <- 2 / 3
 
-#households' dataset
-agroconsumo <- data |>
-  group_by(hogar) |>
-  summarise(n_prod = sum(count_prod))
+  agroproductos <- agroproductos |>
+    mutate(
+      n_tipo_prod = case_when(
+        # no production
+        val_tot == 0 ~ 0,
 
-#datasets with households' total consumption for different products
-data_agr <- data[data$tipo == 1, ] #crops
-agroconsumo1 <- data_agr |>
-  group_by(hogar) |>
-  summarise(n_agr = sum(count_prod), val_agr = sum(valestim))
-rm(data_agr)
-data_ani <- data[data$tipo == 2, ] #livestock
-agroconsumo2 <- data_ani |>
-  group_by(hogar) |>
-  summarise(n_ani = sum(count_prod), val_ani = sum(valestim))
-rm(data_ani)
-data_prodani <- data[data$tipo == 3, ] #animal products
-agroconsumo3 <- data_prodani |>
-  group_by(hogar) |>
-  summarise(n_prodani = sum(count_prod), val_prodani = sum(valestim))
-rm(data_prodani)
-data_for <- data[data$tipo == 4, ] #forest products
-agroconsumo4 <- data_for |>
-  group_by(hogar) |>
-  summarise(n_for = sum(count_prod), val_for = sum(valestim))
-rm(data_for)
-data_fis <- data[data$tipo == 5, ] #fishing products
-agroconsumo5 <- data_fis |>
-  group_by(hogar) |>
-  summarise(n_fis = sum(count_prod), val_fis = sum(valestim))
-rm(data_fis)
-data_hun <- data[data$tipo == 6, ] #hunting products
-agroconsumo6 <- data_hun |>
-  group_by(hogar) |>
-  summarise(n_hun = sum(count_prod), val_hun = sum(valestim))
-rm(data_hun)
+        # crop farms
+        val_agr >= val_tot * tres_agri_spe ~ 1,
 
-#merging new variables in the households dataset - setting NA to 0
-agroconsumo <- left_join(agroconsumo, agroconsumo1, by = "hogar")
-agroconsumo$n_agr <- ifelse(is.na(agroconsumo$n_agr), 0, agroconsumo$n_agr)
-agroconsumo$val_agr <- ifelse(
-  is.na(agroconsumo$val_agr),
-  0,
-  agroconsumo$val_agr
-)
+        # livestock farms
+        (val_ani + val_prodani) >= val_tot * tres_agri_spe ~ 2,
 
-agroconsumo <- left_join(agroconsumo, agroconsumo2, by = "hogar")
-agroconsumo$n_ani <- ifelse(is.na(agroconsumo$n_ani), 0, agroconsumo$n_ani)
-agroconsumo$val_ani <- ifelse(
-  is.na(agroconsumo$val_ani),
-  0,
-  agroconsumo$val_ani
-)
+        # mixed crop-livestock
+        (val_agr > 0 &
+          (val_ani + val_prodani) > 0 &
+          (val_agr + val_ani + val_prodani) > val_tot * tres_agri_spe) ~ 3,
 
-agroconsumo <- left_join(agroconsumo, agroconsumo3, by = "hogar")
-agroconsumo$n_prodani <- ifelse(
-  is.na(agroconsumo$n_prodani),
-  0,
-  agroconsumo$n_prodani
-)
-agroconsumo$val_prodani <- ifelse(
-  is.na(agroconsumo$val_prodani),
-  0,
-  agroconsumo$val_prodani
-)
+        # mixed farm-primary
+        ((val_agr > 0 |
+          (val_ani + val_prodani) > 0) &
+          (val_agr + val_ani + val_prodani) < val_tot * tres_agri_spe) ~ 4,
 
-agroconsumo <- left_join(agroconsumo, agroconsumo4, by = "hogar")
-agroconsumo$n_for <- ifelse(is.na(agroconsumo$n_for), 0, agroconsumo$n_for)
-agroconsumo$val_for <- ifelse(
-  is.na(agroconsumo$val_for),
-  0,
-  agroconsumo$val_for
-)
+        # primary non-farm
+        (val_agr + val_ani + val_prodani == 0 &
+          val_tot > 0) ~ 5,
 
-agroconsumo <- left_join(agroconsumo, agroconsumo5, by = "hogar")
-agroconsumo$n_fis <- ifelse(is.na(agroconsumo$n_fis), 0, agroconsumo$n_fis)
-agroconsumo$val_fis <- ifelse(
-  is.na(agroconsumo$val_fis),
-  0,
-  agroconsumo$val_fis
-)
+        TRUE ~ NA_real_
+      )
+    )
 
-agroconsumo <- left_join(agroconsumo, agroconsumo6, by = "hogar")
-agroconsumo$n_hun <- ifelse(is.na(agroconsumo$n_hun), 0, agroconsumo$n_hun)
-agroconsumo$val_hun <- ifelse(
-  is.na(agroconsumo$val_hun),
-  0,
-  agroconsumo$val_hun
-)
+  n_na <- sum(is.na(agroproductos$n_tipo_prod))
 
-rm(
-  agroconsumo1,
-  agroconsumo2,
-  agroconsumo3,
-  agroconsumo4,
-  agroconsumo5,
-  agroconsumo6
-)
+  if (n_na > 0) {
+    stop(message(paste0("\n\n🐞 ERROR in AGROPRODUCTO: ", n_na, " missing types")))
+  } else {
+    message("\n\n🆗 AGROPRODUCTO IS CORRECT: all farmers have a production type")
+  }
+  output_file <- here("output", "data", "agroproductos")
+  saveRDS(agroproductos, paste0(output_file, ".rds"))
+}
 
-#total self-consumption
-attach(agroconsumo)
-agroconsumo$n_tot <- n_agr + n_ani + n_prodani + n_for + n_fis + n_hun
-agroconsumo$valestim <- val_agr +
-  val_ani +
-  val_prodani +
-  val_for +
-  val_fis +
-  val_hun
-detach(agroconsumo)
-
-#saving data
-output_file <- here("output", "data", "agroconsumo")
-save(agroconsumo, file = paste0(output_file, ".Rdata"))
-write.table(
-  agroconsumo,
-  file = paste0(output_file, ".csv"),
-  sep = ";",
-  col.names = TRUE,
-  row.names = FALSE
-)
-rm(table, data)
-
-#AGRO
-#####
-
-#working directory
-wd <- "/conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_agro_enigh2022_ns/conjunto_de_datos"
-#loading original data and selecting variables
-table <- read.csv(
-  here("src", wd, "conjunto_de_datos_agro_enigh2022_ns.csv"),
-  header = TRUE,
-  sep = ","
-)
-data <- table #when  using the original file
-#data <- table[c("folioviv","foliohog","codigo","destino","valestim")]
-
-#Variable to identify households
-data$hogar <- str_c(data$folioviv, data$foliohog)
-data$count_member <- 1
-
-#new variables
-data$tipoact_agro <- ifelse(data$tipoact < 6, 1, 0) #actividad agricola y ganadera
-
-data$apoyo_1 <- ifelse(is.na(data$apoyo_1), 0, data$apoyo_1) #Apoyo de gobierno federal con pago
-data$apoyo_2 <- ifelse(is.na(data$apoyo_2), 0, data$apoyo_2) #Apoyo de gobierno estatal con pago
-data$apoyo_3 <- ifelse(is.na(data$apoyo_3), 0, data$apoyo_3) #Apoyo de gobierno municipal con pago
-data$apoyo_7 <- ifelse(is.na(data$apoyo_7), 0, data$apoyo_7) #Apoyo no gubernamental con pago
-data$apoyo_pago <- (data$apoyo_1 + data$apoyo_2 + data$apoyo_3 + data$apoyo_7) *
-  12 #Apoyo con pago
-
-data$apoyo_4 <- ifelse(is.na(data$apoyo_4), 0, data$apoyo_4) #Apoyo de gobierno federal sin pago
-data$apoyo_5 <- ifelse(is.na(data$apoyo_5), 0, data$apoyo_5) #Apoyo de gobierno estatal sin pago
-data$apoyo_6 <- ifelse(is.na(data$apoyo_6), 0, data$apoyo_6) #Apoyo de gobierno municipal sin pago
-data$apoyo_8 <- ifelse(is.na(data$apoyo_8), 0, data$apoyo_8) #Apoyo no gubernamental sin pago
-data$apoyo_npago <- (data$apoyo_4 +
-  data$apoyo_5 +
-  data$apoyo_6 +
-  data$apoyo_8) *
-  12 #Apoyo sin pago
-
-data$proagro <- ifelse(is.na(data$proagro), 0, data$proagro) #Apoyo PROCAMPO / ProAgro / Bienestar
-data$progan <- ifelse(is.na(data$progan), 0, data$progan) #Apoyo del PROGAN
-data$pro_agrogan <- (data$proagro + data$progan) * 12 #Apoyo Procampo y Progan
-
-data$nvo_cant1 <- ifelse(is.na(data$nvo_cant1), 0, data$nvo_cant1)
-data$nvo_cant2 <- ifelse(is.na(data$nvo_cant2), 0, data$nvo_cant2)
-data$nvo_cant3 <- ifelse(is.na(data$nvo_cant3), 0, data$nvo_cant3)
-data$nvo_tot <- (data$nvo_cant1 + data$nvo_cant2 + data$nvo_cant3) * 12 #Total support from new social programmes
-
-data$nvo_prog1 <- ifelse(is.na(data$nvo_prog1), 0, data$nvo_prog1)
-data$nvo_prog2 <- ifelse(is.na(data$nvo_prog2), 0, data$nvo_prog2)
-data$nvo_prog3 <- ifelse(is.na(data$nvo_prog3), 0, data$nvo_prog3)
-data$nvo1 <- ifelse(
-  data$nvo_prog1 == 2001 | data$nvo_prog1 == 2002,
-  data$nvo_cant1,
-  0
-)
-data$nvo2 <- ifelse(
-  data$nvo_prog2 == 2001 | data$nvo_prog2 == 2002,
-  data$nvo_cant2,
-  0
-)
-data$nvo3 <- ifelse(
-  data$nvo_prog3 == 2001 | data$nvo_prog3 == 2002,
-  data$nvo_cant3,
-  0
-)
-data$sembr_vida <- (data$nvo1 + data$nvo2 + data$nvo3) * 12 #Sembrando Vida
-
-data$nvo1 <- ifelse(
-  data$nvo_prog1 == 2003 | data$nvo_prog1 == 2004,
-  data$nvo_cant1,
-  0
-)
-data$nvo2 <- ifelse(
-  data$nvo_prog2 == 2003 | data$nvo_prog2 == 2004,
-  data$nvo_cant2,
-  0
-)
-data$nvo3 <- ifelse(
-  data$nvo_prog3 == 2003 | data$nvo_prog3 == 2004,
-  data$nvo_cant3,
-  0
-)
-data$tand_bien <- (data$nvo1 + data$nvo2 + data$nvo3) * 12 #Tandas para el Bienestar (Microcréditos para el Bienestar)
-
-data$nvo1 <- ifelse(
-  data$nvo_prog1 == 2005 | data$nvo_prog1 == 2006,
-  data$nvo_cant1,
-  0
-)
-data$nvo2 <- ifelse(
-  data$nvo_prog2 == 2005 | data$nvo_prog2 == 2006,
-  data$nvo_cant2,
-  0
-)
-data$nvo3 <- ifelse(
-  data$nvo_prog3 == 2005 | data$nvo_prog3 == 2006,
-  data$nvo_cant3,
-  0
-)
-data$agromercados <- (data$nvo1 + data$nvo2 + data$nvo3) * 12 #Agromercados Sociales y Sustentables
-
-data$nvo1 <- ifelse(
-  data$nvo_prog1 == 2007 | data$nvo_prog1 == 2008,
-  data$nvo_cant1,
-  0
-)
-data$nvo2 <- ifelse(
-  data$nvo_prog2 == 2007 | data$nvo_prog2 == 2008,
-  data$nvo_cant2,
-  0
-)
-data$nvo3 <- ifelse(
-  data$nvo_prog3 == 2007 | data$nvo_prog3 == 2008,
-  data$nvo_cant3,
-  0
-)
-data$precios_gar <- (data$nvo1 + data$nvo2 + data$nvo3) * 12 #Precios de Garantía a Productos Alimentarios Básicos
-
-data$nvo1 <- ifelse(
-  data$nvo_prog1 == 2009 | data$nvo_prog1 == 2010,
-  data$nvo_cant1,
-  0
-)
-data$nvo2 <- ifelse(
-  data$nvo_prog2 == 2009 | data$nvo_prog2 == 2010,
-  data$nvo_cant2,
-  0
-)
-data$nvo3 <- ifelse(
-  data$nvo_prog3 == 2009 | data$nvo_prog3 == 2010,
-  data$nvo_cant3,
-  0
-)
-data$credito_gan <- (data$nvo1 + data$nvo2 + data$nvo3) * 12 #Crédito Ganadero a la Palabra
-
-data$nvo1 <- ifelse(
-  data$nvo_prog1 == 2011 | data$nvo_prog1 == 2012,
-  data$nvo_cant1,
-  0
-)
-data$nvo2 <- ifelse(
-  data$nvo_prog2 == 2011 | data$nvo_prog2 == 2012,
-  data$nvo_cant2,
-  0
-)
-data$nvo3 <- ifelse(
-  data$nvo_prog3 == 2011 | data$nvo_prog3 == 2012,
-  data$nvo_cant3,
-  0
-)
-data$nacion_fer <- (data$nvo1 + data$nvo2 + data$nvo3) * 12 #Nacional de Fertilizantes
-
-data$nvo1 <- ifelse(
-  data$nvo_prog1 == 2013 | data$nvo_prog1 == 2014,
-  data$nvo_cant1,
-  0
-)
-data$nvo2 <- ifelse(
-  data$nvo_prog2 == 2013 | data$nvo_prog2 == 2014,
-  data$nvo_cant2,
-  0
-)
-data$nvo3 <- ifelse(
-  data$nvo_prog3 == 2013 | data$nvo_prog3 == 2014,
-  data$nvo_cant3,
-  0
-)
-data$desarollo_rur <- (data$nvo1 + data$nvo2 + data$nvo3) * 12 #Desarrollo Rural
-
-data$nvo1 <- ifelse(
-  data$nvo_prog1 == 2015 | data$nvo_prog1 == 2016,
-  data$nvo_cant1,
-  0
-)
-data$nvo2 <- ifelse(
-  data$nvo_prog2 == 2015 | data$nvo_prog2 == 2016,
-  data$nvo_cant2,
-  0
-)
-data$nvo3 <- ifelse(
-  data$nvo_prog3 == 2015 | data$nvo_prog3 == 2016,
-  data$nvo_cant3,
-  0
-)
-data$otros_prog <- (data$nvo1 + data$nvo2 + data$nvo3) * 12 #Otros programas sociales
-
-#direct payments new social programmes
-data$nvo_tot_npago <- data$sembr_vida +
-  data$agromercados +
-  data$precios_gar +
-  data$nacion_fer +
-  data$desarollo_rur +
-  data$otros_prog
-
-#farm gross output, net income, direct payments
-data$size_val <- (data$ventas_tri + data$auto_tri + data$otros_tri) * 4
-data$fni_year <- (data$ing_tri - data$ero_tri) *
-  4 +
-  data$apoyo_npago +
-  data$pro_agrogan +
-  data$nvo_tot_npago
-data$support <- data$apoyo_npago + data$pro_agrogan + data$nvo_tot_npago
-
-#dataset with new agro variables at the household level
-agro <- data |>
-  group_by(hogar) |>
-  summarise(
-    n_act = sum(count_member),
-    n_fni = sum(fni_year),
-    auto_tri = sum(auto_tri),
-    n_support = sum(support),
-    n_size_val = sum(size_val),
-    n_apoyo_npago = sum(apoyo_npago),
-    n_pro_agrogan = sum(pro_agrogan),
-    n_nvo_tot = sum(nvo_tot_npago),
-    n_sembr_vida = sum(sembr_vida),
-    n_tand_bien = sum(tand_bien),
-    n_agromercados = sum(agromercados),
-    n_precios_gar = sum(precios_gar),
-    n_credito_gan = sum(credito_gan),
-    n_nacion_fert = sum(nacion_fer),
-    n_desarollo_rur = sum(desarollo_rur),
-    n_otros_prog = sum(otros_prog)
+# AGROCONSUMO
+{
+  agroconsumo_raw <- readr::read_csv(
+    here(
+      "src",
+      "conjunto_de_datos_enigh_ns_2022_csv",
+      "conjunto_de_datos_agroconsumo_enigh2022_ns",
+      "conjunto_de_datos",
+      "conjunto_de_datos_agroconsumo_enigh2022_ns.csv"
+    )
   )
 
-#share of self consumption on total output
-agro$n_autoconsumo <- ifelse(
-  agro$n_size_val > 0,
-  (agro$auto_tri * 4) / agro$n_size_val,
-  0
-)
+  spec(agroconsumo_raw)
+  # ---------------------------------------------------------
+  # Clean + filter + classify
+  # ---------------------------------------------------------
 
-#share of support on total revenues
-agro$n_apoyo <- 0
-agro$n_apoyo <- ifelse(
-  agro$n_size_val + agro$n_support > 0 & agro$n_size_val > 0,
-  agro$n_support / (agro$n_size_val + agro$n_support),
-  agro$n_apoyo
-)
-agro$n_apoyo <- ifelse(
-  agro$n_size_val + agro$n_support > 0 & agro$n_size_val == 0,
-  1,
-  agro$n_apoyo
-)
+  agroconsumo_clean <- agroconsumo_raw |>
+    select(
+      folioviv,
+      foliohog,
+      codigo,
+      destino,
+      valestim
+      #TODO: we could add cantitad (to get volume of self-consumption in kg or L o piezas (il faudra prendre en % pour éliminer l'unité)
+    ) |>
+    mutate(
+      hogar = str_c(folioviv, foliohog),
+      count_prod = 1,
 
-agro$n_size_class[agro$n_size_val < 250001] <- 1
-agro$n_size_class[agro$n_size_val > 250000 & agro$n_size_val < 500001] <- 2
-agro$n_size_class[agro$n_size_val > 500000 & agro$n_size_val < 1000001] <- 3
-agro$n_size_class[agro$n_size_val > 1000000 & agro$n_size_val < 2000001] <- 4
-agro$n_size_class[agro$n_size_val > 2000000 & agro$n_size_val < 5000001] <- 5
-agro$n_size_class[agro$n_size_val > 5000000 & agro$n_size_val < 10000001] <- 6
-agro$n_size_class[agro$n_size_val > 10000000] <- 7
+      tipo = case_when(
+        codigo < 230 ~ "agr",
+        codigo < 278 ~ "ani",
+        codigo < 296 ~ "prodani",
+        codigo < 474 ~ "for",
+        codigo < 601 ~ "fis",
+        codigo >= 601 ~ "hun"
+      )
+    ) |>
+    # keep only self-consumption
+    # left out : 2,Utilizado en el negocio ; 4,Pago deudas del negocio
+    filter(
+      destino == 1 | # household's consumption
+        destino == 3 | # household's debt repayment
+        destino > 5 # household's gifts and products exchanges
+    )
 
-#importing farm type and market orientation from the agroproductos dataset
-farmtype <- agroproductos[c("hogar", "n_tipo_prod", "tipo_market")]
-agro <- left_join(agro, farmtype, by = "hogar")
-rm(farmtype)
+  # ---------------------------------------------------------
+  # Household-level totals by type
+  # ---------------------------------------------------------
 
-#importing selfconsumption from the agroconsumo dataset
-autocons <- agroconsumo[c("hogar", "valestim")]
-agro <- left_join(agro, autocons, by = "hogar")
-rm(autocons)
+  agroconsumo <- agroconsumo_clean |>
+    group_by(hogar, tipo) |>
+    summarise(
+      n = sum(count_prod, na.rm = TRUE),
+      val = sum(valestim, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    pivot_wider(
+      names_from = tipo,
+      values_from = c(n, val),
+      names_glue = "{.value}_{tipo}",
+      values_fill = 0
+    ) |>
+    mutate(
+      # number of different types of self-consumed products
+      n_tot = n_agr + n_ani + n_prodani + n_for + n_fis + n_hun,
+      # estimated value of total self-consumption
+      valestim = val_agr + val_ani + val_prodani + val_for + val_fis + val_hun
+    )
 
-#share of self consumption on total output with selfconsumption values from the agroconsumo dataset
-agro$n_size_val2 <- agro$n_size_val - agro$auto_tri * 4 + agro$valestim
-agro$n_autoconsumo2 <- agro$valestim / agro$n_size_val2
+  # ---------------------------------------------------------
+  # Safety check NA (normally unnecessary after fill = 0)
+  # ---------------------------------------------------------
+  n_na_n <- sum(is.na(agroconsumo$n_tot))
+  n_na_val <- sum(is.na(agroconsumo$valestim))
 
-#saving data
-output_file <- here("output", "data", "agro")
-save(agro, file = paste0(output_file, ".Rdata"))
-write.table(
-  agro,
-  file = paste0(output_file, ".csv"),
-  sep = ";",
-  col.names = TRUE,
-  row.names = FALSE
-)
-rm(table, data)
+  if (n_na_n > 0 | n_na_val > 0) {
+    stop(paste0(
+      "\n\n🐞 ERROR in AGROCONSUMO: missing values -> n_tot (number of different types of self-consumed products): ",
+      n_na_n,
+      ", valestim (estimated value of self-consumption): ",
+      n_na_val
+    ))
+  } else {
+    message(
+      "\n\n 🆗 AGROCONSUMO IS CORRECT: no missing values in n_tot (number of different types of self-consumption) or valestim (estimated value of self-consumption)"
+    )
+  }
 
-#ETNIA
-######
-#working directory
-wd <- "conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_poblacion_enigh2022_ns/conjunto_de_datos/"
-#loading original data and selecting variables
-table <- read.csv(
-  here("src", wd, "conjunto_de_datos_poblacion_enigh2022_ns.csv"),
-  header = TRUE,
-  sep = ","
-)
-data <- table[c("folioviv", "foliohog", "parentesco", "etnia")]
-data <- data[which(data$parentesco == "101"), ] # including only Jefe
+  agroconsumo <- agroconsumo |>
+    mutate(across(where(is.numeric), ~ coalesce(.x, 0)))
 
-#Variable to identify households
-data$hogar <- str_c(data$folioviv, data$foliohog)
-etnia <- data
-colnames(etnia)[4] <- "n_etnia"
+  # ---------------------------------------------------------
+  # Save
+  # ---------------------------------------------------------
 
-#saving data
-output_file <- here("output", "data", "etnia")
-save(etnia, file = paste0(output_file, ".Rdata"))
-write.table(
-  etnia,
-  file = paste0(output_file, ".csv"),
-  sep = ";",
-  col.names = TRUE,
-  row.names = FALSE
-)
-rm(table, data)
-
-#CONCERN FOR FOOD
-#################
-#working directory
-wd <- "conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_hogares_enigh2022_ns/conjunto_de_datos"
-#loading original data and selecting variables
-table <- read.csv(
-  here("src", wd, "conjunto_de_datos_hogares_enigh2022_ns.csv"),
-  header = TRUE,
-  sep = ","
-)
-data <- table[c("folioviv", "foliohog", "acc_alim1")]
-
-#Variable to identify households
-data$hogar <- str_c(data$folioviv, data$foliohog)
-alim <- data
-
-colnames(alim)[3] <- "n_acc_alim1"
-
-#saving data
-output_file <- here("output", "data", "alim")
-save(alim, file = paste0(output_file, ".Rdata"))
-write.table(
-  alim,
-  file = paste0(output_file, ".csv"),
-  sep = ";",
-  col.names = TRUE,
-  row.names = FALSE
-)
-rm(table, data)
-
-#NOAGRO
-#######
-
-#working directory
-wd <- "conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_noagro_enigh2022_ns/conjunto_de_datos"
-#loading original data and selecting variables
-table <- read.csv(
-  here("src", wd, "conjunto_de_datos_noagro_enigh2022_ns.csv"),
-  header = TRUE,
-  sep = ","
-)
-#loading original data and selecting variables
-data <- table[c("folioviv", "foliohog", "ing_tri", "ero_tri")]
-
-#Variable to identify households
-data$hogar <- str_c(data$folioviv, data$foliohog)
-
-#non agricultural self employed incomes
-data$n_ingr_noagr <- (data$ing_tri - data$ero_tri) * 4
-
-#dataset with new noagro variables at the household level
-noagro <- data |>
-  group_by(hogar) |>
-  summarise(n_ingr_noagr = sum(n_ingr_noagr))
-
-#saving data
-output_file <- here("output", "data", "noagro")
-save(noagro, file = paste0(output_file, ".Rdata"))
-write.table(
-  noagro,
-  file = paste0(output_file, ".csv"),
-  sep = ";",
-  col.names = TRUE,
-  row.names = FALSE
-)
-rm(table, data)
-
-#CONCENTRADOHOGAR
-#################
-#working directory
-wd <- "/conjunto_de_datos_enigh_ns_2022_csv/conjunto_de_datos_concentradohogar_enigh2022_ns/conjunto_de_datos"
-#loading original data and selecting variables
-table <- read.csv(
-  here("src", wd, "conjunto_de_datos_concentradohogar_enigh2022_ns.csv"),
-  header = TRUE,
-  sep = ","
-)
-data <- table[c(
-  "folioviv",
-  "foliohog",
-  "trabajo",
-  "rentas",
-  "transfer",
-  "estim_alqu",
-  "otros_ing"
-)]
-
-#Variable to identify households
-data$hogar <- str_c(data$folioviv, data$foliohog)
-
-#importing additional variables from other datasets
-#agro
-imp <- agro[c(
-  "hogar",
-  "n_fni",
-  "n_size_val",
-  "n_size_class",
-  "n_tipo_prod",
-  "n_autoconsumo",
-  "n_autoconsumo2",
-  "n_apoyo",
-  "n_apoyo_npago",
-  "n_pro_agrogan",
-  "n_nvo_tot",
-  "n_support",
-  "n_sembr_vida",
-  "n_tand_bien",
-  "n_agromercados",
-  "n_precios_gar",
-  "n_credito_gan",
-  "n_nacion_fert",
-  "n_desarollo_rur",
-  "n_otros_prog"
-)]
-data <- left_join(data, imp, by = "hogar")
-data$n_fni <- ifelse(is.na(data$n_fni), 0, data$n_fni)
-rm(imp)
-#noagro
-imp <- noagro[c("hogar", "n_ingr_noagr")]
-data <- left_join(data, imp, by = "hogar")
-data$n_ingr_noagr <- ifelse(is.na(data$n_ingr_noagr), 0, data$n_ingr_noagr)
-rm(imp)
-#etnia
-imp <- etnia[c("hogar", "n_etnia")]
-data <- left_join(data, imp, by = "hogar")
-rm(imp)
-#alim
-imp <- alim[c("hogar", "n_acc_alim1")]
-data <- left_join(data, imp, by = "hogar")
-rm(imp)
-
-#creating new variables
-data$n_trabajo <- data$trabajo * 4 #annual income from employed labour
-data$n_rentas <- data$rentas * 4 #annual income from owned assets
-data$n_transfer <- data$transfer * 4 #annual income from social and private transfers
-data$n_estim_alqu <- data$estim_alqu * 4 #annual implicit rent from property dwelling
-data$n_otros_ing <- data$otros_ing * 4 #other annual sources of income
-data$n_ing_cor <- data$n_fni +
-  data$n_ingr_noagr +
-  data$n_trabajo +
-  data$n_rentas +
-  data$n_transfer +
-  data$n_estim_alqu +
-  data$n_otros_ing
-data$n_tipo_act <- ifelse(data$n_tipo_prod < 5, 1, 0) #households with farming activities
-
-exclude <- names(data) %in%
-  c(
-    "folioviv",
-    "foliohog",
-    "trabajo",
-    "rentas",
-    "transfer",
-    "estim_alqu",
-    "otros_ing"
+  saveRDS(
+    agroconsumo,
+    here("output", "data", "agroconsumo.rds")
   )
-data <- data[!exclude]
-rm(exclude)
+}
 
-#merging the new variables with the original dataset
-table$hogar <- str_c(table$folioviv, table$foliohog)
-concentradohogar <- left_join(table, data, by = "hogar")
-rm(data, table)
+# AGRO
+{
+  agro_raw <- readr::read_csv(
+    here(
+      "src",
+      "conjunto_de_datos_enigh_ns_2022_csv",
+      "conjunto_de_datos_agro_enigh2022_ns",
+      "conjunto_de_datos",
+      "conjunto_de_datos_agro_enigh2022_ns.csv"
+    ),
+    col_types = cols(.default = col_double())
+  )
 
-#INCOME DECILES AND QUINTILES (we will do that in part 2)
-#############################
+  spec(agro_raw)
 
-# #selecting variables
-# data <- concentradohogar[c("hogar","factor","tot_integ",
-#                            "n_ing_cor","n_fni","n_ingr_noagr","n_trabajo","n_rentas","n_transfer","n_estim_alqu","n_otros_ing")]
-# #replacing negative income values
-# quantiles <- Hmisc::wtd.quantile(data$n_fni[data$n_fni > 0], weights = data$factor, na.rm = TRUE)
-# lower_quartile_fni <- quantiles[2]
-# quantiles <- wtd.quantile(data$n_ingr_noagr[data$n_ingr_noagr > 0], weights = data$factor, na.rm = TRUE)
-# lower_quartile_ingr_noagr <-quantiles[2]
-# rm(quantiles)
-# data$neg_idx <- ifelse(data$n_fni < 0,1,0)
-# data$nn_fni <- ifelse(data$neg_idx == 1,runif(n=sum(!is.na(data$n_fni)&data$n_fni<0), min = 0, max = lower_quartile_fni[1]),data$n_fni)
-# data$neg_idx <- ifelse(data$n_ingr_noagr < 0,1,0)
-# data$nn_ingr_noagr <- ifelse(data$neg_idx == 1 , runif(n=sum(!is.na(data$n_ingr_noagr)&data$n_ingr_noagr<0), min = 0, max = lower_quartile_ingr_noagr[1]),data$n_ingr_noagr)
-# data$nn_fni <- ifelse(is.na(data$n_fni),0,data$nn_fni)
-# data$nn_ingr_noagr <- ifelse(is.na(data$n_ingr_noagr),0,data$nn_ingr_noagr)
-# data$neg_idx <- NULL
-# summary(data$nn_fni)
-# summary(data$nn_ingr_noagr)
-#
-# data$nn_ingr_corr <- data$nn_fni+data$nn_ingr_noagr+data$n_trabajo+data$n_rentas+data$n_transfer+data$n_estim_alqu+data$n_otros_ing
-# summary(data$nn_ingr_corr)
-# data$equiv_integ <- sqrt(data$tot_integ)#equivalence scale square root
-# data$epc_ingr_cor <- data$nn_ingr_corr/data$equiv_integ#per capita equivalent income using the square root equivalence scale
-# summary(data$epc_ingr_cor)
-# summary(data$equiv_integ)
-#
-# #income deciles
-# dec <- as.vector(weightedQuantile(data$epc_ingr_cor,weights = data$factor, probs = seq(0,1,0.1), sorted = FALSE,na.rm = TRUE))
-# data$decile <- 0
-# data$decile <- ifelse(data$epc_ingr_cor < dec[2],1,data$decile)
-# data$decile <- ifelse(data$epc_ingr_cor>= dec[2]& data$epc_ingr_cor<dec[3],2,data$decile)
-# data$decile <- ifelse(data$epc_ingr_cor>= dec[3]& data$epc_ingr_cor<dec[4],3,data$decile)
-# data$decile <- ifelse(data$epc_ingr_cor>= dec[4]& data$epc_ingr_cor<dec[5],4,data$decile)
-# data$decile <- ifelse(data$epc_ingr_cor>= dec[5]& data$epc_ingr_cor<dec[6],5,data$decile)
-# data$decile <- ifelse(data$epc_ingr_cor>= dec[6]& data$epc_ingr_cor<dec[7],6,data$decile)
-# data$decile <- ifelse(data$epc_ingr_cor>= dec[7]& data$epc_ingr_cor<dec[8],7,data$decile)
-# data$decile <- ifelse(data$epc_ingr_cor>= dec[8]& data$epc_ingr_cor<dec[9],8,data$decile)
-# data$decile <- ifelse(data$epc_ingr_cor>= dec[9]& data$epc_ingr_cor<dec[10],9,data$decile)
-# data$decile <- ifelse(data$epc_ingr_cor>= dec[10],10,data$decile)
-#
-# #income quintile
-# data$quintile <- 0
-# data$quintile <- ifelse(data$decile==1 | data$decile==2,1,data$quintile)
-# data$quintile <- ifelse(data$decile==3 | data$decile==4,2,data$quintile)
-# data$quintile <- ifelse(data$decile==5 | data$decile==6,3,data$quintile)
-# data$quintile <- ifelse(data$decile==7 | data$decile==8,4,data$quintile)
-# data$quintile <- ifelse(data$decile==9 | data$decile==10,5,data$quintile)
-#
-# data <- data[c("hogar","decile","quintile")]
-# concentradohogar <- left_join(concentradohogar,data,by="hogar")
-#
-# #saving data
-rev_nb <- "_rev8"
-output_file <- here("output", "data", "concentradohogar")
-save(concentradohogar, file = paste0(output_file, rev_nb, ".Rdata"))
-write.table(
-  concentradohogar,
-  file = paste0(output_file, rev_nb, ".csv"),
-  sep = ";",
-  col.names = TRUE,
-  row.names = FALSE
-)
-# rm(data)
+  # ---------------------------------------------------------
+  # Clean + feature engineering
+  # ---------------------------------------------------------
+  # This is by product types and support
+  agro_clean <- agro_raw |>
+    mutate(
+      hogar = str_c(folioviv, foliohog),
+      count_member = 1,
+
+      # actividad agricola y ganadera
+      # WARN: tipoact_agro = if_else(tipoact < 6, 1, 0)
+      # Il n'y a que de 4 à 9 comme activités dans AGRO (industries et services ne sont pas dedans)
+      tipoact_agro = if_else(tipoact %in% c(4, 5), 1, 0),
+
+      # cf. spec: some colunms are wrongly interpreted as lgl because only NA
+      across(starts_with("apoyo"), ~ replace_na(.x, 0)),
+      across(
+        c(
+          proagro,
+          progan,
+          starts_with("nvo_"),
+          ventas_tri,
+          auto_tri,
+          otros_tri,
+          ing_tri,
+          ero_tri
+        ),
+        ~ replace_na(.x, 0)
+      ),
+
+      # NOTE: SUPPORT from MONTHLY to YEARLY data
+
+      # Apoyo con pago (con necesidad de devolver la ayuda de vuelta)
+      # resp : Apoyo de gobierno federal, estatal, municipal, no gubernamental con pago
+      apoyo_pago = (apoyo_1 + apoyo_2 + apoyo_3 + apoyo_7) * 12,
+      # Apoyo sin pago (sin terner que devolverlo)
+      # resp : Apoyo de gobierno federal, estatal, municipal, no gubernamental sin pago
+      apoyo_npago = (apoyo_4 + apoyo_5 + apoyo_6 + apoyo_8) * 12,
+
+      #Apoyo Procampu y Progan
+      ## proagro: PROCAMPO / ProAgro / Bienestar
+      ## PROCAMPO se dirige al sector agrícola con pagos por hectárea de superficie elegible (basada en cultivos de 1993-1995),
+      ## progan: PROGAN
+      ## PROGAN apoya al sector pecuario mediante estímulos por unidad animal bajo condiciones de sustentabilidad y ordenamiento. Strangely, only NA in this column in the data
+      pro_agrogan = (proagro + progan) * 12,
+
+      #Total support from new social programmes
+      ## households could answer three diff kind of programs
+      nvo_tot = (nvo_cant1 + nvo_cant2 + nvo_cant3) * 12,
+
+      # Sembrando vida : 2001, 2002
+      # NOTE: Why are there two codes?
+      nvo1 = case_when(nvo_prog1 %in% c(2001, 2002) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2001, 2002) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2001, 2002) ~ nvo_cant3, TRUE ~ 0),
+      sembr_vida = (nvo1 + nvo2 + nvo3) * 12,
+      #Tandas para el Bienestar (Microcréditos para el Bienestar)
+      nvo1 = case_when(nvo_prog1 %in% c(2003, 2004) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2003, 2004) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2003, 2004) ~ nvo_cant3, TRUE ~ 0),
+      tand_bien = (nvo1 + nvo2 + nvo3) * 12,
+      # Agromercados Sociales y Sustentables
+      nvo1 = case_when(nvo_prog1 %in% c(2005, 2006) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2005, 2006) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2005, 2006) ~ nvo_cant3, TRUE ~ 0),
+      agromercados = (nvo1 + nvo2 + nvo3) * 12,
+      # Precios de garantia
+      nvo1 = case_when(nvo_prog1 %in% c(2007, 2008) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2007, 2008) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2007, 2008) ~ nvo_cant3, TRUE ~ 0),
+      precios_gar = (nvo1 + nvo2 + nvo3) * 12,
+      # Credito Ganadero a la Palabra (creditos)
+      nvo1 = case_when(nvo_prog1 %in% c(2009, 2010) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2009, 2010) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2009, 2010) ~ nvo_cant3, TRUE ~ 0),
+      credito_gan = (nvo1 + nvo2 + nvo3) * 12,
+      # Programa Nacional de Fertilizantes
+      nvo1 = case_when(nvo_prog1 %in% c(2011, 2012) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2011, 2012) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2011, 2012) ~ nvo_cant3, TRUE ~ 0),
+      nacion_fer = (nvo1 + nvo2 + nvo3) * 12,
+      # Desarollo rural
+      nvo1 = case_when(nvo_prog1 %in% c(2013, 2014) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2013, 2014) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2013, 2014) ~ nvo_cant3, TRUE ~ 0),
+      desarollo_rur = (nvo1 + nvo2 + nvo3) * 12,
+      # Otros programas
+      nvo1 = case_when(nvo_prog1 %in% c(2015, 2016) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2015, 2016) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2015, 2016) ~ nvo_cant3, TRUE ~ 0),
+      otros_prog = (nvo1 + nvo2 + nvo3) * 12,
+
+      #direct payments new social programmes (sin pago : sin necesidad de devolverlo)
+      nvo_tot_npago = sembr_vida +
+        agromercados +
+        precios_gar +
+        nacion_fer +
+        desarollo_rur +
+        otros_prog,
+
+      # NOTE: QUADRIMESTRIAL TO YEARLY data
+
+      # farm gross output, net income, direct payments
+      # Ingreso trimestral por ventas
+      # Autoconsumo trimestral
+      # Otros montos trimestral
+      # TODO: pour préciser dans présentation : turnover inclut autoconsommation y Otros montos no monetarios trimestrales (pago de trabajadores, deudas del negocio, deudas del hogar e intercambios)
+      size_val = (ventas_tri + auto_tri + otros_tri) * 4,
+
+      fni_year = (ing_tri - ero_tri) *
+        4 +
+        apoyo_npago +
+        pro_agrogan +
+        nvo_tot_npago,
+
+      support = apoyo_npago + pro_agrogan + nvo_tot_npago
+    )
+
+  # ---------------------------------------------------------
+  # Household aggregation
+  # ---------------------------------------------------------
+
+  agro <- agro_clean |>
+    group_by(hogar) |>
+    summarise(
+      n_act = sum(count_member), # nomber of different activities
+      n_fni = sum(fni_year),
+      auto_tri = sum(auto_tri), # value of self consumed production from AGRO
+      n_support = sum(support),
+      n_size_val = sum(size_val),
+
+      n_pro_agrogan = sum(pro_agrogan), # old support programs
+      n_nvo_tot = sum(nvo_tot_npago), # new support programs 
+      n_apoyo_npago = sum(apoyo_npago), # other kind of social programs
+
+      n_sembr_vida = sum(sembr_vida),
+      n_tand_bien = sum(tand_bien),
+      n_agromercados = sum(agromercados),
+      n_precios_gar = sum(precios_gar),
+      n_credito_gan = sum(credito_gan),
+      n_nacion_fert = sum(nacion_fer),
+      n_desarollo_rur = sum(desarollo_rur),
+      n_otros_prog = sum(otros_prog),
+      .groups = "drop"
+    ) |>
+    mutate(
+      #TODO : share autoconsumo à calculer dans part 2
+      # n_autoconsumo = if_else(n_size_val > 0, (auto_tri * 4) / n_size_val, 0),
+      #TODO: share apoyo a calculer dans part 2 (réintroduire au début +  vérifier : “entrate aziendali” = revenus/ressources d’exploitation et NON n_fni)
+      # n_apoyo = case_when(
+      #   n_size_val + n_support > 0 & n_size_val > 0 ~ n_support /
+      #     (n_size_val + n_support),
+      #   n_size_val + n_support > 0 & n_size_val == 0 ~ 1,
+      #   TRUE ~ 0
+      # ),
+
+      n_size_class = case_when(
+        n_size_val < 250001 ~ 1,
+        n_size_val < 500001 ~ 2,
+        n_size_val < 1000001 ~ 3,
+        n_size_val < 2000001 ~ 4,
+        n_size_val < 5000001 ~ 5,
+        n_size_val < 10000001 ~ 6,
+        TRUE ~ 7
+      )
+    )
+
+  # ---------------------------------------------------------
+  # Add farm type + market orientation
+  # ---------------------------------------------------------
+
+  agro <- agro |>
+    #importing farm type and market orientation from the agroproductos dataset
+    left_join(
+      agroproductos |>
+        select(hogar, n_tipo_prod, tipo_market),
+      by = "hogar"
+    ) |>
+    #importing selfconsumption from the agroconsumo dataset
+    left_join(
+      agroconsumo |>
+        select(hogar, valestim),
+      by = "hogar"
+    ) |>
+    mutate(
+      valestim = coalesce(valestim, 0),
+      # total output corrected with agroconsumo self-consumption
+      n_size_val2 = n_size_val - auto_tri * 4 + valestim
+      #TODO: share of self-consumption on total output : à calculer dans part2
+      # n_autoconsumo2 = if_else(
+      #   n_size_val2 > 0,
+      #   valestim / n_size_val2,
+      #   0
+      #)
+    )
+  #TODO: add the two measures of self consumption to final db
+  message(
+    "\n\n😀 AGRO now integrates valestim from AGROCONSUMO and n_tipo_prod/tipo_market from AGROPRODUCTO\n We have:\n 
+    * two measures for self-consumption, auto_tri*4 and valestim, \n 
+    * and hence two measures for total farm output"
+  )
+  # ---------------------------------------------------------
+  # Save
+  # ---------------------------------------------------------
+
+  saveRDS(
+    agro,
+    here("output", "data", "agro.rds")
+  )
+}
+
+# ETNIA
+{
+  etnia_raw <- readr::read_csv(
+    here(
+      "src",
+      "conjunto_de_datos_enigh_ns_2022_csv",
+      "conjunto_de_datos_poblacion_enigh2022_ns",
+      "conjunto_de_datos",
+      "conjunto_de_datos_poblacion_enigh2022_ns.csv"
+    )
+  )
+  spec(etnia_raw)
+
+  etnia <- etnia_raw |>
+    select(
+      folioviv,
+      foliohog,
+      parentesco,
+      etnia
+    ) |>
+    # keep only household head (jefe)
+    filter(parentesco == "101") |>
+    mutate(
+      #Variable to identify households
+      hogar = str_c(folioviv, foliohog)
+    ) |>
+    rename(
+      n_etnia = etnia
+    )
+
+  # ---------------------------------------------------------
+  # Save
+  # ---------------------------------------------------------
+
+  saveRDS(
+    etnia,
+    here("output", "data", "etnia.rds")
+  )
+
+  message("\n\nETNIA now available 🎉")
+}
+
+# CONCERN FOR FOOD
+{
+  alim_raw <- readr::read_csv(
+    here(
+      "src",
+      "conjunto_de_datos_enigh_ns_2022_csv",
+      "conjunto_de_datos_hogares_enigh2022_ns",
+      "conjunto_de_datos",
+      "conjunto_de_datos_hogares_enigh2022_ns.csv"
+    )
+  )
+  spec(alim_raw)
+
+  alim <- alim_raw |>
+    select(
+      folioviv,
+      foliohog,
+      acc_alim1
+    ) |>
+    mutate(
+      hogar = str_c(folioviv, foliohog)
+    ) |>
+    rename(
+      n_acc_alim1 = acc_alim1
+    )
+  # DEFINICION : Alguna vez por falta de dinero o recursos, se vio en la preocupación que la comida se acabara.
+  # PREGUNTA En los últimos tres meses, por falta de dinero o  recursos ¿alguna vez usted se preocupó de que la comida se acabara?
+  #
+  # ---------------------------------------------------------
+  # Save
+  # ---------------------------------------------------------
+
+  saveRDS(
+    alim,
+    here("output", "data", "alim.rds")
+  )
+  message("\n\nALIM now available 🎉")
+}
+
+#TODO:: check if the numbers in apoyo_1 etc sont nuls ou NA ou avec qchose et dans ce cas les rajouter ?
+
+# NOAGRO
+{
+  noagro_raw <- readr::read_csv(
+    here(
+      "src",
+      "conjunto_de_datos_enigh_ns_2022_csv",
+      "conjunto_de_datos_noagro_enigh2022_ns",
+      "conjunto_de_datos",
+      "conjunto_de_datos_noagro_enigh2022_ns.csv"
+    ),
+    # col_types = cols(.default = col_double())
+  )
+
+  spec(noagro_raw)
+
+  # ---------------------------------------------------------
+  # Clean + household identifier
+  # ---------------------------------------------------------
+
+  noagro_clean <- noagro_raw |>
+    select(
+      folioviv,
+      foliohog,
+      ing_tri,
+      ero_tri
+    ) |>
+    mutate(
+      hogar = str_c(folioviv, foliohog),
+
+      # annualized non-agricultural self-employed income
+      n_ingr_noagr = (ing_tri - ero_tri) * 4
+    )
+
+  # ---------------------------------------------------------
+  # Household-level aggregation
+  # ---------------------------------------------------------
+
+  noagro <- noagro_clean |>
+    group_by(hogar) |>
+    summarise(
+      n_ingr_noagr = sum(n_ingr_noagr, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  # ---------------------------------------------------------
+  # Save
+  # ---------------------------------------------------------
+
+  saveRDS(
+    noagro,
+    here("output", "data", "noagro.rds")
+  )
+  message("📋 self-employed NOAGRO is done !")
+}
+
+# CONCENTRADOHOGAR
+{
+  concentradohogar_raw <- readr::read_csv(
+    here(
+      "src",
+      "conjunto_de_datos_enigh_ns_2022_csv",
+      "conjunto_de_datos_concentradohogar_enigh2022_ns",
+      "conjunto_de_datos",
+      "conjunto_de_datos_concentradohogar_enigh2022_ns.csv"
+    )
+  )
+  spec(concentradohogar_raw)
+
+  # ---------------------------------------------------------
+  # Select + household identifier
+  # ---------------------------------------------------------
+
+  concentradohogar_clean <- concentradohogar_raw |>
+    select(
+      folioviv,
+      foliohog,
+      trabajo,
+      rentas,
+      transfer,
+      estim_alqu,
+      otros_ing
+    ) |>
+    mutate(
+      hogar = str_c(folioviv, foliohog)
+    )
+
+  # ---------------------------------------------------------
+  # Merge external datasets
+  # ---------------------------------------------------------
+
+  concentradohogar_enriched <- concentradohogar_clean |>
+    left_join(
+      agro |>
+        select(
+          hogar,
+          n_fni,
+          n_size_val,
+          n_size_class,
+          n_tipo_prod,
+          # n_autoconsumo,
+          # n_autoconsumo2,
+          # n_apoyo,
+          n_apoyo_npago,
+          n_pro_agrogan,
+          n_nvo_tot,
+          n_support,
+          n_sembr_vida,
+          n_tand_bien,
+          n_agromercados,
+          n_precios_gar,
+          n_credito_gan,
+          n_nacion_fert,
+          n_desarollo_rur,
+          n_otros_prog
+        ),
+      by = "hogar"
+    ) |>
+    left_join(
+      noagro |>
+        select(hogar, n_ingr_noagr),
+      by = "hogar"
+    ) |>
+    left_join(
+      etnia |>
+        select(hogar, n_etnia),
+      by = "hogar"
+    ) |>
+    left_join(
+      alim |>
+        select(hogar, n_acc_alim1),
+      by = "hogar"
+    ) |>
+    mutate(
+      across(
+        c(n_fni, n_ingr_noagr),
+        ~ coalesce(.x, 0) # avoid NA for non agri household
+      )
+    )
+
+  # ---------------------------------------------------------
+  # Income variables
+  # ---------------------------------------------------------
+
+  concentradohogar_features <- concentradohogar_enriched |>
+    mutate(
+      # annual income components
+      n_trabajo = trabajo * 4, #annual income from employed labour
+      n_rentas = rentas * 4, #annual income from owned assets
+      n_transfer = transfer * 4, #annual income from social and private transfers
+      n_estim_alqu = estim_alqu * 4, #annual implicit rent from property dwelling
+      n_otros_ing = otros_ing * 4, #other annual sources of income
+
+      # total current income
+      n_ing_cor = n_fni +
+        n_ingr_noagr +
+        n_trabajo +
+        n_rentas +
+        n_transfer +
+        n_estim_alqu +
+        n_otros_ing,
+
+      # households with farming activities
+      n_tipo_act = if_else(n_tipo_prod < 5, 1, 0) # exclusion : NA et primary non-farm
+    ) |>
+    select(
+      -folioviv,
+      -foliohog,
+      -trabajo,
+      -rentas,
+      -transfer,
+      -estim_alqu,
+      -otros_ing
+    )
+
+  # ---------------------------------------------------------
+  # Merge back with original dataset
+  # ---------------------------------------------------------
+
+  concentradohogar <- concentradohogar_raw |>
+    mutate(
+      hogar = str_c(folioviv, foliohog)
+    ) |>
+    left_join(
+      concentradohogar_features,
+      by = "hogar"
+    )
+
+  # ---------------------------------------------------------
+  # Save
+  # ---------------------------------------------------------
+
+  rev_nb <- "_rev8"
+
+  saveRDS(
+    concentradohogar,
+    here(
+      "output",
+      "data",
+      paste0("concentradohogar", rev_nb, ".rds")
+    )
+  )
+
+  message("\n\n𝍃 is it over? Concentradohogar served.")
+}
+
