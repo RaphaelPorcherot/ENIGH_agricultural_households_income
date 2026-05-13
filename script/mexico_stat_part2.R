@@ -156,18 +156,27 @@
 
 # LOADING and ADDING NEW VARIABLES
 {
-  # d7 <- read_csv2(here("output", "data", "concentradohogar_rev7.csv"))
+  d <- readRDS(
+    here("output", "data", "concentradohogar_rev8.rds")
+  )
+
+  # d7 <- read_csv2(here("output", "data", "_concentradohogar_rev7.csv"))
   # d7 |>
   #   summarise(
   #     min_total = min(n_ing_cor, na.rm = TRUE)
   #   )
+  #    d |>
+  #      summarise(
+  #        min_total = min(n_ing_cor, na.rm = TRUE)
+  #      )
+  #
   # d |>
-  #   summarise(
-  #     min_total = min(n_ing_cor, na.rm = TRUE)
-  #   )
-  d <- readRDS(
-    here("output", "data", "concentradohogar_rev8.rds")
-  )
+  #   summarise(mean = mean(n_ing_cor, na.rm = TRUE),
+  #             sd   = sd(n_ing_cor, na.rm = TRUE))
+  #
+  # d7 |>
+  #   summarise(mean = mean(n_ing_cor, na.rm = TRUE),
+  #             sd   = sd(n_ing_cor, na.rm = TRUE))
 
   d <- d |>
     # correcting negative income from autonomous (agri and not agri) employment

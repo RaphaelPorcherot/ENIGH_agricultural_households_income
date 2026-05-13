@@ -1,7 +1,8 @@
-#q#####################################################
 #PREPARING THE DATABASE FOR THE PILOT STUDY ON MEXICO#
 #April 2026                                          #
 ######################################################
+
+#TODO: somewhere, annualisation is not going well
 
 # AGROPRODUCTOS
 {
@@ -35,7 +36,7 @@
     ) |>
     mutate(
       hogar = stringr::str_c(folioviv, foliohog),
-      #NOTE: some codes are missing for instance 473 does not exist in original database
+      #WARN: some codes are missing for instance 473 does not exist in original database
       tipo = case_when(
         codigo < 230 ~ "agr", # 1 = crops
         codigo < 278 ~ "ani", # 2 = livestock
@@ -177,12 +178,42 @@
       )
     )
 
+  # display distrbution
+  # agroproductos |> group_by(n_tipo_prod) |> summarise(n=n())
+  hogar_product_but_no_production <- agroproductos |>
+    filter(n_tipo_prod == 0) |>
+    select(hogar) |>
+    pull()
+
+  test_product_but_no_production <- agroproductos_clean |>
+    filter(hogar %in% hogar_product_but_no_production) |>
+    distinct(cosecha) |>
+    pull()
+
+  if (test_product_but_no_production == 2) {
+    message(paste0(
+      "\n\n",
+      length(hogar_product_but_no_production),
+      " households with declared products but no actual production : they did not harvest! 🌾"
+    ))
+  } else {
+    stop(
+      "check households with product (n_ =/= 0) but no production (cant_ == 0) : some did harvest! Where has this production all gone?"
+    )
+  }
+
   n_na <- sum(is.na(agroproductos$n_tipo_prod))
 
   if (n_na > 0) {
-    stop(message(paste0("\n\n🐞 ERROR in AGROPRODUCTO: ", n_na, " missing types")))
+    stop(paste0(
+      "\n\n🐞 ERROR in AGROPRODUCTO: ",
+      n_na,
+      " missing types"
+    ))
   } else {
-    message("\n\n🆗 AGROPRODUCTO IS CORRECT: all farmers have a production type")
+    message(
+      "\n\n🆗 AGROPRODUCTO IS CORRECT: all farmers have a production type"
+    )
   }
   output_file <- here("output", "data", "agroproductos")
   saveRDS(agroproductos, paste0(output_file, ".rds"))
@@ -256,6 +287,7 @@
       # number of different types of self-consumed products
       n_tot = n_agr + n_ani + n_prodani + n_for + n_fis + n_hun,
       # estimated value of total self-consumption
+      # WARN: is valestim annual value ? For now we treat it as if it were the case
       valestim = val_agr + val_ani + val_prodani + val_for + val_fis + val_hun
     )
 
@@ -351,13 +383,11 @@
       ## progan: PROGAN
       ## PROGAN apoya al sector pecuario mediante estímulos por unidad animal bajo condiciones de sustentabilidad y ordenamiento. Strangely, only NA in this column in the data
       pro_agrogan = (proagro + progan) * 12,
-
       #Total support from new social programmes
       ## households could answer three diff kind of programs
       nvo_tot = (nvo_cant1 + nvo_cant2 + nvo_cant3) * 12,
-
       # Sembrando vida : 2001, 2002
-      # NOTE: Why are there two codes?
+      # WARN: Why are there two codes?
       nvo1 = case_when(nvo_prog1 %in% c(2001, 2002) ~ nvo_cant1, TRUE ~ 0),
       nvo2 = case_when(nvo_prog2 %in% c(2001, 2002) ~ nvo_cant2, TRUE ~ 0),
       nvo3 = case_when(nvo_prog3 %in% c(2001, 2002) ~ nvo_cant3, TRUE ~ 0),
@@ -433,12 +463,12 @@
     summarise(
       n_act = sum(count_member), # nomber of different activities
       n_fni = sum(fni_year),
-      auto_tri = sum(auto_tri), # value of self consumed production from AGRO
+      n_autoconsumo1 = sum(auto_tri) * 4, # value of self consumed production from AGRO
       n_support = sum(support),
-      n_size_val = sum(size_val),
+      n_size_val1 = sum(size_val),
 
       n_pro_agrogan = sum(pro_agrogan), # old support programs
-      n_nvo_tot = sum(nvo_tot_npago), # new support programs 
+      n_nvo_tot = sum(nvo_tot_npago), # new support programs
       n_apoyo_npago = sum(apoyo_npago), # other kind of social programs
 
       n_sembr_vida = sum(sembr_vida),
@@ -463,12 +493,12 @@
       # ),
 
       n_size_class = case_when(
-        n_size_val < 250001 ~ 1,
-        n_size_val < 500001 ~ 2,
-        n_size_val < 1000001 ~ 3,
-        n_size_val < 2000001 ~ 4,
-        n_size_val < 5000001 ~ 5,
-        n_size_val < 10000001 ~ 6,
+        n_size_val1 < 250001 ~ 1,
+        n_size_val1 < 500001 ~ 2,
+        n_size_val1 < 1000001 ~ 3,
+        n_size_val1 < 2000001 ~ 4,
+        n_size_val1 < 5000001 ~ 5,
+        n_size_val1 < 10000001 ~ 6,
         TRUE ~ 7
       )
     )
@@ -491,9 +521,9 @@
       by = "hogar"
     ) |>
     mutate(
-      valestim = coalesce(valestim, 0),
+      n_autoconsumo2 = coalesce(valestim, 0),
       # total output corrected with agroconsumo self-consumption
-      n_size_val2 = n_size_val - auto_tri * 4 + valestim
+      n_size_val2 = n_size_val1 - n_autoconsumo1 + n_autoconsumo2
       #TODO: share of self-consumption on total output : à calculer dans part2
       # n_autoconsumo2 = if_else(
       #   n_size_val2 > 0,
@@ -501,11 +531,11 @@
       #   0
       #)
     )
-  #TODO: add the two measures of self consumption to final db
+
   message(
     "\n\n😀 AGRO now integrates valestim from AGROCONSUMO and n_tipo_prod/tipo_market from AGROPRODUCTO\n We have:\n 
-    * two measures for self-consumption, auto_tri*4 and valestim, \n 
-    * and hence two measures for total farm output"
+    * two measures for self-consumption, n_autoconsumo1 = auto_tri*4 and n_autoconsumo2 = valestim, \n 
+    * and hence two measures for total farm output, n_size_val1 and n_size_val2"
   )
   # ---------------------------------------------------------
   # Save
@@ -526,7 +556,8 @@
       "conjunto_de_datos_poblacion_enigh2022_ns",
       "conjunto_de_datos",
       "conjunto_de_datos_poblacion_enigh2022_ns.csv"
-    )
+    ),
+    col_types = cols(.default = col_character())
   )
   spec(etnia_raw)
 
@@ -598,7 +629,7 @@
   message("\n\nALIM now available 🎉")
 }
 
-#TODO:: check if the numbers in apoyo_1 etc sont nuls ou NA ou avec qchose et dans ce cas les rajouter ?
+#TODO: check if the numbers in apoyo_1 etc sont nuls ou NA ou avec qchose et dans ce cas les rajouter ?
 
 # NOAGRO
 {
@@ -610,7 +641,7 @@
       "conjunto_de_datos",
       "conjunto_de_datos_noagro_enigh2022_ns.csv"
     ),
-    # col_types = cols(.default = col_double())
+    col_types = cols(.default = col_double())
   )
 
   spec(noagro_raw)
@@ -696,11 +727,12 @@
         select(
           hogar,
           n_fni,
-          n_size_val,
+          n_size_val1,
+          n_size_val2,
           n_size_class,
           n_tipo_prod,
-          # n_autoconsumo,
-          # n_autoconsumo2,
+          n_autoconsumo1,
+          n_autoconsumo2,
           # n_apoyo,
           n_apoyo_npago,
           n_pro_agrogan,
@@ -762,7 +794,13 @@
         n_otros_ing,
 
       # households with farming activities
-      n_tipo_act = if_else(n_tipo_prod < 5, 1, 0) # exclusion : NA et primary non-farm
+      n_tipo_act = case_when(
+        is.na(n_tipo_prod) ~ NA_real_,
+        n_tipo_prod %in% 1:4 ~ 1, # yes
+        n_tipo_prod == 5 ~ 2, # no
+        n_tipo_prod == 0 ~ 0, # no production yet (no harvest !)
+        TRUE ~ NA_real_
+      )
     ) |>
     select(
       -folioviv,
@@ -805,3 +843,69 @@
   message("\n\n𝍃 is it over? Concentradohogar served.")
 }
 
+# CONSISTENCY CHECK
+{
+  if (
+    nrow(agro |> count(hogar) |> filter(n > 1)) == 0 &
+      nrow(noagro |> count(hogar) |> filter(n > 1)) == 0 &
+      nrow(etnia |> count(hogar) |> filter(n > 1)) == 0 &
+      nrow(alim |> count(hogar) |> filter(n > 1)) == 0
+  ) {
+    message("\n\nno duplicated households in source databases 👌")
+  } else {
+    stop("\n\nOne of agro, noagro, etnia or alim has duplicated households")
+  }
+}
+
+# CREATE NEW VARIABLE DICTIONNARY (then manual edition of the .csv)
+{
+  vars_n <- sort(names(concentradohogar)[str_starts(
+    names(concentradohogar),
+    "n_"
+  )])
+
+  var_cat <- c(
+    "n_size_class",
+    "n_tipo_prod",
+    "n_etnia",
+    "n_acc_alim1",
+    "n_tipo_act"
+  )
+
+  dict <- purrr::map_dfr(vars_n, function(v) {
+    vals <- concentradohogar |> select(v)
+
+    if (v %in% var_cat) {
+      levels <- vals |> distinct() |> pull()
+      levels[is.na(levels)] <- "not applicable"
+      bind_rows(
+        tibble(
+          variable = v,
+          type = "categorical",
+          from_table = NA_character_,
+          level = NA_character_,
+          definition = NA_character_
+        ),
+        tibble(
+          variable = v,
+          type = "categorical",
+          from_table = NA_character_,
+          level = levels,
+          definition = NA_character_
+        )
+      )
+    } else {
+      tibble(
+        variable = v,
+        type = "numeric",
+        from_table = NA_character_,
+        level = NA_character_,
+        definition = NA_character_
+      )
+    }
+  })
+  dict <- dict |> arrange(type, variable)
+
+  today <- Sys.Date()
+  readr::write_csv(dict, str_c("dict_new_variables_", today, ".csv"), na = "")
+}
