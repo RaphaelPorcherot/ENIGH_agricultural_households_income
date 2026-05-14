@@ -442,16 +442,13 @@
       # Ingreso trimestral por ventas
       # Autoconsumo trimestral
       # Otros montos trimestral
+      # TODO: c'est quoi la relation entre ventas_tri et ing_tri ? identique ? différentes unités de mesures ? 
       # TODO: pour préciser dans présentation : turnover inclut autoconsommation y Otros montos no monetarios trimestrales (pago de trabajadores, deudas del negocio, deudas del hogar e intercambios)
       size_val = (ventas_tri + auto_tri + otros_tri) * 4,
 
-      fni_year = (ing_tri - ero_tri) *
-        4 +
-        apoyo_npago +
-        pro_agrogan +
-        nvo_tot_npago,
+      support = apoyo_npago + pro_agrogan + nvo_tot_npago,
 
-      support = apoyo_npago + pro_agrogan + nvo_tot_npago
+      fni_year = (ing_tri - ero_tri) * 4 + support
     )
 
   # ---------------------------------------------------------
@@ -631,6 +628,7 @@
 
 #TODO: check if the numbers in apoyo_1 etc sont nuls ou NA ou avec qchose et dans ce cas les rajouter ?
 
+
 # NOAGRO
 {
   noagro_raw <- readr::read_csv(
@@ -645,7 +643,7 @@
   )
 
   spec(noagro_raw)
-
+  # noagro_raw |> select(starts_with("nvo_")) |> distinct()
   # ---------------------------------------------------------
   # Clean + household identifier
   # ---------------------------------------------------------
@@ -864,48 +862,68 @@
     "n_"
   )])
 
-  var_cat <- c(
-    "n_size_class",
-    "n_tipo_prod",
-    "n_etnia",
-    "n_acc_alim1",
-    "n_tipo_act"
-  )
+  cur_dic <- read_csv("dict_new_variables.csv")
+  test_new_var <- !vars_n %in%
+    {
+      cur_dic |> select(variable) |> pull()
+    }
 
-  dict <- purrr::map_dfr(vars_n, function(v) {
-    vals <- concentradohogar |> select(v)
+  if (any(test_new_var)) {
+    var_cat <- c(
+      "n_size_class",
+      "n_tipo_prod",
+      "n_etnia",
+      "n_acc_alim1",
+      "n_tipo_act"
+    )
 
-    if (v %in% var_cat) {
-      levels <- vals |> distinct() |> pull()
-      levels[is.na(levels)] <- "not applicable"
-      bind_rows(
+    dict <- purrr::map_dfr(vars_n, function(v) {
+      vals <- concentradohogar |> select(v)
+
+      if (v %in% var_cat) {
+        levels <- vals |> distinct() |> pull()
+        levels[is.na(levels)] <- "not applicable"
+        bind_rows(
+          tibble(
+            variable = v,
+            type = "categorical",
+            from_table = NA_character_,
+            level = NA_character_,
+            definition = NA_character_
+          ),
+          tibble(
+            variable = v,
+            type = "categorical",
+            from_table = NA_character_,
+            level = levels,
+            definition = NA_character_
+          )
+        )
+      } else {
         tibble(
           variable = v,
-          type = "categorical",
+          type = "numeric",
           from_table = NA_character_,
           level = NA_character_,
           definition = NA_character_
-        ),
-        tibble(
-          variable = v,
-          type = "categorical",
-          from_table = NA_character_,
-          level = levels,
-          definition = NA_character_
         )
-      )
-    } else {
-      tibble(
-        variable = v,
-        type = "numeric",
-        from_table = NA_character_,
-        level = NA_character_,
-        definition = NA_character_
-      )
-    }
-  })
-  dict <- dict |> arrange(type, variable)
+      }
+    })
+    dict <- dict |> arrange(type, variable)
 
-  today <- Sys.Date()
-  readr::write_csv(dict, str_c("dict_new_variables_", today, ".csv"), na = "")
+    today <- Sys.Date()
+    readr::write_csv(dict, str_c("dict_new_variables_", today, ".csv"), na = "")
+
+    message(
+      str_c(
+        "\n\n❗️❗️ New variables detected. A new dictionnary file has been created.\n📖 Check "
+      ),
+      str_c("dict_new_variables_", today),
+      " and complete it with the description of the new variables"
+    )
+  } else {
+    message(
+      "\n\n 📖 No new variable has been created as a result of part 1.\n ✅ The dictionnary need not to be updated."
+    )
+  }
 }
