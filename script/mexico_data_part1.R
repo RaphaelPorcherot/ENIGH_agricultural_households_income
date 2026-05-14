@@ -442,7 +442,7 @@
       # Ingreso trimestral por ventas
       # Autoconsumo trimestral
       # Otros montos trimestral
-      # TODO: c'est quoi la relation entre ventas_tri et ing_tri ? identique ? différentes unités de mesures ? 
+      # TODO: c'est quoi la relation entre ventas_tri et ing_tri ? identique ? différentes unités de mesures ?
       # TODO: pour préciser dans présentation : turnover inclut autoconsommation y Otros montos no monetarios trimestrales (pago de trabajadores, deudas del negocio, deudas del hogar e intercambios)
       size_val = (ventas_tri + auto_tri + otros_tri) * 4,
 
@@ -626,9 +626,7 @@
   message("\n\nALIM now available 🎉")
 }
 
-#TODO: check if the numbers in apoyo_1 etc sont nuls ou NA ou avec qchose et dans ce cas les rajouter ?
-
-
+#WARN : there are stuff in nvo_poyo de 1 à 2, mais pas 3. Les rajouter ? 
 # NOAGRO
 {
   noagro_raw <- readr::read_csv(
