@@ -35,7 +35,7 @@
       val_venta
     ) |>
     mutate(
-      hogar = stringr::str_c(folioviv, foliohog, sep = "_"),
+      hogar = stringr::str_c(folioviv, foliohog),
       #WARN: some codes are missing for instance 473 does not exist in original database
       tipo = case_when(
         codigo < 230 ~ "agr", # 1 = crops
@@ -58,7 +58,7 @@
     group_by(hogar, tipo) |>
     summarise(
       n = sum(count_prod, na.rm = TRUE), # number of subtypes by production type
-      cant = sum(cantidad, na.rm = TRUE), # volume of production, in kg
+      cant = sum(cantidad, na.rm = TRUE), # volume of production
       cven = sum(cant_venta, na.rm = TRUE), # production sold
       val = sum(valor, na.rm = TRUE), # value of production
       ven = sum(val_venta, na.rm = TRUE), # value of sold production
@@ -246,7 +246,7 @@
       #TODO: we could add cantitad (to get volume of self-consumption in kg or L o piezas (il faudra prendre en % pour éliminer l'unité)
     ) |>
     mutate(
-      hogar = str_c(folioviv, foliohog, sep = "_"),
+      hogar = str_c(folioviv, foliohog),
       count_prod = 1,
 
       tipo = case_when(
@@ -344,7 +344,7 @@
   # This is by product types and support
   agro_clean <- agro_raw |>
     mutate(
-      hogar = str_c(folioviv, foliohog, sep = "_"),
+      hogar = str_c(folioviv, foliohog),
       count_member = 1,
 
       # actividad agricola y ganadera
@@ -569,7 +569,7 @@
     filter(parentesco == "101") |>
     mutate(
       #Variable to identify households
-      hogar = str_c(folioviv, foliohog, sep = "_")
+      hogar = str_c(folioviv, foliohog)
     ) |>
     rename(
       n_etnia = etnia
@@ -607,7 +607,7 @@
       acc_alim1
     ) |>
     mutate(
-      hogar = str_c(folioviv, foliohog, sep = "_")
+      hogar = str_c(folioviv, foliohog)
     ) |>
     rename(
       n_acc_alim1 = acc_alim1
@@ -626,7 +626,7 @@
   message("\n\nALIM now available 🎉")
 }
 
-#WARN : there are stuff in nvo_poyo de 1 à 2, mais pas 3. Les rajouter ?
+#WARN : there are stuff in nvo_poyo de 1 à 2, mais pas 3. Les rajouter ? 
 # NOAGRO
 {
   noagro_raw <- readr::read_csv(
@@ -654,7 +654,7 @@
       ero_tri
     ) |>
     mutate(
-      hogar = str_c(folioviv, foliohog, sep = "_"),
+      hogar = str_c(folioviv, foliohog),
 
       # annualized non-agricultural self-employed income
       n_ingr_noagr = (ing_tri - ero_tri) * 4
@@ -710,7 +710,7 @@
       otros_ing
     ) |>
     mutate(
-      hogar = str_c(folioviv, foliohog, sep = "_")
+      hogar = str_c(folioviv, foliohog)
     )
 
   # ---------------------------------------------------------
@@ -814,7 +814,7 @@
 
   concentradohogar <- concentradohogar_raw |>
     mutate(
-      hogar = str_c(folioviv, foliohog, sep = "_")
+      hogar = str_c(folioviv, foliohog)
     ) |>
     left_join(
       concentradohogar_features,

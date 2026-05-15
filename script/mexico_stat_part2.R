@@ -155,7 +155,7 @@
 }
 
 # LOADING and ADDING NEW VARIABLES
-{
+{#WARN: smg e : Salario mínimo general trimestralizado.
   d <- readRDS(
     here("output", "data", "concentradohogar_rev8.rds")
   )
@@ -173,18 +173,9 @@
     summarise(
       min_total = min(n_ing_cor, na.rm = TRUE)
     )
-
-  d |>
-    summarise(
-      mean = mean(n_ing_cor, na.rm = TRUE),
-      sd = sd(n_ing_cor, na.rm = TRUE)
-    )
-
-  d7 |>
-    summarise(
-      mean = mean(n_ing_cor, na.rm = TRUE),
-      sd = sd(n_ing_cor, na.rm = TRUE)
-    )
+d8 |> skim(n_ing_cor)
+d7 |> skim(n_ing_cor)
+d |> skim(n_ing_cor)
 
   d <- d |>
     # correcting negative income from autonomous (agri and not agri) employment
