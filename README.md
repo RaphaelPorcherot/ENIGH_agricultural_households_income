@@ -5,8 +5,8 @@
 Una volta che sei stato aggiunto come collaboratore su GitHub:
 
 ```bash
-git clone https://github.com/USER/REPO.git
-cd REPO
+git clone https://github.com/RaphaelPorcherot/INEGI_Mexico.git
+cd INEGI_Mexico
 ```
 
 Poi apri il progetto in RStudio (o VSCode).
