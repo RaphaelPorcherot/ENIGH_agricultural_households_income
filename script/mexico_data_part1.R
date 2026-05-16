@@ -2,7 +2,25 @@
 #April 2026                                          #
 ######################################################
 
-#TODO: somewhere, annualisation is not going well
+# WARN: agricultural households are defined from AGRO module only.
+# Households appearing exclusively in AGROPRODUCTOS or AGROCONSUMO
+# are excluded from the analytical sample.
+# IN AGRO we could do instead
+# hogares_agri <- bind_rows(
+#   hogar_agro,
+#   hogar_producto,
+#   hogar_consumo
+# ) %>%
+#   distinct(hogar)
+# But we would have a lot of NA, though the analysis would be more exhaustive
+
+# WARN: n_tipo_prod based on AGROPRODUCTO. But household in AGRO notin AGROPRODUCTOS will be classified as not agri because n_tipo_act will be NA. We are confusing lack of information and lack of activities (difficulty partially overcome with our definition of agri as an household that has at least n_fni in n_ing_cor)
+
+# WARN: tipoact_agro is unused
+#
+# Vérifier l’unicité des ménages dans concentradohogar
+# Sauvegarder les diagnostics d’univers et d’intersections
+# Documenter les hypothèses d’annualisation
 
 # AGROPRODUCTOS
 {
@@ -503,6 +521,13 @@
   # ---------------------------------------------------------
   # Add farm type + market orientation
   # ---------------------------------------------------------
+  # avoid silent explosions through joining operations
+  stopifnot(
+    agroproductos %>% count(hogar) %>% pull(n) %>% max() == 1
+  )
+  stopifnot(
+    agroconsumo %>% count(hogar) %>% pull(n) %>% max() == 1
+  )
 
   agro <- agro |>
     #importing farm type and market orientation from the agroproductos dataset
@@ -528,12 +553,134 @@
       #   0
       #)
     )
+  # |>
+  # # add provenance flags
+  # mutate(
+  #   in_agro = 1,
+  #   in_producto = if_else(!is.na(n_tipo_prod), 1, 0),
+  #   in_consumo = if_else(!is.na(valestim), 1, 0)
+  # )
+
+  message("\n\n❗️Size of joined datasets")
+  message("number of households in agroproductos : ", nrow(agroproductos))
+  message("number of households in agroconsumo : ", nrow(agroconsumo))
+  message("number of households in agro : ", nrow(agro))
+
+  #WARN: AGROPRODUCTOS, AGROCONSUMO and AGRO do not have the same hogares
+  hogar_agro <- agro %>% distinct(hogar)
+  hogar_producto <- agroproductos %>% distinct(hogar)
+  hogar_consumo <- agroconsumo %>% distinct(hogar)
+
+  # 1. agro only
+  agro_only <- hogar_agro %>%
+    anti_join(hogar_producto, by = "hogar") %>%
+    anti_join(hogar_consumo, by = "hogar")
+
+  # 2. agro + producto only
+  agro_producto_only <- hogar_agro %>%
+    inner_join(hogar_producto, by = "hogar") %>%
+    anti_join(hogar_consumo, by = "hogar")
+
+  # 3. agro + consumo only
+  agro_consumo_only <- hogar_agro %>%
+    inner_join(hogar_consumo, by = "hogar") %>%
+    anti_join(hogar_producto, by = "hogar")
+
+  # 4. agro + producto + consumo
+  all_three <- hogar_agro %>%
+    inner_join(hogar_producto, by = "hogar") %>%
+    inner_join(hogar_consumo, by = "hogar")
+
+  # 5. producto only
+  producto_only <- hogar_producto %>%
+    anti_join(hogar_agro, by = "hogar") %>%
+    anti_join(hogar_consumo, by = "hogar")
+
+  # 6. consumo only
+  consumo_only <- hogar_consumo %>%
+    anti_join(hogar_agro, by = "hogar") %>%
+    anti_join(hogar_producto, by = "hogar")
+
+  # 7. producto + consumo only
+  producto_consumo_only <- hogar_producto %>%
+    inner_join(hogar_consumo, by = "hogar") %>%
+    anti_join(hogar_agro, by = "hogar")
+
+  # Summary table
+  agro_overlap_diagnostics <- tibble(
+    category = c(
+      "agro only",
+      "agro + producto only",
+      "agro + consumo only",
+      "agro + producto + consumo",
+      "producto only",
+      "consumo only",
+      "producto + consumo only"
+    ),
+    n_households = c(
+      nrow(agro_only),
+      nrow(agro_producto_only),
+      nrow(agro_consumo_only),
+      nrow(all_three),
+      nrow(producto_only),
+      nrow(consumo_only),
+      nrow(producto_consumo_only)
+    )
+  )
+
+  print(agro_overlap_diagnostics)
+  saveRDS(
+    agro_overlap_diagnostics,
+    here(
+      "output",
+      "diagnostics",
+      "agro_overlap_diagnostics.rds"
+    )
+  )
+
+  readr::write_csv(
+    agro_overlap_diagnostics,
+    here(
+      "output",
+      "diagnostics",
+      "egro_overlap_diagnostics.csv"
+    )
+  )
 
   message(
     "\n\n😀 AGRO now integrates valestim from AGROCONSUMO and n_tipo_prod/tipo_market from AGROPRODUCTO\n We have:\n 
     * two measures for self-consumption, n_autoconsumo1 = auto_tri*4 and n_autoconsumo2 = valestim, \n 
-    * and hence two measures for total farm output, n_size_val1 and n_size_val2"
+    * and hence two measures for total farm output, n_size_val1 and n_size_val2\n\n
+    ❗️ There are ",
+    nrow(agroconsumo),
+    " households only in agroconsumo.\n
+    This is ",
+    nrow(agro) - nrow(agroconsumo),
+    " less households than in agro.\n
+    The measure of self-consumption n_autoconsumo2 is likely to be less relevant than n_autoconsumo1."
   )
+
+  test_cor <- agro |> select(n_autoconsumo1, n_autoconsumo2)
+
+  message("\nComparison of n_autoconsumo1 and n_autoconsumo2\n")
+
+  test_cor |> summary(n_autoconsumo1 - n_autoconsumo2)
+
+  test_cor |>
+    mutate(
+      diff = n_autoconsumo1 - n_autoconsumo2
+    ) |>
+    summarise(
+      corr = cor(
+        n_autoconsumo1,
+        n_autoconsumo2,
+        use = "complete.obs"
+      ),
+      mean_diff = mean(diff, na.rm = TRUE),
+      median_diff = median(diff, na.rm = TRUE),
+      p90_diff = quantile(diff, .9, na.rm = TRUE)
+    )
+
   # ---------------------------------------------------------
   # Save
   # ---------------------------------------------------------
@@ -574,6 +721,11 @@
     rename(
       n_etnia = etnia
     )
+  # |>
+  # # add provenance flags
+  # mutate(
+  #   in_etnia = 1
+  # )
 
   # ---------------------------------------------------------
   # Save
@@ -612,6 +764,11 @@
     rename(
       n_acc_alim1 = acc_alim1
     )
+  # |> # add provenance flags
+  # mutate(
+  #   in_alim = 1
+  # )
+
   # DEFINICION : Alguna vez por falta de dinero o recursos, se vio en la preocupación que la comida se acabara.
   # PREGUNTA En los últimos tres meses, por falta de dinero o  recursos ¿alguna vez usted se preocupó de que la comida se acabara?
   #
@@ -670,6 +827,10 @@
       n_ingr_noagr = sum(n_ingr_noagr, na.rm = TRUE),
       .groups = "drop"
     )
+  # |> # add provenance flags
+  # mutate(
+  #   in_noagro = 1
+  # )
 
   # ---------------------------------------------------------
   # Save
@@ -716,6 +877,20 @@
   # ---------------------------------------------------------
   # Merge external datasets
   # ---------------------------------------------------------
+
+  # Avoid silent explosion through joining operations
+  stopifnot(
+    agro %>% count(hogar) %>% pull(n) %>% max() == 1
+  )
+  stopifnot(
+    noagro %>% count(hogar) %>% pull(n) %>% max() == 1
+  )
+  stopifnot(
+    etnia %>% count(hogar) %>% pull(n) %>% max() == 1
+  )
+  stopifnot(
+    alim %>% count(hogar) %>% pull(n) %>% max() == 1
+  )
 
   concentradohogar_enriched <- concentradohogar_clean |>
     left_join(
@@ -812,6 +987,11 @@
   # Merge back with original dataset
   # ---------------------------------------------------------
 
+  # Avoid silent explosion through joining operations
+  stopifnot(
+    concentradohogar_features %>% count(hogar) %>% pull(n) %>% max() == 1
+  )
+
   concentradohogar <- concentradohogar_raw |>
     mutate(
       hogar = str_c(folioviv, foliohog, sep = "_")
@@ -851,6 +1031,171 @@
   } else {
     stop("\n\nOne of agro, noagro, etnia or alim has duplicated households")
   }
+}
+
+# DIAGNOSE UNIVERSES and PROVENANCE FLAGS
+{
+  hogar_concentrado <- concentradohogar_clean %>%
+    distinct(hogar)
+
+  hogar_agro <- agro %>%
+    distinct(hogar)
+
+  hogar_producto <- agroproductos %>%
+    distinct(hogar)
+
+  hogar_consumo <- agroconsumo %>%
+    distinct(hogar)
+
+  hogar_noagro <- noagro %>%
+    distinct(hogar)
+
+  hogar_etnia <- etnia %>%
+    distinct(hogar)
+
+  hogar_alim <- alim %>%
+    distinct(hogar)
+
+  # diagnostics functions
+
+  diagnostic_universe <- function(
+    data_hogar,
+    data_name,
+    ref_hogar = hogar_concentrado
+  ) {
+    # households outside concentradohogar
+    outside_ref <- data_hogar %>%
+      anti_join(ref_hogar, by = "hogar")
+
+    n_outside <- nrow(outside_ref)
+
+    # fatal error
+    if (n_outside > 0) {
+      stop(
+        paste0(
+          "\n\n🚨 CRITICAL ERROR: ",
+          n_outside,
+          " households from ",
+          data_name,
+          " are absent from CONCENTRADOHOGAR."
+        )
+      )
+    }
+
+    # households included in concentradohogar
+    n_included <- data_hogar %>%
+      semi_join(ref_hogar, by = "hogar") %>%
+      nrow()
+
+    tibble(
+      dataset = data_name,
+      n_households = nrow(data_hogar),
+      n_in_concentrado = n_included,
+      share_concentrado = round(
+        100 * n_included / nrow(ref_hogar),
+        2
+      ),
+      n_outside_concentrado = n_outside
+    )
+  }
+
+  universe_diagnostics <- bind_rows(
+    diagnostic_universe(
+      hogar_agro,
+      "agro"
+    ),
+
+    diagnostic_universe(
+      hogar_producto,
+      "agroproductos"
+    ),
+
+    diagnostic_universe(
+      hogar_consumo,
+      "agroconsumo"
+    ),
+
+    diagnostic_universe(
+      hogar_noagro,
+      "noagro"
+    ),
+
+    diagnostic_universe(
+      hogar_etnia,
+      "etnia"
+    ),
+
+    diagnostic_universe(
+      hogar_alim,
+      "alim"
+    )
+  )
+
+  universe_diagnostics <- bind_rows(
+    tibble(
+      dataset = "concentradohogar",
+      n_households = nrow(hogar_concentrado),
+      n_in_concentrado = nrow(hogar_concentrado),
+      share_concentrado = 100,
+      n_outside_concentrado = 0
+    ),
+    universe_diagnostics
+  )
+
+  message("\n\n📋 Universe diagnostics")
+  print(universe_diagnostics)
+
+  saveRDS(
+    universe_diagnostics,
+    here(
+      "output",
+      "diagnostics",
+      "universe_diagnostics.rds"
+    )
+  )
+
+  readr::write_csv(
+    universe_diagnostics,
+    here(
+      "output",
+      "diagnostics",
+      "universe_diagnostics.csv"
+    )
+  )
+
+  concentradohogar_enriched <- concentradohogar_clean |>
+    mutate(
+      in_producto = if_else(
+        hogar %in% hogar_producto$hogar,
+        1,
+        0
+      ),
+      in_consumo = if_else(
+        hogar %in% hogar_consumo$hogar,
+        1,
+        0
+      ),
+      in_agro = if_else(
+        hogar %in% hogar_agro$hogar,
+        1,
+        0
+      ),
+      in_etnia = if_else(
+        hogar %in% hogar_etnia$hogar,
+        1,
+        0
+      ),
+      in_alim = if_else(
+        hogar %in% hogar_alim$hogar,
+        1,
+        0
+      ),
+      in_noagro = if_else(
+        hogar %in% hogar_noagro$hogar,
+        1,
+        0
+      )
+    )
 }
 
 # CREATE NEW VARIABLE DICTIONNARY (then manual edition of the .csv)
