@@ -22,7 +22,7 @@ n_tipo_act,categorical,AGROPRODUCTO,1,yes
 n_tipo_act,categorical,AGROPRODUCTO,2,no
 n_tipo_prod,categorical,AGROPRODUCTO,,type of agricultural activities
 n_tipo_prod,categorical,AGROPRODUCTO,NA,no agropastoral activities
-n_tipo_prod,categorical,AGROPRODUCTO,0,np production yet (declared products but no harvest yet)
+n_tipo_prod,categorical,AGROPRODUCTO,0,no production yet (declared products but no harvest yet)
 n_tipo_prod,categorical,AGROPRODUCTO,1,crop farms
 n_tipo_prod,categorical,AGROPRODUCTO,2,livestock farms
 n_tipo_prod,categorical,AGROPRODUCTO,3,mixed crops-livestock farms

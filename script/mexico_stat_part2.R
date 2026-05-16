@@ -155,28 +155,29 @@
 }
 
 # LOADING and ADDING NEW VARIABLES
-{#WARN: smg e : Salario mínimo general trimestralizado.
+{
+  #WARN: smg e : Salario mínimo general trimestralizado.
   d <- readRDS(
     here("output", "data", "concentradohogar_rev8.rds")
   )
-  d8 <- read_csv2(here("output", "data", "_concentradohogar_rev8.csv"))
-  d7 <- read_csv2(here("output", "data", "_concentradohogar_rev7.csv"))
-  d8 |>
-    summarise(
-      min_total = min(n_ing_cor, na.rm = TRUE)
-    )
-  d7 |>
-    summarise(
-      min_total = min(n_ing_cor, na.rm = TRUE)
-    )
-  d |>
-    summarise(
-      min_total = min(n_ing_cor, na.rm = TRUE)
-    )
-d8 |> skim(n_ing_cor)
-d7 |> skim(n_ing_cor)
-d |> skim(n_ing_cor)
-
+  # d8 <- read_csv2(here("output", "data", "_concentradohogar_rev8.csv"))
+  # d7 <- read_csv2(here("output", "data", "_concentradohogar_rev7.csv"))
+  # d8 |>
+  #   summarise(
+  #     min_total = min(n_ing_cor, na.rm = TRUE)
+  #   )
+  # d7 |>
+  #   summarise(
+  #     min_total = min(n_ing_cor, na.rm = TRUE)
+  #   )
+  # d |>
+  #   summarise(
+  #     min_total = min(n_ing_cor, na.rm = TRUE)
+  #   )
+  # d8 |> skim(n_ing_cor)
+  # d7 |> skim(n_ing_cor)
+  # d |> skim(n_ing_cor)
+  #
   d <- d |>
     # correcting negative income from autonomous (agri and not agri) employment
     mutate(
@@ -194,6 +195,7 @@ d |> skim(n_ing_cor)
         n_ingr_noagr_clean,
       # human readable production types
       n_tipo_prod = case_when(
+        n_tipo_prod == "0" ~ "No harvest yet",
         n_tipo_prod == "1" ~ "Crops",
         n_tipo_prod == "2" ~ "Livestock",
         n_tipo_prod == "3" ~ "Mixed crops-livestock",
@@ -294,13 +296,22 @@ d |> skim(n_ing_cor)
       type_agroproducto = "has a farm"
     )
 
-  # NON AGRI but with production activities in 1 to 4 : no farm income, but farm product
-  non_agri_with_prod <- d |>
-    filter(n_tipo_act %in% c(1, 0) & is_agri == "not_agri") |>
+  # NON AGRI but with production activities in 1 to 4 : no farm income, but harvested farm product
+  non_agri_with_harvested_prod <- d |>
+    filter(n_tipo_act == 1 & is_agri == "not_agri") |>
     summarise(sum = sum(factor), n = n()) |>
     mutate(
       type_income = "no farm income",
-      type_agroproducto = "has farm production"
+      type_agroproducto = "has harvested farm production"
+    )
+
+  # NON AGRI but with production activities in 0 : no farm income, declared product but no harvested farm product
+  non_agri_with_no_harvested_prod <- d |>
+    filter(n_tipo_act == 0 & is_agri == "not_agri") |>
+    summarise(sum = sum(factor), n = n()) |>
+    mutate(
+      type_income = "no farm income",
+      type_agroproducto = "declared products, but no harvest yet"
     )
 
   # This does not require a correction (they are already included)
@@ -310,23 +321,34 @@ d |> skim(n_ing_cor)
     summarise(sum = sum(factor), n = n()) |>
     mutate(
       type_income = "farm income",
-      type_agroproducto = "has no farm production"
+      type_agroproducto = "has no declared product, nor farm production"
     )
 
   # AGRI but production activities in AGROPRODUCTO of type 5 = "PRIMARY NON FARM": farm income, no farm production
   agri_with_primary_non_farm_prod <- d |>
-    filter(n_tipo_act == 0 & is_agri != "not_agri") |>
+    filter(n_tipo_act == 5 & is_agri != "not_agri") |>
     summarise(sum = sum(factor), n = n()) |>
     mutate(
       type_income = "farm income",
       type_agroproducto = "has primary non farm production"
     )
 
+  # AGRI but production activities in AGROPRODUCTO of type 0 = no harvest yet, farm income, declared product, no production yet
+  agri_with_no_harvested_prod <- d |>
+    filter(n_tipo_act == 0 & is_agri != "not_agri") |>
+    summarise(sum = sum(factor), n = n()) |>
+    mutate(
+      type_income = "farm income",
+      type_agroproducto = "declared products, but no harvest yet"
+    )
+
   edge_cases <- bind_rows(
     non_agri_with_farm,
-    non_agri_with_prod,
+    non_agri_with_harvested_prod,
+    non_agri_with_no_harvested_prod,
+    agri_with_no_prod,
     agri_with_primary_non_farm_prod,
-    agri_with_no_prod
+    agri_with_no_harvested_prod
   ) |>
     mutate(
       sum_total = d |>
@@ -340,6 +362,11 @@ d |> skim(n_ing_cor)
     ) |>
     select(type_income, type_agroproducto, everything(), -sum_total, n_total)
 
+  message( "\n\n-----------------------\nEdges cases found:\n")
+  edge_cases
+  message("-----------------------\n\n")
+
+  # d |> filter(n_tipo_act == 0)  |> count()
   # Dealing with non farmer
   d <- d |>
     mutate(
@@ -510,7 +537,7 @@ mysvyr <- d_UC |> as_survey_design(upm, strata = est_dis, weights = factor)
     ) +
     labs(
       title = "Decile cut-off for annual income and confidence intervals at 99%",
-      subtitle = "Square root equivalence scale",
+subtitle = "Square root equivalence scale",
       x = "Income deciles",
       y = "Current income per capita (million MXN)"
     ) +

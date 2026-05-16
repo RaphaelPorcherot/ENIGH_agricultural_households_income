@@ -2,25 +2,11 @@
 #April 2026                                          #
 ######################################################
 
-# WARN: agricultural households are defined from AGRO module only.
-# Households appearing exclusively in AGROPRODUCTOS or AGROCONSUMO
-# are excluded from the analytical sample.
-# IN AGRO we could do instead
-# hogares_agri <- bind_rows(
-#   hogar_agro,
-#   hogar_producto,
-#   hogar_consumo
-# ) %>%
-#   distinct(hogar)
-# But we would have a lot of NA, though the analysis would be more exhaustive
-
-# WARN: n_tipo_prod based on AGROPRODUCTO. But household in AGRO notin AGROPRODUCTOS will be classified as not agri because n_tipo_act will be NA. We are confusing lack of information and lack of activities (difficulty partially overcome with our definition of agri as an household that has at least n_fni in n_ing_cor)
-
+#INFO: we had issue with the key hogar : now solved, by setting its type explicitely to characer(). all hogares are in concentradohogar.
+# WARN: n_tipo_prod based on AGROPRODUCTO. But household in AGRO not in AGROPRODUCTOS will be classified as not agri because n_tipo_act will be NA. We are confusing lack of information and lack of activities (difficulty partially overcome with our definition of agri as an household that has at least n_fni in n_ing_cor)
 # WARN: tipoact_agro is unused
-#
-# Vérifier l’unicité des ménages dans concentradohogar
-# Sauvegarder les diagnostics d’univers et d’intersections
-# Documenter les hypothèses d’annualisation
+# TODO: Documenter les hypothèses d’annualisation
+
 
 # AGROPRODUCTOS
 {
@@ -31,6 +17,10 @@
       "conjunto_de_datos_agroproductos_enigh2022_ns",
       "conjunto_de_datos",
       "conjunto_de_datos_agroproductos_enigh2022_ns.csv"
+    ),
+    col_types = cols(
+      folioviv = col_character(),
+      foliohog = col_character()
     )
   )
   spec(agroproductos_raw)
@@ -246,6 +236,10 @@
       "conjunto_de_datos_agroconsumo_enigh2022_ns",
       "conjunto_de_datos",
       "conjunto_de_datos_agroconsumo_enigh2022_ns.csv"
+    ),
+    col_types = cols(
+      folioviv = col_character(),
+      foliohog = col_character()
     )
   )
 
@@ -351,7 +345,11 @@
       "conjunto_de_datos",
       "conjunto_de_datos_agro_enigh2022_ns.csv"
     ),
-    col_types = cols(.default = col_double())
+    col_types = cols(
+      .default = col_double(),
+      folioviv = col_character(),
+      foliohog = col_character()
+    )
   )
 
   spec(agro_raw)
@@ -660,27 +658,6 @@
     The measure of self-consumption n_autoconsumo2 is likely to be less relevant than n_autoconsumo1."
   )
 
-  test_cor <- agro |> select(n_autoconsumo1, n_autoconsumo2)
-
-  message("\nComparison of n_autoconsumo1 and n_autoconsumo2\n")
-
-  test_cor |> summary(n_autoconsumo1 - n_autoconsumo2)
-
-  test_cor |>
-    mutate(
-      diff = n_autoconsumo1 - n_autoconsumo2
-    ) |>
-    summarise(
-      corr = cor(
-        n_autoconsumo1,
-        n_autoconsumo2,
-        use = "complete.obs"
-      ),
-      mean_diff = mean(diff, na.rm = TRUE),
-      median_diff = median(diff, na.rm = TRUE),
-      p90_diff = quantile(diff, .9, na.rm = TRUE)
-    )
-
   # ---------------------------------------------------------
   # Save
   # ---------------------------------------------------------
@@ -701,7 +678,11 @@
       "conjunto_de_datos",
       "conjunto_de_datos_poblacion_enigh2022_ns.csv"
     ),
-    col_types = cols(.default = col_character())
+    col_types = cols(
+      .default = col_character(),
+      folioviv = col_character(),
+      foliohog = col_character()
+    )
   )
   spec(etnia_raw)
 
@@ -748,6 +729,10 @@
       "conjunto_de_datos_hogares_enigh2022_ns",
       "conjunto_de_datos",
       "conjunto_de_datos_hogares_enigh2022_ns.csv"
+    ),
+    col_types = cols(
+      folioviv = col_character(),
+      foliohog = col_character()
     )
   )
   spec(alim_raw)
@@ -794,7 +779,11 @@
       "conjunto_de_datos",
       "conjunto_de_datos_noagro_enigh2022_ns.csv"
     ),
-    col_types = cols(.default = col_double())
+    col_types = cols(
+      .default = col_double(),
+      folioviv = col_character(),
+      foliohog = col_character()
+    )
   )
 
   spec(noagro_raw)
@@ -852,6 +841,11 @@
       "conjunto_de_datos_concentradohogar_enigh2022_ns",
       "conjunto_de_datos",
       "conjunto_de_datos_concentradohogar_enigh2022_ns.csv"
+    ),
+    col_types = cols(
+      # .default = col_double(),
+      folioviv = col_character(),
+      foliohog = col_character()
     )
   )
   spec(concentradohogar_raw)
@@ -875,6 +869,65 @@
     )
 
   # ---------------------------------------------------------
+  # PROVENANCE FLAGS
+  # ---------------------------------------------------------
+
+  hogar_concentrado <- concentradohogar_clean %>%
+    distinct(hogar)
+
+  hogar_agro <- agro %>%
+    distinct(hogar)
+
+  hogar_producto <- agroproductos %>%
+    distinct(hogar)
+
+  hogar_consumo <- agroconsumo %>%
+    distinct(hogar)
+
+  hogar_noagro <- noagro %>%
+    distinct(hogar)
+
+  hogar_etnia <- etnia %>%
+    distinct(hogar)
+
+  hogar_alim <- alim %>%
+    distinct(hogar)
+
+  concentradohogar_flag <- concentradohogar_clean |>
+    mutate(
+      in_producto = if_else(
+        hogar %in% hogar_producto$hogar,
+        1,
+        0
+      ),
+      in_consumo = if_else(
+        hogar %in% hogar_consumo$hogar,
+        1,
+        0
+      ),
+      in_agro = if_else(
+        hogar %in% hogar_agro$hogar,
+        1,
+        0
+      ),
+      in_etnia = if_else(
+        hogar %in% hogar_etnia$hogar,
+        1,
+        0
+      ),
+      in_alim = if_else(
+        hogar %in% hogar_alim$hogar,
+        1,
+        0
+      ),
+      in_noagro = if_else(
+        hogar %in% hogar_noagro$hogar,
+        1,
+        0
+      )
+    )
+
+  # ---------------------------------------------------------
   # Merge external datasets
   # ---------------------------------------------------------
 
@@ -892,7 +945,7 @@
     alim %>% count(hogar) %>% pull(n) %>% max() == 1
   )
 
-  concentradohogar_enriched <- concentradohogar_clean |>
+  concentradohogar_enriched <- concentradohogar_flag |>
     left_join(
       agro |>
         select(
@@ -904,7 +957,7 @@
           n_tipo_prod,
           n_autoconsumo1,
           n_autoconsumo2,
-          # n_apoyo,
+          # n_apoyo, -> now in part2, based on n_support / n_ing_cor
           n_apoyo_npago,
           n_pro_agrogan,
           n_nvo_tot,
@@ -1033,30 +1086,19 @@
   }
 }
 
-# DIAGNOSE UNIVERSES and PROVENANCE FLAGS
+# DIAGNOSE UNIVERSES
 {
-  hogar_concentrado <- concentradohogar_clean %>%
-    distinct(hogar)
+  message("\nHouseholds in concentradohogar: ", nrow(concentradohogar))
+  message("\nHouseholds in alim: ", nrow(alim))
+  message("\nHouseholds in etnia: ", nrow(etnia))
+  message("\nHouseholds in noagro: ", nrow(noagro))
+  message("\nHouseholds in agro: ", nrow(agro))
+  message("\nHouseholds in agroproductos: ", nrow(agroproductos))
+  message("\nHouseholds in agroconsumo: ", nrow(agroconsumo))
 
-  hogar_agro <- agro %>%
-    distinct(hogar)
-
-  hogar_producto <- agroproductos %>%
-    distinct(hogar)
-
-  hogar_consumo <- agroconsumo %>%
-    distinct(hogar)
-
-  hogar_noagro <- noagro %>%
-    distinct(hogar)
-
-  hogar_etnia <- etnia %>%
-    distinct(hogar)
-
-  hogar_alim <- alim %>%
-    distinct(hogar)
-
-  # diagnostics functions
+  message("\n-----------------------------------\n")
+  print(agro_overlap_diagnostics)
+  message("\n-----------------------------------\n")
 
   diagnostic_universe <- function(
     data_hogar,
@@ -1143,7 +1185,7 @@
   )
 
   message("\n\n📋 Universe diagnostics")
-  print(universe_diagnostics)
+  print(universe_diagnostics, width = Inf)
 
   saveRDS(
     universe_diagnostics,
@@ -1162,40 +1204,31 @@
       "universe_diagnostics.csv"
     )
   )
+}
 
-  concentradohogar_enriched <- concentradohogar_clean |>
-    mutate(
-      in_producto = if_else(
-        hogar %in% hogar_producto$hogar,
-        1,
-        0
-      ),
-      in_consumo = if_else(
-        hogar %in% hogar_consumo$hogar,
-        1,
-        0
-      ),
-      in_agro = if_else(
-        hogar %in% hogar_agro$hogar,
-        1,
-        0
-      ),
-      in_etnia = if_else(
-        hogar %in% hogar_etnia$hogar,
-        1,
-        0
-      ),
-      in_alim = if_else(
-        hogar %in% hogar_alim$hogar,
-        1,
-        0
-      ),
-      in_noagro = if_else(
-        hogar %in% hogar_noagro$hogar,
-        1,
-        0
+# CORRELATION BETWEEN the two measures of self-consumption
+{
+  test_cor <- agro |> select(n_autoconsumo1, n_autoconsumo2)
+
+  message("\nComparison of n_autoconsumo1 and n_autoconsumo2\n")
+
+  print(test_cor |> summary(n_autoconsumo1 - n_autoconsumo2))
+  print(
+    test_cor |>
+      mutate(
+        diff = n_autoconsumo1 - n_autoconsumo2
+      ) |>
+      summarise(
+        corr = cor(
+          n_autoconsumo1,
+          n_autoconsumo2,
+          use = "complete.obs"
+        ),
+        mean_diff = mean(diff, na.rm = TRUE),
+        median_diff = median(diff, na.rm = TRUE),
+        p90_diff = quantile(diff, .9, na.rm = TRUE)
       )
-    )
+  )
 }
 
 # CREATE NEW VARIABLE DICTIONNARY (then manual edition of the .csv)
