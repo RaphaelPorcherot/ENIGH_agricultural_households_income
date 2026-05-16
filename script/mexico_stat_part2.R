@@ -363,8 +363,25 @@
     select(type_income, type_agroproducto, everything(), -sum_total, n_total)
 
   message( "\n\n-----------------------\nEdges cases found:\n")
-  edge_cases
+  print(edge_cases, width=Inf)
   message("-----------------------\n\n")
+
+    saveRDS(
+    edge_cases,
+    here(
+      "output",
+      "diagnostics",
+      "edges_cases.rds"
+    )
+  )
+  readr::write_csv(
+    edge_cases,
+    here(
+      "output",
+      "diagnostics",
+      "edge_cases.csv"
+    )
+  )
 
   # d |> filter(n_tipo_act == 0)  |> count()
   # Dealing with non farmer

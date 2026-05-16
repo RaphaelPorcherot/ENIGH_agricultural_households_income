@@ -7,7 +7,6 @@
 # WARN: tipoact_agro is unused
 # TODO: Documenter les hypothèses d’annualisation
 
-
 # AGROPRODUCTOS
 {
   agroproductos_raw <- readr::read_csv(
@@ -769,6 +768,7 @@
 }
 
 #WARN : there are stuff in nvo_poyo de 1 à 2, mais pas 3. Les rajouter ?
+
 # NOAGRO
 {
   noagro_raw <- readr::read_csv(
@@ -1208,26 +1208,66 @@
 
 # CORRELATION BETWEEN the two measures of self-consumption
 {
+  # WARN: what do we do about that ?
   test_cor <- agro |> select(n_autoconsumo1, n_autoconsumo2)
 
   message("\nComparison of n_autoconsumo1 and n_autoconsumo2\n")
+  summary <- as_tibble(
+    test_cor |> summary(n_autoconsumo1 - n_autoconsumo2),
+    .name_repair = "unique"
+  )
 
-  print(test_cor |> summary(n_autoconsumo1 - n_autoconsumo2))
-  print(
-    test_cor |>
-      mutate(
-        diff = n_autoconsumo1 - n_autoconsumo2
-      ) |>
-      summarise(
-        corr = cor(
-          n_autoconsumo1,
-          n_autoconsumo2,
-          use = "complete.obs"
-        ),
-        mean_diff = mean(diff, na.rm = TRUE),
-        median_diff = median(diff, na.rm = TRUE),
-        p90_diff = quantile(diff, .9, na.rm = TRUE)
-      )
+  print(summary)
+
+  cor <- test_cor |>
+    mutate(
+      diff = n_autoconsumo1 - n_autoconsumo2
+    ) |>
+    summarise(
+      corr = cor(
+        n_autoconsumo1,
+        n_autoconsumo2,
+        use = "complete.obs"
+      ),
+      mean_diff = mean(diff, na.rm = TRUE),
+      median_diff = median(diff, na.rm = TRUE),
+      p90_diff = quantile(diff, .9, na.rm = TRUE)
+    )
+
+  print(cor)
+
+  saveRDS(
+    summary,
+    here(
+      "output",
+      "diagnostics",
+      "summary_autoconsumo1_2.rds"
+    )
+  )
+  readr::write_csv(
+    summary,
+    here(
+      "output",
+      "diagnostics",
+      "summary_autoconsumo1_2.csv"
+    )
+  )
+
+  saveRDS(
+    cor,
+    here(
+      "output",
+      "diagnostics",
+      "cor_autoconsumo1_2.rds"
+    )
+  )
+  readr::write_csv(
+    summary,
+    here(
+      "output",
+      "diagnostics",
+      "cor_autoconsumo1_2.csv"
+    )
   )
 }
 
