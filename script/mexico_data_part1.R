@@ -2,10 +2,9 @@
 #April 2026                                          #
 ######################################################
 
-#INFO: we had issue with the key hogar : now solved, by setting its type explicitely to characer(). all hogares are in concentradohogar.
-# WARN: n_tipo_prod based on AGROPRODUCTO. But household in AGRO not in AGROPRODUCTOS will be classified as not agri because n_tipo_act will be NA. We are confusing lack of information and lack of activities (difficulty partially overcome with our definition of agri as an household that has at least n_fni in n_ing_cor)
-# WARN: tipoact_agro is unused
-# TODO: Documenter les hypothèses d’annualisation
+#INFO: n_tipo_prod based on AGROPRODUCTO. But household in AGRO not in AGROPRODUCTOS will be classified as not agri because n_tipo_act will be NA. The difficulty is overcome in part 2 in which we explicitely assign a production type to household in AGRO but not in AGROPRODUCTO
+#NOTE: we had issue with the key hogar : now solved, by setting its type explicitely to characer(). all hogares are in concentradohogar.
+#NOTE: tipoact_agro is unused : we use instead our own is_agri income based definition
 
 # AGROPRODUCTOS
 {
@@ -43,7 +42,7 @@
     ) |>
     mutate(
       hogar = stringr::str_c(folioviv, foliohog, sep = "_"),
-      #WARN: some codes are missing for instance 473 does not exist in original database
+      #NOTE: some codes are missing for instance 473 does not exist in original database
       tipo = case_when(
         codigo < 230 ~ "agr", # 1 = crops
         codigo < 278 ~ "ani", # 2 = livestock
@@ -143,7 +142,7 @@
 
   # ---------------------------------------------------------
   # Market orientation
-  # ---------------------------------------------------------
+  # -------------------------?--------------------------------
   agroproductos <- agroproductos |>
     mutate(
       tipo_market = if_else(ven_tot > 0, 1, 0)
@@ -254,7 +253,7 @@
       codigo,
       destino,
       valestim
-      #TODO: we could add cantitad (to get volume of self-consumption in kg or L o piezas (il faudra prendre en % pour éliminer l'unité)
+      #TODO: we could add cantitad (to get volume of self-consumption in kg or L o piezas and UNIT PRICES (il faudra prendre en % pour éliminer l'unité)
     ) |>
     mutate(
       hogar = str_c(folioviv, foliohog, sep = "_"),
@@ -298,7 +297,7 @@
       # number of different types of self-consumed products
       n_tot = n_agr + n_ani + n_prodani + n_for + n_fis + n_hun,
       # estimated value of total self-consumption
-      # WARN: is valestim annual value ? For now we treat it as if it were the case
+      #NOTE : valestim is annual value
       valestim = val_agr + val_ani + val_prodani + val_for + val_fis + val_hun
     )
 
@@ -352,7 +351,7 @@
   )
 
   spec(agro_raw)
-
+  # agro_raw |> select(tipoact) |> distinct()
   # ---------------------------------------------------------
   # Clean + feature engineering
   # ---------------------------------------------------------
@@ -363,8 +362,7 @@
       count_member = 1,
 
       # actividad agricola y ganadera
-      # WARN: tipoact_agro = if_else(tipoact < 6, 1, 0)
-      # Il n'y a que de 4 à 9 comme activités dans AGRO (industries et services ne sont pas dedans)
+      # NOTE: tipoact_agro = if_else(tipoact < 6, 1, 0) Il n'y a que de 4 à 9 comme activités dans AGRO (industries et services ne sont pas dedans)
       tipoact_agro = if_else(tipoact %in% c(4, 5), 1, 0),
 
       # cf. spec: some colunms are wrongly interpreted as lgl because only NA
@@ -402,7 +400,6 @@
       ## households could answer three diff kind of programs
       nvo_tot = (nvo_cant1 + nvo_cant2 + nvo_cant3) * 12,
       # Sembrando vida : 2001, 2002
-      # WARN: Why are there two codes?
       nvo1 = case_when(nvo_prog1 %in% c(2001, 2002) ~ nvo_cant1, TRUE ~ 0),
       nvo2 = case_when(nvo_prog2 %in% c(2001, 2002) ~ nvo_cant2, TRUE ~ 0),
       nvo3 = case_when(nvo_prog3 %in% c(2001, 2002) ~ nvo_cant3, TRUE ~ 0),
@@ -457,8 +454,8 @@
       # Ingreso trimestral por ventas
       # Autoconsumo trimestral
       # Otros montos trimestral
-      # TODO: c'est quoi la relation entre ventas_tri et ing_tri ? identique ? différentes unités de mesures ?
-      # TODO: pour préciser dans présentation : turnover inclut autoconsommation y Otros montos no monetarios trimestrales (pago de trabajadores, deudas del negocio, deudas del hogar e intercambios)
+      # INFO: ventas_tri is ing - ero but negative values are set to zero, hence we reconstruct ventas by taking the difference and later applying replace_negatives() in part2
+      # INFO: turnover inclut autoconsommation y Otros montos no monetarios trimestrales (pago de trabajadores, deudas del negocio, deudas del hogar e intercambios)
       size_val = (ventas_tri + auto_tri + otros_tri) * 4,
 
       support = apoyo_npago + pro_agrogan + nvo_tot_npago,
@@ -494,16 +491,6 @@
       .groups = "drop"
     ) |>
     mutate(
-      #TODO : share autoconsumo à calculer dans part 2
-      # n_autoconsumo = if_else(n_size_val > 0, (auto_tri * 4) / n_size_val, 0),
-      #TODO: share apoyo a calculer dans part 2 (réintroduire au début +  vérifier : “entrate aziendali” = revenus/ressources d’exploitation et NON n_fni)
-      # n_apoyo = case_when(
-      #   n_size_val + n_support > 0 & n_size_val > 0 ~ n_support /
-      #     (n_size_val + n_support),
-      #   n_size_val + n_support > 0 & n_size_val == 0 ~ 1,
-      #   TRUE ~ 0
-      # ),
-
       n_size_class = case_when(
         n_size_val1 < 250001 ~ 1,
         n_size_val1 < 500001 ~ 2,
@@ -543,12 +530,6 @@
       n_autoconsumo2 = coalesce(valestim, 0),
       # total output corrected with agroconsumo self-consumption
       n_size_val2 = n_size_val1 - n_autoconsumo1 + n_autoconsumo2
-      #TODO: share of self-consumption on total output : à calculer dans part2
-      # n_autoconsumo2 = if_else(
-      #   n_size_val2 > 0,
-      #   valestim / n_size_val2,
-      #   0
-      #)
     )
   # |>
   # # add provenance flags
@@ -563,7 +544,6 @@
   message("number of households in agroconsumo : ", nrow(agroconsumo))
   message("number of households in agro : ", nrow(agro))
 
-  #WARN: AGROPRODUCTOS, AGROCONSUMO and AGRO do not have the same hogares
   hogar_agro <- agro %>% distinct(hogar)
   hogar_producto <- agroproductos %>% distinct(hogar)
   hogar_consumo <- agroconsumo %>% distinct(hogar)
@@ -767,7 +747,7 @@
   message("\n\nALIM now available 🎉")
 }
 
-#WARN : there are stuff in nvo_poyo de 1 à 2, mais pas 3. Les rajouter ?
+# TODO: tipoact %in 1:3 do receives support from new social programs. We need to integrate them
 
 # NOAGRO
 {
@@ -788,6 +768,8 @@
 
   spec(noagro_raw)
   # noagro_raw |> select(starts_with("nvo_")) |> distinct()
+  # noagro_raw |> select(tipoact, starts_with("nvo_")) |> distinct()
+
   # ---------------------------------------------------------
   # Clean + household identifier
   # ---------------------------------------------------------
@@ -1208,7 +1190,6 @@
 
 # CORRELATION BETWEEN the two measures of self-consumption
 {
-  # WARN: what do we do about that ?
   test_cor <- agro |> select(n_autoconsumo1, n_autoconsumo2)
 
   message("\nComparison of n_autoconsumo1 and n_autoconsumo2\n")

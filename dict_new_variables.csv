@@ -17,12 +17,12 @@ n_size_class,categorical,AGRO,6,5 000 001 - 10 000 000
 n_size_class,categorical,AGRO,7,> 10 000 000
 n_tipo_act,categorical,AGROPRODUCTO,,Household has agricultural activities (from 0 to 4 in n_tipo_prod)
 n_tipo_act,categorical,AGROPRODUCTO,NA,no agropastoral activities
-n_tipo_act,categorical,AGROPRODUCTO,0,no production yet
+n_tipo_act,categorical,AGROPRODUCTO,0,no harvest yet
 n_tipo_act,categorical,AGROPRODUCTO,1,yes
 n_tipo_act,categorical,AGROPRODUCTO,2,no
 n_tipo_prod,categorical,AGROPRODUCTO,,type of agricultural activities
 n_tipo_prod,categorical,AGROPRODUCTO,NA,no agropastoral activities
-n_tipo_prod,categorical,AGROPRODUCTO,0,no production yet (declared products but no harvest yet)
+n_tipo_prod,categorical,AGROPRODUCTO,0,no harvest yet (declared products but no harvest yet)
 n_tipo_prod,categorical,AGROPRODUCTO,1,crop farms
 n_tipo_prod,categorical,AGROPRODUCTO,2,livestock farms
 n_tipo_prod,categorical,AGROPRODUCTO,3,mixed crops-livestock farms

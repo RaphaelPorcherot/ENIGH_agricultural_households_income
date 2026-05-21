@@ -1,3 +1,22 @@
+#TODO : compute share autoconsumo1 and 2 share autoconsumo à calculer dans part 2
+# n_autoconsumo = if_else(n_size_val > 0, (auto_tri * 4) / n_size_val, 0),
+# share of self-consumption on total output : à calculer dans part2
+# n_autoconsumo2 = if_else(
+#   n_size_val2 > 0,
+#   valestim / n_size_val2,
+#   0
+#)
+#TODO : compute share support in valor prod (entrate aziendale : valore de la produzione vendita + autoconsumata + intercambiata + support) share apoyo a calculer dans part 2 (réintroduire au début +  vérifier : “entrate aziendali” = revenus/ressources d’exploitation et NON n_fni)
+# n_apoyo = case_when(
+#   n_size_val + n_support > 0 & n_size_val > 0 ~ n_support /
+#     (n_size_val + n_support),
+#   n_size_val + n_support > 0 & n_size_val == 0 ~ 1,
+#   TRUE ~ 0
+# ),
+#TODO: compute share support in n_fni
+#TODO: compute share support in n_ing_cor
+#TODO: compute the contrafactural income distribution that would be the case w/o support
+
 #  FUNCTIONS
 {
   make_tbl <- function(label, stat, ci_method = NULL) {
@@ -156,7 +175,6 @@
 
 # LOADING and ADDING NEW VARIABLES
 {
-  #WARN: smg e : Salario mínimo general trimestralizado.
   d <- readRDS(
     here("output", "data", "concentradohogar_rev8.rds")
   )
@@ -362,11 +380,10 @@
     ) |>
     select(type_income, type_agroproducto, everything(), -sum_total, n_total)
 
-  message( "\n\n-----------------------\nEdges cases found:\n")
-  print(edge_cases, width=Inf)
+  message("\n\n-----------------------\nEdges cases found:\n")
+  print(edge_cases, width = Inf)
   message("-----------------------\n\n")
-
-    saveRDS(
+  saveRDS(
     edge_cases,
     here(
       "output",
@@ -383,50 +400,59 @@
     )
   )
 
-  # d |> filter(n_tipo_act == 0)  |> count()
-  # Dealing with non farmer
+  # Dealing with NON AGRI with farm or harvested prod or no harvested prod
   d <- d |>
     mutate(
       # flagging households to be changed
       non_agri_with_farm = is_agri == "not_agri" & !is.na(n_size_class),
-      non_agri_with_prod = is_agri == "not_agri" & n_tipo_act %in% c(1, 0),
+      non_agri_with_harvested_prod = is_agri == "not_agri" & n_tipo_act == 1,
+      non_agri_with_no_harvested_prod = is_agri == "not_agri" & n_tipo_act == 0,
     ) |>
     mutate(
-      # non farmer with farm or prod must be in agri_broad
+      #INFO: non agri with farm or farm product must be included in is_agri_broad
       is_agri = if_else(
-        non_agri_with_farm | non_agri_with_prod,
+        non_agri_with_farm |
+          non_agri_with_harvested_prod |
+          non_agri_with_no_harvested_prod,
         "agri_broad",
         is_agri
       ),
       is_agri_broad = if_else(
-        non_agri_with_farm | non_agri_with_prod,
+        non_agri_with_farm |
+          non_agri_with_harvested_prod |
+          non_agri_with_no_harvested_prod,
         "agri_broad",
         is_agri_broad
       ),
-      # non farmer with farm or farm product must be inclued in agri with primary no farm prouct
-      # agri with farm but no production activites must be classified as primary non farm
+      #INFO: non agri with farm or farm product have no n_fni but they may have a productive specialisation if they produced something
+      # by construction no harvested product means that they are in "no production yet" == n_tipo_prod == n_tipo_act
+      # non agri with farm or harvested product with productive specialisation means that they consumed their production but did not sell it.
+      # They should retain their productive specialisation
+      # And we should only recode those non agri with farm/harvested product who is.na(n_tipo_prod) -> they should be in n_tipo_prod == 0 == no production/harvest yet
       n_tipo_prod = case_when(
-        non_agri_with_farm |
-          non_agri_with_prod ~ "Primary non-farm",
+        (non_agri_with_farm |
+          non_agri_with_harvested_prod |
+          non_agri_with_no_harvested_prod) &
+          is.na(n_tipo_prod) ~ "No harvest yet",
         TRUE ~ n_tipo_prod
       ),
       n_tipo_act = case_when(
-        non_agri_with_farm |
-          non_agri_with_prod ~ 0,
+        (non_agri_with_farm |
+          non_agri_with_harvested_prod |
+          non_agri_with_no_harvested_prod) &
+          is.na(n_tipo_prod) ~ 0,
         TRUE ~ n_tipo_act
       )
     )
 
-  # Now dealing with farmers with n prod
+  #INFO: now dealing with farmers with no prod, either harvested or not (they are no agri with no farm !): should be considered as no harvest yet : n_tipo_prod == n_tipo_act == 0
   d <- d |>
     mutate(
       agri_with_no_prod = is.na(n_tipo_act) & is_agri != "not_agri"
     ) |>
     mutate(
-      # non farmer with farm or farm product must be inclued in agri with primary no farm prouct
-      # agri with farm but no production activites must be classified as primary non farm
       n_tipo_prod = case_when(
-        agri_with_no_prod ~ "Primary non-farm",
+        agri_with_no_prod ~ "No harvest yet",
         TRUE ~ n_tipo_prod
       ),
       n_tipo_act = case_when(
@@ -434,6 +460,102 @@
         TRUE ~ n_tipo_act
       )
     )
+
+  # This requires a correction (they need to be included)
+  # NON AGRI with FARM : no farm income, but a farm
+  non_agri_with_farm <- d |>
+    filter(is_agri == "not_agri" & !is.na(n_size_class)) |>
+    summarise(sum = sum(factor), n = n()) |>
+    mutate(
+      type_income = "no farm income",
+      type_agroproducto = "has a farm"
+    )
+
+  # NON AGRI but with production activities in 1 to 4 : no farm income, but harvested farm product
+  non_agri_with_harvested_prod <- d |>
+    filter(n_tipo_act == 1 & is_agri == "not_agri") |>
+    summarise(sum = sum(factor), n = n()) |>
+    mutate(
+      type_income = "no farm income",
+      type_agroproducto = "has harvested farm production"
+    )
+
+  # NON AGRI but with production activities in 0 : no farm income, declared product but no harvested farm product
+  non_agri_with_no_harvested_prod <- d |>
+    filter(n_tipo_act == 0 & is_agri == "not_agri") |>
+    summarise(sum = sum(factor), n = n()) |>
+    mutate(
+      type_income = "no farm income",
+      type_agroproducto = "declared products, but no harvest yet"
+    )
+
+  # This does not require a correction (they are already included)
+  # AGRI but no production activities in AGROPRODUCTO : farm income, no farm production
+  agri_with_no_prod <- d |>
+    filter(is.na(n_tipo_act) & is_agri != "not_agri") |>
+    summarise(sum = sum(factor), n = n()) |>
+    mutate(
+      type_income = "farm income",
+      type_agroproducto = "has no declared product, nor farm production"
+    )
+
+  # AGRI but production activities in AGROPRODUCTO of type 5 = "PRIMARY NON FARM": farm income, no farm production
+  agri_with_primary_non_farm_prod <- d |>
+    filter(n_tipo_act == 5 & is_agri != "not_agri") |>
+    summarise(sum = sum(factor), n = n()) |>
+    mutate(
+      type_income = "farm income",
+      type_agroproducto = "has primary non farm production"
+    )
+
+  # AGRI but production activities in AGROPRODUCTO of type 0 = no harvest yet, farm income, declared product, no production yet
+  agri_with_no_harvested_prod <- d |>
+    filter(n_tipo_act == 0 & is_agri != "not_agri") |>
+    summarise(sum = sum(factor), n = n()) |>
+    mutate(
+      type_income = "farm income",
+      type_agroproducto = "declared products, but no harvest yet"
+    )
+
+  edge_cases_after <- bind_rows(
+    non_agri_with_farm,
+    non_agri_with_harvested_prod,
+    non_agri_with_no_harvested_prod,
+    agri_with_no_prod,
+    agri_with_primary_non_farm_prod,
+    agri_with_no_harvested_prod
+  ) |>
+    mutate(
+      sum_total = d |>
+        summarise(sum = sum(factor)) |>
+        pull(),
+      n_total = d |>
+        summarise(n = n()) |>
+        pull(),
+      sum_pct = sum / sum_total * 100,
+      n_pct = n / n_total * 100,
+    ) |>
+    select(type_income, type_agroproducto, everything(), -sum_total, n_total)
+
+  message("\n\n-----------------------\nEdges cases after correction:\n")
+  print(edge_cases_after, width = Inf)
+  message("-----------------------\n\n")
+  saveRDS(
+    edge_cases_after,
+    here(
+      "output",
+      "diagnostics",
+      "edges_cases_after.rds"
+    )
+  )
+  readr::write_csv(
+    edge_cases_after,
+    here(
+      "output",
+      "diagnostics",
+      "edge_cases_after.csv"
+    )
+  )
 }
 
 # generate the survey object
@@ -554,7 +676,7 @@ mysvyr <- d_UC |> as_survey_design(upm, strata = est_dis, weights = factor)
     ) +
     labs(
       title = "Decile cut-off for annual income and confidence intervals at 99%",
-subtitle = "Square root equivalence scale",
+      subtitle = "Square root equivalence scale",
       x = "Income deciles",
       y = "Current income per capita (million MXN)"
     ) +
