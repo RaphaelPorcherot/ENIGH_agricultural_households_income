@@ -398,6 +398,7 @@
       pro_agrogan = (proagro + progan) * 12,
       #Total support from new social programmes
       ## households could answer three diff kind of programs
+      #TODO: by comparing nvo_tot and nvo_toto_npago we could assess the distribution of direct subsidies. Do lower income households receive more credits as a % of total nvo?
       nvo_tot = (nvo_cant1 + nvo_cant2 + nvo_cant3) * 12,
       # Sembrando vida : 2001, 2002
       nvo1 = case_when(nvo_prog1 %in% c(2001, 2002) ~ nvo_cant1, TRUE ~ 0),
@@ -470,12 +471,13 @@
   agro <- agro_clean |>
     group_by(hogar) |>
     summarise(
+      # TODO: we could compute the number of different activities agro and noagro
       n_act = sum(count_member), # nomber of different activities
       n_fni = sum(fni_year),
       n_autoconsumo1 = sum(auto_tri) * 4, # value of self consumed production from AGRO
-      n_support = sum(support),
       n_size_val1 = sum(size_val),
 
+      n_support = sum(support),
       n_pro_agrogan = sum(pro_agrogan), # old support programs
       n_nvo_tot = sum(nvo_tot_npago), # new support programs
       n_apoyo_npago = sum(apoyo_npago), # other kind of social programs
@@ -747,8 +749,6 @@
   message("\n\nALIM now available 🎉")
 }
 
-# TODO: tipoact %in 1:3 do receives support from new social programs. We need to integrate them
-
 # NOAGRO
 {
   noagro_raw <- readr::read_csv(
@@ -767,6 +767,8 @@
   )
 
   spec(noagro_raw)
+  noagro_raw |> select(ventas_tri)
+  # noagro_raw |> select(nvo_prog1, nvo_prog2, nvo_prog3) |> distinct()
   # noagro_raw |> select(starts_with("nvo_")) |> distinct()
   # noagro_raw |> select(tipoact, starts_with("nvo_")) |> distinct()
 
@@ -775,17 +777,78 @@
   # ---------------------------------------------------------
 
   noagro_clean <- noagro_raw |>
-    select(
-      folioviv,
-      foliohog,
-      ing_tri,
-      ero_tri
-    ) |>
     mutate(
       hogar = str_c(folioviv, foliohog, sep = "_"),
+      count_member = 1,
 
+      across(starts_with("nvo"), ~ replace_na(.x, 0)),
+      across(
+        c(ventas_tri, auto_tri, otros_tri, ing_tri, ero_tri),
+        ~ replace_na(.x, 0)
+      ),
+
+      #NOTE: SUPPORT from monthly to yearly data
+
+      # no old social program, only the new one
+      # NOTE: in NOAGRO, some activities received support from new programs. the activity for whcih support is received is specificied by the surveyed person, but the latter appear in NOAGRO because they are registered as either industrial (1) or commercail (2) or else services (3)
+
+      #Total support from new social programmes
+      ## households could answer three diff kind of programs
+      nvo_tot = (nvo_cant1 + nvo_cant2 + nvo_cant3) * 12,
+      # Sembrando vida : 2001, 2002
+      nvo1 = case_when(nvo_prog1 %in% c(2001, 2002) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2001, 2002) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2001, 2002) ~ nvo_cant3, TRUE ~ 0),
+      sembr_vida = (nvo1 + nvo2 + nvo3) * 12,
+      #Tandas para el Bienestar (Microcréditos para el Bienestar)
+      nvo1 = case_when(nvo_prog1 %in% c(2003, 2004) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2003, 2004) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2003, 2004) ~ nvo_cant3, TRUE ~ 0),
+      tand_bien = (nvo1 + nvo2 + nvo3) * 12,
+      # Agromercados Sociales y Sustentables
+      nvo1 = case_when(nvo_prog1 %in% c(2005, 2006) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2005, 2006) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2005, 2006) ~ nvo_cant3, TRUE ~ 0),
+      agromercados = (nvo1 + nvo2 + nvo3) * 12,
+      # Precios de garantia
+      nvo1 = case_when(nvo_prog1 %in% c(2007, 2008) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2007, 2008) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2007, 2008) ~ nvo_cant3, TRUE ~ 0),
+      precios_gar = (nvo1 + nvo2 + nvo3) * 12,
+      # Credito Ganadero a la Palabra (creditos)
+      nvo1 = case_when(nvo_prog1 %in% c(2009, 2010) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2009, 2010) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2009, 2010) ~ nvo_cant3, TRUE ~ 0),
+      credito_gan = (nvo1 + nvo2 + nvo3) * 12,
+      # Programa Nacional de Fertilizantes
+      nvo1 = case_when(nvo_prog1 %in% c(2011, 2012) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2011, 2012) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2011, 2012) ~ nvo_cant3, TRUE ~ 0),
+      nacion_fer = (nvo1 + nvo2 + nvo3) * 12,
+      # Desarollo rural
+      nvo1 = case_when(nvo_prog1 %in% c(2013, 2014) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2013, 2014) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2013, 2014) ~ nvo_cant3, TRUE ~ 0),
+      desarollo_rur = (nvo1 + nvo2 + nvo3) * 12,
+      # Otros programas
+      nvo1 = case_when(nvo_prog1 %in% c(2015, 2016) ~ nvo_cant1, TRUE ~ 0),
+      nvo2 = case_when(nvo_prog2 %in% c(2015, 2016) ~ nvo_cant2, TRUE ~ 0),
+      nvo3 = case_when(nvo_prog3 %in% c(2015, 2016) ~ nvo_cant3, TRUE ~ 0),
+      otros_prog = (nvo1 + nvo2 + nvo3) * 12,
+
+      #direct payments new social programmes (sin pago : sin necesidad de devolverlo)
+      nvo_tot_npago = sembr_vida +
+        agromercados +
+        precios_gar +
+        nacion_fer +
+        desarollo_rur +
+        otros_prog,
+
+      # note: quadrimestrial to yearly data
+      size_val = (ventas_tri + auto_tri + otros_tri) * 4,
+      support = nvo_tot_npago,
       # annualized non-agricultural self-employed income
-      n_ingr_noagr = (ing_tri - ero_tri) * 4
+      n_ingr_noagr = (ing_tri - ero_tri) * 4 + support
     )
 
   # ---------------------------------------------------------
@@ -795,13 +858,44 @@
   noagro <- noagro_clean |>
     group_by(hogar) |>
     summarise(
+      n_act = sum(count_member),
       n_ingr_noagr = sum(n_ingr_noagr, na.rm = TRUE),
+      n_autoconsumo1 = sum(auto_tri) * 4,
+      n_size_val1 = sum(size_val),
+
+      n_support = sum(support),
+      n_nvo_tot = sum(nvo_tot_npago),
+
+      n_sembr_vida = sum(sembr_vida),
+      n_tand_bien = sum(tand_bien),
+      n_agromercados = sum(agromercados),
+      n_precios_gar = sum(precios_gar),
+      n_credito_gan = sum(credito_gan),
+      n_nacion_fert = sum(nacion_fer),
+      n_desarollo_rur = sum(desarollo_rur),
+      n_otros_prog = sum(otros_prog),
+
       .groups = "drop"
     )
-  # |> # add provenance flags
-  # mutate(
-  #   in_noagro = 1
-  # )
+  #TODO: add n_size_class as in AGRO ?
+
+  # noagro |>
+  #   select(
+  #     n_sembr_vida,
+  #     n_tand_bien,
+  #     n_agromercados,
+  #     n_precios_gar,
+  #     n_credito_gan,
+  #     n_nacion_fert,
+  #     n_desarollo_rur,
+  #     n_otros_prog
+  #   ) |>
+  #   summarise(
+  #     across(
+  #       everything(),
+  #       ~ sum(.x, na.rm = TRUE)
+  #     )
+  #   )
 
   # ---------------------------------------------------------
   # Save
@@ -929,36 +1023,14 @@
 
   concentradohogar_enriched <- concentradohogar_flag |>
     left_join(
-      agro |>
-        select(
-          hogar,
-          n_fni,
-          n_size_val1,
-          n_size_val2,
-          n_size_class,
-          n_tipo_prod,
-          n_autoconsumo1,
-          n_autoconsumo2,
-          # n_apoyo, -> now in part2, based on n_support / n_ing_cor
-          n_apoyo_npago,
-          n_pro_agrogan,
-          n_nvo_tot,
-          n_support,
-          n_sembr_vida,
-          n_tand_bien,
-          n_agromercados,
-          n_precios_gar,
-          n_credito_gan,
-          n_nacion_fert,
-          n_desarollo_rur,
-          n_otros_prog
-        ),
+      agro |> rename_with(~ paste0(.x, "_agro"), starts_with("n_")),
       by = "hogar"
     ) |>
     left_join(
       noagro |>
-        select(hogar, n_ingr_noagr),
-      by = "hogar"
+        rename(n_ingr = n_ingr_noagr) |>
+        rename_with(~ paste0(.x, "_noagro"), starts_with("n_")),
+      by = "hogar",
     ) |>
     left_join(
       etnia |>
@@ -972,13 +1044,13 @@
     ) |>
     mutate(
       across(
-        c(n_fni, n_ingr_noagr),
+        c(n_fni_agro, n_ingr_noagro),
         ~ coalesce(.x, 0) # avoid NA for non agri household
       )
     )
 
   # ---------------------------------------------------------
-  # Income variables
+  # Income and support variables
   # ---------------------------------------------------------
 
   concentradohogar_features <- concentradohogar_enriched |>
@@ -991,21 +1063,34 @@
       n_otros_ing = otros_ing * 4, #other annual sources of income
 
       # total current income
-      n_ing_cor = n_fni +
-        n_ingr_noagr +
+      n_ing_cor = n_fni_agro + # containts support from apoyo, nvo, and agrogan
+        n_ingr_noagro + # contains support from nvo
         n_trabajo +
         n_rentas +
         n_transfer +
         n_estim_alqu +
         n_otros_ing,
 
+      n_autoconsumo1 = n_autoconsumo1_agro + n_autoconsumo1_noagro,
+
+      n_nvo_tot = n_nvo_tot_agro + n_nvo_tot_noagro,
+      n_support = n_support_agro + n_support_noagro,
+      n_agromercados = n_agromercados_agro + n_agromercados_noagro,
+      n_credito_gan = n_credito_gan_agro + n_credito_gan_noagro,
+      n_desarollo_rur = n_desarollo_rur_agro + n_desarollo_rur_noagro,
+      n_nacion_fert = n_nacion_fert_agro + n_nacion_fert_noagro,
+      n_otros_prog = n_otros_prog_agro + n_otros_prog_noagro,
+      n_precios_gar = n_precios_gar_agro + n_precios_gar_noagro,
+      n_sembr_vida = n_sembr_vida_agro + n_sembr_vida_noagro,
+      n_tand_bien = n_tand_bien_agro + n_tand_bien_noagro,
+
       # households with farming activities
-      n_tipo_act = case_when(
-        is.na(n_tipo_prod) ~ NA_real_,
-        n_tipo_prod %in% 1:4 ~ 1, # yes
-        n_tipo_prod == 5 ~ 2, # no
-        n_tipo_prod == 0 ~ 0, # no production yet (no harvest !)
-        TRUE ~ NA_real_
+      n_tipo_act_agro = case_when(
+        is.na(n_tipo_prod_agro) ~ NA_real_,
+        n_tipo_prod_agro %in% 1:4 ~ 1, # yes
+        n_tipo_prod_agro == 5 ~ 2, # no
+        n_tipo_prod_agro == 0 ~ 0, # no production yet (no harvest !)
+        TRUE ~ NA_real_,
       )
     ) |>
     select(
@@ -1190,11 +1275,13 @@
 
 # CORRELATION BETWEEN the two measures of self-consumption
 {
-  test_cor <- agro |> select(n_autoconsumo1, n_autoconsumo2)
+  test_cor <- agro |>
+    select(n_autoconsumo1, n_autoconsumo2) |>
+    rename_with(~ paste0(.x, "_agro"), everything())
 
-  message("\nComparison of n_autoconsumo1 and n_autoconsumo2\n")
+  message("\nComparison of n_autoconsumo1_agro and n_autoconsumo2_agro\n")
   summary <- as_tibble(
-    test_cor |> summary(n_autoconsumo1 - n_autoconsumo2),
+    test_cor |> summary(n_autoconsumo1_agro - n_autoconsumo2_agro),
     .name_repair = "unique"
   )
 
@@ -1202,12 +1289,12 @@
 
   cor <- test_cor |>
     mutate(
-      diff = n_autoconsumo1 - n_autoconsumo2
+      diff = n_autoconsumo1_agro - n_autoconsumo2_agro
     ) |>
     summarise(
       corr = cor(
-        n_autoconsumo1,
-        n_autoconsumo2,
+        n_autoconsumo1_agro,
+        n_autoconsumo2_agro,
         use = "complete.obs"
       ),
       mean_diff = mean(diff, na.rm = TRUE),
@@ -1222,7 +1309,7 @@
     here(
       "output",
       "diagnostics",
-      "summary_autoconsumo1_2.rds"
+      "summary_autoconsumo1_2_agro.rds"
     )
   )
   readr::write_csv(
@@ -1230,7 +1317,7 @@
     here(
       "output",
       "diagnostics",
-      "summary_autoconsumo1_2.csv"
+      "summary_autoconsumo1_2_agro.csv"
     )
   )
 
@@ -1239,7 +1326,7 @@
     here(
       "output",
       "diagnostics",
-      "cor_autoconsumo1_2.rds"
+      "cor_autoconsumo1_2_agro.rds"
     )
   )
   readr::write_csv(
@@ -1247,19 +1334,25 @@
     here(
       "output",
       "diagnostics",
-      "cor_autoconsumo1_2.csv"
+      "cor_autoconsumo1_2_agro.csv"
     )
   )
 }
 
-# CREATE NEW VARIABLE DICTIONNARY (then manual edition of the .csv)
+# CREATE NEW VARIABLE DICTIONARY (append new variables if needed)
 {
   vars_n <- sort(names(concentradohogar)[str_starts(
     names(concentradohogar),
     "n_"
   )])
 
-  cur_dic <- read_csv("dict_new_variables.csv")
+  cur_dic <- read_csv(
+    "dict_new_variables.csv",
+    col_types = cols(
+      level = col_character()
+    )
+  )
+
   test_new_var <- !vars_n %in%
     {
       cur_dic |> select(variable) |> pull()
@@ -1267,19 +1360,22 @@
 
   if (any(test_new_var)) {
     var_cat <- c(
-      "n_size_class",
-      "n_tipo_prod",
+      "n_size_class_agro",
+      "n_tipo_prod_agro",
       "n_etnia",
       "n_acc_alim1",
-      "n_tipo_act"
+      "n_tipo_act_agro"
     )
 
-    dict <- purrr::map_dfr(vars_n, function(v) {
-      vals <- concentradohogar |> select(v)
+    new_vars <- vars_n[test_new_var]
+
+    dict_new <- purrr::map_dfr(new_vars, function(v) {
+      vals <- concentradohogar |> pull(all_of(v))
 
       if (v %in% var_cat) {
-        levels <- vals |> distinct() |> pull()
+        levels <- unique(as.character(vals))
         levels[is.na(levels)] <- "not applicable"
+
         bind_rows(
           tibble(
             variable = v,
@@ -1306,21 +1402,20 @@
         )
       }
     })
-    dict <- dict |> arrange(type, variable)
 
-    today <- Sys.Date()
-    readr::write_csv(dict, str_c("dict_new_variables_", today, ".csv"), na = "")
+    # 🔥 APPEND AU DICTIONARY EXISTANT
+    dict_updated <- bind_rows(cur_dic, dict_new) |>
+      distinct(variable, type, level, .keep_all = TRUE) |>
+      arrange(type, variable)
+
+    readr::write_csv(dict_updated, "dict_new_variables.csv", na = "")
 
     message(
-      str_c(
-        "\n\n❗️❗️ New variables detected. A new dictionnary file has been created.\n📖 Check "
-      ),
-      str_c("dict_new_variables_", today),
-      " and complete it with the description of the new variables"
+      "\n\n❗️ New variables appended to dict_new_variables.csv\n📖 Dictionary updated successfully."
     )
   } else {
     message(
-      "\n\n 📖 No new variable has been created as a result of part 1.\n ✅ The dictionnary need not to be updated."
+      "\n\n 📖 No new variable has been created.\n ✅ Dictionary is already up to date."
     )
   }
 }

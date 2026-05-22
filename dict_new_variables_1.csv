@@ -1,0 +1,63 @@
+variable,type,from_table,level,definition
+n_acc_alim1,categorical,ALIM,,Concerned about food availability in the past three months
+n_acc_alim1,categorical,ALIM,1,yes
+n_acc_alim1,categorical,ALIM,2,no
+n_etnia,categorical,ETNIA,,Ethnic self-description of the household head
+n_etnia,categorical,ETNIA,1,indigenous
+n_etnia,categorical,ETNIA,2,non indigenous
+n_hogar,categorical,,,household unique ID
+n_size_class,categorical,AGRO,,Farm's class based on n_size_val1
+n_size_class,categorical,AGRO,1,0 - 250 000
+n_size_class,categorical,AGRO,2,250 001 - 500 000
+n_size_class,categorical,AGRO,3,500 001 - 1 000 000
+n_size_class,categorical,AGRO,4,1 000 001 - 2 000 000
+n_size_class,categorical,AGRO,5,2 000 001 - 5 000 000
+n_size_class,categorical,AGRO,6,5 000 001 - 10 000 000
+n_size_class,categorical,AGRO,7,> 10 000 000
+n_tipo_act,categorical,AGROPRODUCTO,,Household has agricultural activities (from 0 to 4 in n_tipo_prod)
+n_tipo_act,categorical,AGROPRODUCTO,0,no harvest yet
+n_tipo_act,categorical,AGROPRODUCTO,1,yes
+n_tipo_act,categorical,AGROPRODUCTO,2,no
+n_tipo_prod,categorical,AGROPRODUCTO,,type of agricultural activities
+n_tipo_prod,categorical,AGROPRODUCTO,0,no harvest yet (declared products but no harvest yet)
+n_tipo_prod,categorical,AGROPRODUCTO,1,crop farms
+n_tipo_prod,categorical,AGROPRODUCTO,2,livestock farms
+n_tipo_prod,categorical,AGROPRODUCTO,3,mixed crops-livestock farms
+n_tipo_prod,categorical,AGROPRODUCTO,4,mixed farm-primary
+n_tipo_prod,categorical,AGROPRODUCTO,5,primary non-farm
+n_agromercados,numeric,AGRO,,Agromercados Sociales y Sustentables
+n_agromercados_noagro,numeric,,,
+n_apoyo_npago,numeric,AGRO,,OTHERS policies - non-repayable support policies from federal state and municipal governements
+n_autoconsumo1,numeric,AGRO,,value of self-consumption (based on auto_tri)
+n_autoconsumo1_noagro,numeric,,,
+n_autoconsumo2,numeric,AGROCONSUMO,,value of self-consumption (based on valestim)
+n_credito_gan,numeric,AGRO,,Crédito Ganadero a la Palabra
+n_credito_gan_noagro,numeric,,,
+n_desarollo_rur,numeric,AGRO,,Desarrollo Rural
+n_desarollo_rur_noagro,numeric,,,
+n_estim_alqu,numeric,AGRO,,imputed rent from owner-occupied housing
+n_fni,numeric,AGRO,,"household's farm net income (from ing_tri, ero_tri, support, that is with all non-repayable support policies)"
+n_ing_cor,numeric,AGRO;CONCENTRADOHOGAR;NOAGRO,,"household's total current income (n_fni, n_ingr_noagr, n_trabajo, n_rentas, n_transfer, n_esti_alqui, n_otros_ingr)"
+n_ingr_noagr,numeric,NOAGRO,,"household's mixed income from non agricultural self employment (sum over all members, from ing_tri, ero_tri)"
+n_nacion_fert,numeric,AGRO,,Nacional de Fertilizantes
+n_nacion_fert_noagro,numeric,,,
+n_nvo_tot,numeric,AGRO,,"NEW policies - non-repayable new support policies (sembr_vid, agromercados, precios_gar, nacion_fert,desarollo_rur,otros_prog : all except repayable policies : tand_bien,credito_gan)"
+n_nvo_tot_noagro,numeric,,,
+n_otros_ing,numeric,AGRO,,household's other incomes
+n_otros_prog,numeric,AGRO,,Otros programas sociales (in NEW policies)
+n_otros_prog_noagro,numeric,,,
+n_precios_gar,numeric,AGRO,,Precios de Garantía a Productos Alimentarios Básicos
+n_precios_gar_noagro,numeric,,,
+n_pro_agrogan,numeric,AGRO,,"OLD policies - PROCAMPO, PROGAN, Produccion para el Bien Estar support policies"
+n_rentas,numeric,AGRO,,capital income (financial and non financial assets)
+n_sembr_vida,numeric,AGRO,,Sembrando Vida
+n_sembr_vida_noagro,numeric,,,
+n_size_val1,numeric,AGRO,,"total farm output value, in pesos (ventas, n_autoconsumo1, otro_tri)"
+n_size_val1_noagro,numeric,,,
+n_size_val2,numeric,AGROCONSUMO;AGRO,,"total farm output value, in pesos (ventas, n_autoconsumo2, otro_tri)"
+n_support,numeric,AGRO,,"total non repayable-support policies (from apoyo_npago, pro_agrogan, nvo_tot_npago)"
+n_support_noagro,numeric,,,
+n_tand_bien,numeric,AGRO,,Tandas para el Bienestar (Microcréditos para el Bienestar)
+n_tand_bien_noagro,numeric,,,
+n_trabajo,numeric,AGRO,,household's labour income from wage labour (sum over all members)
+n_transfer,numeric,AGRO,,household's social and private transfers
