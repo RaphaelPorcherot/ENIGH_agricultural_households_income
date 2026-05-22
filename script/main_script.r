@@ -1,5 +1,4 @@
 # Packages and options
-library(languageserver)
 library(here) # Manage file paths relative to project root (reproducibility)
 library(readr)
 library(purrr)
