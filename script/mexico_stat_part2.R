@@ -24,7 +24,7 @@
 make_tbl <- function(label, stat, ci_method = NULL) {
   df <- mysvyr |>
     select(decile_total_squareOECD, n_ing_squareOECD) |>
-    mutate(n_ing_squareOECD = n_ing_squareOECD / 1e6)
+    mutate(n_ing_squareOECD = n_ing_squareOECD / 1e3)
 
   tbl <- df |>
     tbl_svysummary(
@@ -176,6 +176,8 @@ replace_negatives <- function(x) {
   return(x)
 }
 
+# -----------
+#
 # LOADING and ADDING NEW VARIABLES ----
 
 d <- readRDS(
@@ -311,7 +313,7 @@ d_UC <- d |>
 # This requires a correction (they need to be included)
 # NON AGRI with FARM : no farm income, but a farm
 non_agri_with_farm <- d |>
-  filter(is_agri == "not_agri" & !is.na(n_size_class)) |>
+  filter(is_agri == "not_agri" & !is.na(n_size_class_agro)) |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "no farm income",
@@ -320,7 +322,7 @@ non_agri_with_farm <- d |>
 
 # NON AGRI but with production activities in 1 to 4 : no farm income, but harvested farm product
 non_agri_with_harvested_prod <- d |>
-  filter(n_tipo_act == 1 & is_agri == "not_agri") |>
+  filter(n_tipo_act_agro == 1 & is_agri == "not_agri") |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "no farm income",
@@ -329,7 +331,7 @@ non_agri_with_harvested_prod <- d |>
 
 # NON AGRI but with production activities in 0 : no farm income, declared product but no harvested farm product
 non_agri_with_no_harvested_prod <- d |>
-  filter(n_tipo_act == 0 & is_agri == "not_agri") |>
+  filter(n_tipo_act_agro == 0 & is_agri == "not_agri") |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "no farm income",
@@ -341,7 +343,7 @@ non_agri_with_no_harvested_prod <- d |>
 # This does not require a correction (they are already included)
 # AGRI but no production activities in AGROPRODUCTO : farm income, no farm production
 agri_with_no_prod <- d |>
-  filter(is.na(n_tipo_act) & is_agri != "not_agri") |>
+  filter(is.na(n_tipo_act_agro) & is_agri != "not_agri") |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "farm income",
@@ -350,7 +352,7 @@ agri_with_no_prod <- d |>
 
 # AGRI but production activities in AGROPRODUCTO of type 5 = "PRIMARY NON FARM": farm income, no farm production
 agri_with_primary_non_farm_prod <- d |>
-  filter(n_tipo_act == 5 & is_agri != "not_agri") |>
+  filter(n_tipo_act_agro == 5 & is_agri != "not_agri") |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "farm income",
@@ -359,7 +361,7 @@ agri_with_primary_non_farm_prod <- d |>
 
 # AGRI but production activities in AGROPRODUCTO of type 0 = no harvest yet, farm income, declared product, no production yet
 agri_with_no_harvested_prod <- d |>
-  filter(n_tipo_act == 0 & is_agri != "not_agri") |>
+  filter(n_tipo_act_agro == 0 & is_agri != "not_agri") |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "farm income",
@@ -415,9 +417,10 @@ readr::write_csv(
 d <- d |>
   mutate(
     # flagging households to be changed
-    non_agri_with_farm = is_agri == "not_agri" & !is.na(n_size_class),
-    non_agri_with_harvested_prod = is_agri == "not_agri" & n_tipo_act == 1,
-    non_agri_with_no_harvested_prod = is_agri == "not_agri" & n_tipo_act == 0,
+    non_agri_with_farm = is_agri == "not_agri" & !is.na(n_size_class_agro),
+    non_agri_with_harvested_prod = is_agri == "not_agri" & n_tipo_act_agro == 1,
+    non_agri_with_no_harvested_prod = is_agri == "not_agri" &
+      n_tipo_act_agro == 0,
   ) |>
   mutate(
     #INFO: non agri with farm or farm product must be included in is_agri_broad
@@ -436,99 +439,86 @@ d <- d |>
       is_agri_broad
     ),
     #INFO: non agri with farm or farm product have no n_fni but they may have a productive specialisation if they produced something
-    # by construction no harvested product means that they are in "no production yet" == n_tipo_prod == n_tipo_act
+    # by construction no harvested product means that they are in "no production yet" == n_tipo_prod_agro == n_tipo_act_agro
     # non agri with farm or harvested product with productive specialisation means that they consumed their production but did not sell it.
     # They should retain their productive specialisation
-    # And we should only recode those non agri with farm/harvested product who is.na(n_tipo_prod) -> they should be in n_tipo_prod == 0 == no production/harvest yet
-    n_tipo_prod = case_when(
+    # And we should only recode those non agri with farm/harvested product who is.na(n_tipo_prod_agro) -> they should be in n_tipo_prod_agro == 0 == no production/harvest yet
+    n_tipo_prod_agro = case_when(
       (non_agri_with_farm |
         non_agri_with_harvested_prod |
         non_agri_with_no_harvested_prod) &
-        is.na(n_tipo_prod) ~ "No harvest yet",
-      TRUE ~ n_tipo_prod
+        is.na(n_tipo_prod_agro) ~ "No harvest yet",
+      TRUE ~ n_tipo_prod_agro
     ),
-    n_tipo_act = case_when(
+    n_tipo_act_agro = case_when(
       (non_agri_with_farm |
         non_agri_with_harvested_prod |
         non_agri_with_no_harvested_prod) &
-        is.na(n_tipo_prod) ~ 0,
-      TRUE ~ n_tipo_act
+        is.na(n_tipo_prod_agro) ~ 0,
+      TRUE ~ n_tipo_act_agro
     )
   )
 
-#INFO: now dealing with farmers with no prod, either harvested or not (they are no agri with no farm !): should be considered as no harvest yet : n_tipo_prod == n_tipo_act == 0
+#INFO: now dealing with farmers with no prod, either harvested or not (they are no agri with no farm !): should be considered as no harvest yet : n_tipo_prod_agro == n_tipo_act_agro == 0
 d <- d |>
   mutate(
-    agri_with_no_prod = is.na(n_tipo_act) & is_agri != "not_agri"
+    agri_with_no_prod = is.na(n_tipo_act_agro) & is_agri != "not_agri"
   ) |>
   mutate(
-    n_tipo_prod = case_when(
+    n_tipo_prod_agro = case_when(
       agri_with_no_prod ~ "No harvest yet",
-      TRUE ~ n_tipo_prod
+      TRUE ~ n_tipo_prod_agro
     ),
-    n_tipo_act = case_when(
+    n_tipo_act_agro = case_when(
       agri_with_no_prod ~ 0,
-      TRUE ~ n_tipo_act
+      TRUE ~ n_tipo_act_agro
     )
   )
 
-# This requires a correction (they need to be included)
-# NON AGRI with FARM : no farm income, but a farm
+## Check edges cases after correction ----
 non_agri_with_farm <- d |>
-  filter(is_agri == "not_agri" & !is.na(n_size_class)) |>
+  filter(is_agri == "not_agri" & !is.na(n_size_class_agro)) |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "no farm income",
     type_agroproducto = "has a farm"
   )
-
-# NON AGRI but with production activities in 1 to 4 : no farm income, but harvested farm product
 non_agri_with_harvested_prod <- d |>
-  filter(n_tipo_act == 1 & is_agri == "not_agri") |>
+  filter(n_tipo_act_agro == 1 & is_agri == "not_agri") |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "no farm income",
     type_agroproducto = "has harvested farm production"
   )
-
-# NON AGRI but with production activities in 0 : no farm income, declared product but no harvested farm product
 non_agri_with_no_harvested_prod <- d |>
-  filter(n_tipo_act == 0 & is_agri == "not_agri") |>
+  filter(n_tipo_act_agro == 0 & is_agri == "not_agri") |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "no farm income",
     type_agroproducto = "declared products, but no harvest yet"
   )
-
-# This does not require a correction (they are already included)
-# AGRI but no production activities in AGROPRODUCTO : farm income, no farm production
 agri_with_no_prod <- d |>
-  filter(is.na(n_tipo_act) & is_agri != "not_agri") |>
+  filter(is.na(n_tipo_act_agro) & is_agri != "not_agri") |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "farm income",
     type_agroproducto = "has no declared product, nor farm production"
   )
-
-# AGRI but production activities in AGROPRODUCTO of type 5 = "PRIMARY NON FARM": farm income, no farm production
 agri_with_primary_non_farm_prod <- d |>
-  filter(n_tipo_act == 5 & is_agri != "not_agri") |>
+  filter(n_tipo_act_agro == 5 & is_agri != "not_agri") |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "farm income",
     type_agroproducto = "has primary non farm production"
   )
-
-# AGRI but production activities in AGROPRODUCTO of type 0 = no harvest yet, farm income, declared product, no production yet
 agri_with_no_harvested_prod <- d |>
-  filter(n_tipo_act == 0 & is_agri != "not_agri") |>
+  filter(n_tipo_act_agro == 0 & is_agri != "not_agri") |>
   summarise(sum = sum(factor), n = n()) |>
   mutate(
     type_income = "farm income",
     type_agroproducto = "declared products, but no harvest yet"
   )
 
-## Check edges cases after correction ----
 edge_cases_after <- bind_rows(
   non_agri_with_farm,
   non_agri_with_harvested_prod,
@@ -570,6 +560,8 @@ readr::write_csv(
     "edge_cases_after.csv"
   )
 )
+# -----------
+
 # ADDING QUANTILES TO HOUSEHOLDS BASED ON EQUIVALED INCOME ----
 
 # generate the survey object
@@ -628,8 +620,8 @@ mysvyr <- mysvyr |>
       include.lowest = TRUE
     )
   )
-# TABLE and BOXPLOT of QUANTILES ----
 
+# TABLE and BOXPLOT of QUANTILES ----
 ## Table of cutoff points ----
 tres_long <- mysvyr |>
   summarize(
@@ -682,13 +674,14 @@ gg_income_decile_cutoff_sqrt_total <- ggplot(
     guide = "none"
   ) +
   scale_y_continuous(
-    labels = scales::label_number(scale = 1e-6, suffix = " M", big.mark = ",")
+    breaks = scales::pretty_breaks(n = 10),
+    labels = scales::label_number(scale = 1e-3, suffix = " M", big.mark = ",")
   ) +
   labs(
     title = "Decile cut-off for annual income and confidence intervals at 99%",
     subtitle = "Square root equivalence scale",
     x = "Income deciles",
-    y = "Current income per capita (million MXN)"
+    y = "Current income per capita (thousands of MXN)"
   ) +
   theme(
     plot.title = element_text(face = "bold", hjust = 0.5)
@@ -698,7 +691,7 @@ gg_income_decile_cutoff_sqrt_total <- ggplot(
 ## Detailed table ----
 t_mean <- make_tbl("mean (99% CI)", "{mean}", ci_method = "svymean") |>
   modify_header(
-    label ~ "**Total current income (millions of MXN)**",
+    label ~ "**Total current income (thousands of MXN)**",
     all_stat_cols(stat_0 = FALSE) ~ "**{level}**"
   ) |>
   modify_spanning_header(
@@ -707,15 +700,12 @@ t_mean <- make_tbl("mean (99% CI)", "{mean}", ci_method = "svymean") |>
 t_median <- make_tbl(
   "median (99% CI)",
   "{median}",
-  ci_method = "svymedian.beta"
-)
+  ci_method = "svymedian.beta")
 t_extreme <- make_tbl("min - max", "{min} - {max}")
 t_quart <- make_tbl("Q1 - Q3", "{p25} - {p75}")
 
-summary_income_decile_sqrt_total <- tbl_stack(
-  list(t_mean, t_median, t_extreme, t_quart),
-  quiet = TRUE
-)
+summary_income_decile_sqrt_total <- tbl_stack(list(t_mean, t_median, t_extreme, t_quart),
+  quiet = TRUE)
+# -----------
 
 # THE END ----
-

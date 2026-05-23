@@ -571,7 +571,7 @@ readr::write_csv(
   here(
     "output",
     "diagnostics",
-    "egro_overlap_diagnostics.csv"
+    "agro_overlap_diagnostics.csv"
   )
 )
 
