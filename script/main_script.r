@@ -1,4 +1,5 @@
 # Packages and options ----
+
 library(here) # Manage file paths relative to project root (reproducibility)
 library(readr)
 library(purrr)
@@ -39,4 +40,4 @@ theme_gtsummary_language(
 source(here("script", "mexico_data_part1.R"))
 
 # PART 2 : STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO ---- 
-# source(here("script", "mexico_stat_part2.R"))
+source(here("script", "mexico_stat_part2.R"))
