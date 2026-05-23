@@ -1,3 +1,4 @@
+# --------------------
 # Packages and options
 library(here) # Manage file paths relative to project root (reproducibility)
 library(readr)
@@ -35,12 +36,10 @@ theme_gtsummary_language(
   language = "en"
 )
 
-# PART 1 : PREPARING THE DATABASE FOR THE PILOT STUDY ON MEXICO
-# April 2026
-
+# --------------------
+# PART 1 : PREPARING THE DATABASE FOR THE PILOT STUDY ON MEXICO April 2026
 source(here("script", "mexico_data_part1.R"))
 
-# PART 2 STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO
-# May 2026
-
+# --------------------
+# PART 2 STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO May 2026
 source(here("script", "mexico_stat_part2.R"))
