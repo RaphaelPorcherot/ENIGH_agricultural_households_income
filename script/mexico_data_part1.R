@@ -1328,3 +1328,6 @@ if (any(test_new_var)) {
     "\n\n 📖 No new variable has been created.\n ✅ Dictionary is already up to date."
   )
 }
+
+# THE END ----
+

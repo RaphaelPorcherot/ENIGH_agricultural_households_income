@@ -716,3 +716,6 @@ summary_income_decile_sqrt_total <- tbl_stack(
   list(t_mean, t_median, t_extreme, t_quart),
   quiet = TRUE
 )
+
+# THE END ----
+

@@ -41,3 +41,4 @@ source(here("script", "mexico_data_part1.R"))
 
 # PART 2 : STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO ---- 
 source(here("script", "mexico_stat_part2.R"))
+# THE END ----
