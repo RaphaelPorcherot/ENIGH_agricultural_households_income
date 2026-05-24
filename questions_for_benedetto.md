@@ -1,3 +1,10 @@
+# CURRENT
+
+* [ ] annnual turnover factor levels needs to be corrected
+* [ ] farm specialisation : big change, no mixed 
+
+# PAST 
+
 ## FINALLY
 
 Caro benedetto, 

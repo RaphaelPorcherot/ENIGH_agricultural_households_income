@@ -109,7 +109,7 @@ agroproductos <- agroproductos |>
   )
 
 ## Farm typology ----
-tres_agri_spe <- 2 / 3
+tres_agri_spe <- 3 / 4
 
 agroproductos <- agroproductos |>
   mutate(
@@ -301,6 +301,9 @@ agro_raw <- readr::read_csv(
 )
 
 spec(agro_raw)
+# agro_raw |> select(ventas_tri) |>skim()
+# agro_raw |> select(auto_tri) |>skim()
+# agro_raw |> select(otros_tri) |>skim()
 # agro_raw |> select(tipoact) |> distinct()
 
 ## Clean + feature engineering ----
@@ -442,13 +445,11 @@ agro <- agro_clean |>
   ) |>
   mutate(
     n_size_class = case_when(
-      n_size_val1 < 250001 ~ 1,
-      n_size_val1 < 500001 ~ 2,
-      n_size_val1 < 1000001 ~ 3,
-      n_size_val1 < 2000001 ~ 4,
-      n_size_val1 < 5000001 ~ 5,
-      n_size_val1 < 10000001 ~ 6,
-      TRUE ~ 7
+      n_size_val1 < 2001 ~ 1,
+      n_size_val1 < 10001 ~ 2,
+      n_size_val1 < 50001 ~ 3,
+      n_size_val1 < 200001 ~ 4,
+      TRUE ~ 5
     )
   )
 
@@ -456,10 +457,10 @@ agro <- agro_clean |>
 
 # avoid silent explosions through joining operations
 stopifnot(
-  agroproductos %>% count(hogar) %>% pull(n) %>% max() == 1
+  agroproductos |> count(hogar) |> pull(n) |> max() == 1
 )
 stopifnot(
-  agroconsumo %>% count(hogar) %>% pull(n) %>% max() == 1
+  agroconsumo |> count(hogar) |> pull(n) |> max() == 1
 )
 
 agro <- agro |>
@@ -494,43 +495,43 @@ message("number of households in agroproductos : ", nrow(agroproductos))
 message("number of households in agroconsumo : ", nrow(agroconsumo))
 message("number of households in agro : ", nrow(agro))
 
-hogar_agro <- agro %>% distinct(hogar)
-hogar_producto <- agroproductos %>% distinct(hogar)
-hogar_consumo <- agroconsumo %>% distinct(hogar)
+hogar_agro <- agro |> distinct(hogar)
+hogar_producto <- agroproductos |> distinct(hogar)
+hogar_consumo <- agroconsumo |> distinct(hogar)
 
 # 1. agro only
-agro_only <- hogar_agro %>%
-  anti_join(hogar_producto, by = "hogar") %>%
+agro_only <- hogar_agro |>
+  anti_join(hogar_producto, by = "hogar") |>
   anti_join(hogar_consumo, by = "hogar")
 
 # 2. agro + producto only
-agro_producto_only <- hogar_agro %>%
-  inner_join(hogar_producto, by = "hogar") %>%
+agro_producto_only <- hogar_agro |>
+  inner_join(hogar_producto, by = "hogar") |>
   anti_join(hogar_consumo, by = "hogar")
 
 # 3. agro + consumo only
-agro_consumo_only <- hogar_agro %>%
-  inner_join(hogar_consumo, by = "hogar") %>%
+agro_consumo_only <- hogar_agro |>
+  inner_join(hogar_consumo, by = "hogar") |>
   anti_join(hogar_producto, by = "hogar")
 
 # 4. agro + producto + consumo
-all_three <- hogar_agro %>%
-  inner_join(hogar_producto, by = "hogar") %>%
+all_three <- hogar_agro |>
+  inner_join(hogar_producto, by = "hogar") |>
   inner_join(hogar_consumo, by = "hogar")
 
 # 5. producto only
-producto_only <- hogar_producto %>%
-  anti_join(hogar_agro, by = "hogar") %>%
+producto_only <- hogar_producto |>
+  anti_join(hogar_agro, by = "hogar") |>
   anti_join(hogar_consumo, by = "hogar")
 
 # 6. consumo only
-consumo_only <- hogar_consumo %>%
-  anti_join(hogar_agro, by = "hogar") %>%
+consumo_only <- hogar_consumo |>
+  anti_join(hogar_agro, by = "hogar") |>
   anti_join(hogar_producto, by = "hogar")
 
 # 7. producto + consumo only
-producto_consumo_only <- hogar_producto %>%
-  inner_join(hogar_consumo, by = "hogar") %>%
+producto_consumo_only <- hogar_producto |>
+  inner_join(hogar_consumo, by = "hogar") |>
   anti_join(hogar_agro, by = "hogar")
 
 # Summary table
@@ -874,25 +875,25 @@ concentradohogar_clean <- concentradohogar_raw |>
 
 ## PROVENANCE FLAGS ----
 
-hogar_concentrado <- concentradohogar_clean %>%
+hogar_concentrado <- concentradohogar_clean |>
   distinct(hogar)
 
-hogar_agro <- agro %>%
+hogar_agro <- agro |>
   distinct(hogar)
 
-hogar_producto <- agroproductos %>%
+hogar_producto <- agroproductos |>
   distinct(hogar)
 
-hogar_consumo <- agroconsumo %>%
+hogar_consumo <- agroconsumo |>
   distinct(hogar)
 
-hogar_noagro <- noagro %>%
+hogar_noagro <- noagro |>
   distinct(hogar)
 
-hogar_etnia <- etnia %>%
+hogar_etnia <- etnia |>
   distinct(hogar)
 
-hogar_alim <- alim %>%
+hogar_alim <- alim |>
   distinct(hogar)
 
 concentradohogar_flag <- concentradohogar_clean |>
@@ -933,16 +934,16 @@ concentradohogar_flag <- concentradohogar_clean |>
 
 # Avoid silent explosion through joining operations
 stopifnot(
-  agro %>% count(hogar) %>% pull(n) %>% max() == 1
+  agro |> count(hogar) |> pull(n) |> max() == 1
 )
 stopifnot(
-  noagro %>% count(hogar) %>% pull(n) %>% max() == 1
+  noagro |> count(hogar) |> pull(n) |> max() == 1
 )
 stopifnot(
-  etnia %>% count(hogar) %>% pull(n) %>% max() == 1
+  etnia |> count(hogar) |> pull(n) |> max() == 1
 )
 stopifnot(
-  alim %>% count(hogar) %>% pull(n) %>% max() == 1
+  alim |> count(hogar) |> pull(n) |> max() == 1
 )
 
 concentradohogar_enriched <- concentradohogar_flag |>
@@ -1029,7 +1030,7 @@ concentradohogar_features <- concentradohogar_enriched |>
 
 # Avoid silent explosion through joining operations
 stopifnot(
-  concentradohogar_features %>% count(hogar) %>% pull(n) %>% max() == 1
+  concentradohogar_features |> count(hogar) |> pull(n) |> max() == 1
 )
 
 concentradohogar <- concentradohogar_raw |>
@@ -1087,7 +1088,7 @@ diagnostic_universe <- function(
   ref_hogar = hogar_concentrado
 ) {
   # households outside concentradohogar
-  outside_ref <- data_hogar %>%
+  outside_ref <- data_hogar |>
     anti_join(ref_hogar, by = "hogar")
 
   n_outside <- nrow(outside_ref)
@@ -1106,8 +1107,8 @@ diagnostic_universe <- function(
   }
 
   # households included in concentradohogar
-  n_included <- data_hogar %>%
-    semi_join(ref_hogar, by = "hogar") %>%
+  n_included <- data_hogar |>
+    semi_join(ref_hogar, by = "hogar") |>
     nrow()
 
   tibble(
