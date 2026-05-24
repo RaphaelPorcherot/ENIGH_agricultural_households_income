@@ -9,6 +9,7 @@ library(stringr)
 library(forcats)
 library(tibble)
 
+library(broom.helpers)
 library(skimr) # Quick and clean data summaries
 library(survey) # Analyse d’enquêtes complexes (pondérations, stratification, etc.)
 library(srvyr) # Tidyverse wrapper for survey

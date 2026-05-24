@@ -2,6 +2,11 @@
 
 * [ ] annnual turnover factor levels needs to be corrected
 * [ ] farm specialisation : big change, no mixed 
+* [ ] sahre of fni much more unequal for some reasons (Gini also i assume)
+* [ ] some poor agri hosuehods have farms with > 50 000 anual turnover and richest have < 2000 turnover
+* [ ] reprendre les TODO et il lui lister 
+* [ ] reprendre les notes sur FLAN + rajouter celles sur AFEP : probablement des TODO, genre MFA()
+* [ ] elf consumption has been corrected (on calculait la part de l'auotconsommation du décile dans la prod total agri lol)
 
 # PAST 
 
