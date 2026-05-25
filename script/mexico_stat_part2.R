@@ -2529,7 +2529,7 @@ custom_save(plot_acc_alim1_decile)
 # Self-consumption ----
 ## from agro self employemnet ----
 
-ratio_autocons_totprod_decile <- get_ratio(
+ratio_autocons_prod_decile <- get_ratio(
   design = mysvyr,
   numerator = "n_autoconsumo1_agro",
   denominator = "n_size_val1_agro",
@@ -2546,7 +2546,7 @@ ratio_autocons_totprod_decile <- get_ratio(
 
 # correct levels order
 decile_lvl <- levels(as.factor(d$n_deciles_total))
-ratio_autocons_totprod_decile <- ratio_autocons_totprod_decile |>
+ratio_autocons_prod_decile <- ratio_autocons_prod_decile |>
   mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
   arrange(n_deciles_total, n_deciles_total)
 
