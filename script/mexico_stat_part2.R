@@ -3,7 +3,6 @@
 #TODO: compute the contrafactural income distribution that would be the case w/o support or w/o new support or w/o new direct support
 
 # FUNCTIONS ----
-
 ## Detailed statistics in custom layout ----
 
 make_tbl <- function(label, stat, ci_method = NULL) {
@@ -124,26 +123,25 @@ replace_negatives <- function(x) {
   } # pas de positifs
   q1 <- quantile(pos, 0.25, na.rm = TRUE)
   candidates <- pos[pos <= q1]
-  if (length(candidates) == 0) {
-    candidates <- min(pos)
-  }
+  # if (length(candidates) == 0) {
+  #   candidates <- min(pos)
+  # }
   neg_idx <- which(x < 0)
   x[neg_idx] <- sample(candidates, length(neg_idx), replace = TRUE)
-  return(x)
+  x
 }
 
-## Ratio ----
+## Custom survey functions ----
 ### PROPORTION des modalités de target_var stratifiés par strat_var, avec filtre optionnel (n_tipo_prod pour niveau de n_size_class) ----
-
 ### proportions et IC exacts beta pour tous les niveaux de target_var
 ### ex : n_tipo_prod pour tous les niveaux de n_size_class
 ### Utile car svyby/svymean ne gèrent pas facilement toutes les combinaisons ni les filtres dynamiques.
-
 ### Advantages:
 # Produces a full conditional distribution of a categorical variable within each stratum, rather than a single mean or binary summary.
 # Provides greater flexibility in sample restriction and stratification, including dynamic filtering that is not easily handled by svyby().
 # Uses beta-based confidence intervals via svyciprop(), which are more robust than standard asymptotic (Wald) intervals for proportions.
 
+# unit test
 # design <- mysvyr
 # strat_var <- "n_deciles_total"
 # target_var <- "n_acc_alim1"
@@ -155,7 +153,7 @@ replace_negatives <- function(x) {
 # target_level <- target_levels
 # method <- "beta"
 
-get_proportion_IC_all <- function(
+get_proportion <- function(
   design,
   strat_var,
   target_var,
@@ -258,47 +256,80 @@ get_proportion_IC_all <- function(
 
 ### svyciprop ne sait pas faire part d’une variable dans un total continu (acc_alim1 is 1/0, while n_fni is continuous) en stratifiant par decile (ou autre sous-groupe)
 ### based on delta method at 99%
-
-# Advantages:
+### Advantages:
 # It is an extension of svyby(~var, ~quant_var, svytotal)-style decomposition (delta method, just as syvby), but explicitly constructs each group-level contribution to a global total and converts it into shares.
 # It provides a share-of-total decomposition across quantiles, allowing interpretation as each group’s contribution to the overall aggregate rather than within-group averages.
 # It adds delta-method standard errors and confidence intervals for ratios of totals, which are not directly provided in standard svyby or basic svytotal outputs.
 
-get_share_by_quant <- function(
+# unit test
+# design <- mysvyr
+# target_var <- "n_fni_agro_clean"
+# strat_var <- "n_deciles_total"
+# # filer_var seulement utile si variable non pertinente pour une partie de la pop (ex: rendement/hectare)
+# # filter_var <- "n_is_agri_broad"
+# # filter_value <- "agri_broad"
+# x <- design$variables[[strat_var]]
+# strat_levels <- unique(as.character(x[!is.na(x)]))
+# strat_level <- strat_levels[2]
+# level <- 0.99
+# z <- qnorm((1 + level) / 2)
+
+get_share <- function(
   design,
-  var,
-  quant_var,
+  target_var,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL,
   level = 0.99
 ) {
   z <- qnorm((1 + level) / 2)
 
-  var_name <- deparse(substitute(var))
-  quant_name <- deparse(substitute(quant_var))
-  quant_values <- levels(
-    as.factor(design$variables[[quant_name]])
+  # Domaine d'analyse éventuel
+  # Si variable qui a du sens sur l'ensemble de la pop, on ne filtre pas (ex: farm net income, les non agri ont 0)
+  # Si variable qui n'a de sens que sur sous-ensemble, on filtre (ex: rendement/hectare, qui n'a pas de sens pour ceux qui n'ont pas de fermes)
+  if (!is.null(filter_var) && !is.null(filter_value)) {
+    design <- subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        as.character(design$variables[[filter_var]]) == filter_value
+    )
+  }
+
+  # Niveaux de stratification
+  x <- design$variables[[strat_var]]
+
+  strat_levels <- unique(
+    as.character(x[!is.na(x)])
   )
-  purrr::map_dfr(quant_values, function(q) {
-    f <- stats::as.formula(str_c(
-      "~ cbind(",
-      str_c(var_name, "_by_", quant_name, " = "),
-      var_name,
-      " * (",
-      quant_name,
-      " == '",
-      q,
-      "'), ",
-      str_c(var_name, "_tot = "),
-      var_name,
-      ")"
-    ))
+
+  calc_share <- function(strat_level) {
+    f <- stats::as.formula(
+      paste0(
+        "~cbind(",
+        "part = ",
+        target_var,
+        " * (",
+        strat_var,
+        " == '",
+        strat_level,
+        "'), ",
+        "total = ",
+        target_var,
+        ")"
+      )
+    )
 
     t2 <- survey::svytotal(
       f,
       design = design,
       na.rm = TRUE
     )
-    X <- coef(t2)[1]
-    Y <- coef(t2)[2]
+    names(t2) <- c("part", "total")
+
+    coefs <- coef(t2)
+
+    X <- coefs[1]
+    Y <- coefs[2]
 
     vc <- vcov(t2)
 
@@ -313,62 +344,77 @@ get_share_by_quant <- function(
     )
 
     tibble::tibble(
-      quantile = q,
-      var = var_name,
+      strat_level = strat_level,
+      target_var = target_var,
       share = ratio,
       SE = SE,
       IC_low = ratio - z * SE,
       IC_high = ratio + z * SE
     )
-  })
+  }
+
+  purrr::map_dfr(
+    strat_levels,
+    calc_share
+  ) |>
+    dplyr::rename(
+      !!strat_var := strat_level
+    )
 }
 
 ### RATIO of a variable by the total of that continous variable in a subgroup (decile) ----
 
-get_ratio_by_quant <- function(
+# unit test
+# design <- mysvyr
+# numerator <- "n_autoconsumo1_agro"
+# denominator <- "n_size_val1_agro"
+# strat_var <- "n_deciles_total"
+# filter_var <- "n_is_agri_broad"
+# filter_value <- "agri_broad"
+# level <- 0.99
+# strat_levels <- unique(as.character(design$variables[[strat_var]]))
+# strat_level <- strat_levels[2]
+
+get_ratio <- function(
   design,
   numerator,
   denominator,
-  group_var,
+  strat_var,
   filter_var = NULL,
   filter_value = NULL,
   level = 0.99
 ) {
   z <- qnorm((1 + level) / 2)
 
-  group_name <- deparse(substitute(group_var))
-  num_name <- deparse(substitute(numerator))
-  denom_name <- deparse(substitute(denominator))
-  filter_name <- deparse(substitute(filter_var))
+  # subset global (domain restriction)
+  if (!is.null(filter_var) && !is.null(filter_value)) {
+    design <- subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        design$variables[[filter_var]] == filter_value
+    )
+  }
 
-  groups <- levels(as.factor(design$variables[[group_name]]))
+  # strat
+  strat_levels <- unique(as.character(design$variables[[strat_var]]))
+  strat_levels <- strat_levels[!is.na(strat_levels)]
 
-  purrr::map_dfr(groups, function(g) {
-    # subset (domain restriction)
-    if (!is.null(filter_var) && !is.null(filter_value)) {
-      design_sub <- subset(
-        design,
-        get(filter_name) == filter_value &
-          get(group_name) == g
-      )
-    } else {
-      design_sub <- subset(
-        design,
-        get(group_name) == g
-      )
-    }
+  calc_ratio <- function(strat_level) {
+    # sous-design dynamique
+    design_sub <- subset(
+      design,
+      !is.na(design$variables[[strat_var]]) &
+        as.character(design$variables[[strat_var]]) == strat_level
+    )
 
-    #  svytotal for numerator and denominator jointly
     f <- stats::as.formula(
       paste0(
         "~cbind(",
-        num_name,
-        " = ",
-        num_name,
+        "num = ",
+        numerator,
         ", ",
-        denom_name,
-        " = ",
-        denom_name,
+        "den = ",
+        denominator,
         ")"
       )
     )
@@ -378,9 +424,11 @@ get_ratio_by_quant <- function(
       design = design_sub,
       na.rm = TRUE
     )
+    names(t2) <- c(str_c("num-", numerator), str_c("den-", denominator))
 
-    X <- coef(t2)[1]
-    Y <- coef(t2)[2]
+    coefs <- coef(t2)
+    X <- coefs[1]
+    Y <- coefs[2]
 
     vc <- vcov(t2)
 
@@ -388,18 +436,10 @@ get_ratio_by_quant <- function(
     VarY <- vc[2, 2]
     CovXY <- vc[1, 2]
 
-    # ratio
-    ratio <- X / Y
-
-    # delta method SE
-    SE <- sqrt(
-      VarX / Y^2 + (X^2 * VarY) / Y^4 - 2 * X * CovXY / Y^3
-    )
-
     # protection denominator
     if (is.na(Y) || Y == 0) {
       return(tibble::tibble(
-        group = g,
+        strat_var = strat_level,
         ratio = NA_real_,
         SE = NA_real_,
         IC_low = NA_real_,
@@ -407,14 +447,23 @@ get_ratio_by_quant <- function(
       ))
     }
 
+    ratio <- X / Y
+
+    SE <- sqrt(
+      VarX / Y^2 + (X^2 * VarY) / Y^4 - 2 * X * CovXY / Y^3
+    )
+
     tibble::tibble(
-      group = g,
+      strat_var = strat_level,
       ratio = ratio,
       SE = SE,
       IC_low = ratio - z * SE,
       IC_high = ratio + z * SE
     )
-  })
+  }
+
+  purrr::map_dfr(strat_levels, calc_ratio) |>
+    dplyr::rename(!!strat_var := strat_var)
 }
 
 # -----------
@@ -1453,7 +1502,7 @@ custom_save(plot_farm_turnover_size_prod)
 #     d$n_is_agri_broad == "agri_broad"
 # )
 
-farm_turnover_size_prod_pct <- get_proportion_IC_all(
+farm_turnover_size_prod_pct <- get_proportion(
   design = mysvyr,
   strat_var = "n_size_class_agro",
   target_var = "n_tipo_prod_agro",
@@ -1526,24 +1575,24 @@ custom_save(plot_farm_turnover_size_prod_pct)
 # Farm dual's structure ----
 ## Shares of n_fni by decile ----
 
-share_fni_decile_pct <- get_share_by_quant(
+share_fni_decile_pct <- get_share(
   design = mysvyr,
-  var = n_fni_agro_clean,
-  quant_var = n_deciles_total,
+  target_var = "n_fni_agro_clean",
+  strat_var = "n_deciles_total"
 ) |>
   mutate(
-    `Ratio (%)` = round(share * 100, 2),
-    SE_pct = round(SE * 100, 2),
-    `IC99 Lower (%)` = round(IC_low * 100, 2),
-    `IC99 Upper (%)` = round(IC_high * 100, 2)
+    share = round(share * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
   ) |>
-  select(
-    Decile = quantile,
-    `Ratio (%)`,
-    SE_pct,
-    `IC99 Lower (%)`,
-    `IC99 Upper (%)`
-  )
+  select(-target_var)
+
+# correct levels order
+decile_lvl <- levels(as.factor(d$n_deciles_total))
+share_fni_decile_pct <- share_fni_decile_pct |>
+  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
+  arrange(n_deciles_total, share_fni_decile_pct)
 
 custom_save(share_fni_decile_pct)
 
@@ -1593,14 +1642,15 @@ pop_sub <- mysvyr |>
 
 pop <- bind_rows(pop_tot, pop_sub)
 
-ratios <- share_fni_decile_pct |>
+share <- share_fni_decile_pct |>
   mutate(type = "Farm net income") |>
-  select(-SE_pct) |>
+  rename(decile = n_deciles_total) |>
+  select(-SE) |>
   mutate(
     cols = viridis(10, option = "plasma", direction = -1)[9]
   ) |>
   set_names(colnames(pop))
-df_plot <- bind_rows(pop, ratios) |>
+df_plot <- bind_rows(pop, share) |>
   mutate(
     decile = factor(decile, levels = paste0("D", 1:10))
   )
@@ -1694,7 +1744,7 @@ custom_save(plot_agri_house_fni_decile_pct)
 # d |> filter(n_is_agri == "agri_narrow") |> group_by(n_deciles_total) |> summarise(mean_ing = mean(n_ing_cor_clean))
 #TODO: do the graph also for agri_narrow
 #INFO: chez les riches mexicains, la possession d’une ferme n’est pas uniquement productive : il y a plus de fermiers dans D10 que dans D9, mais manifestement les D10 ce n'est pas que de l'industrie agricole à grande échelle. Les fermes dans D10 ne sont pas la source principale de la richesse ? Pourtant effectivement qqchose comme 70 % du revenus de D10 vient des fermes
-# Une minorité de très grosses fermes capte l’essentiel du revenu agricole: D10 semble être lui-même dual ! 
+# Une minorité de très grosses fermes capte l’essentiel du revenu agricole: D10 semble être lui-même dual !
 # D9 = bourgeoisie agricole productive
 # grandes exploitations commerciales
 # relativement homogènes
@@ -1704,7 +1754,7 @@ custom_save(plot_agri_house_fni_decile_pct)
 # ménages riches avec petites fermes
 # forte dispersion patrimoniale
 
-farm_turnover_decile_pct <- get_proportion_IC_all(
+farm_turnover_decile_pct <- get_proportion(
   design = mysvyr,
   strat_var = "n_deciles_total",
   target_var = "n_size_class_agro",
@@ -2267,7 +2317,7 @@ names(dr) <- c("ethnic", "age", "gender")
 #   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
 # )
 #
-etnia_decile_pct <- get_proportion_IC_all(
+etnia_decile_pct <- get_proportion(
   design = mysvyr,
   strat_var = "n_deciles_total",
   target_var = "n_etnia",
@@ -2383,30 +2433,7 @@ tbl_or_poverty_ethnicity <- mod_poverty_ethnicity |>
 
 ## Focus on concerns for food ----
 
-
-#NOTE :une dissociation entre revenu monétaire et sécurité alimentaire subjective : tant pour narrow que pour broad, la ruralité/agriculture crée une vulnérabilité spécifique, car dans la pop totalles plus riche ne sont pas très inquiet
-#WARN: The function is meant to be a handy way to compute proportions and confidence intervals of the proportions of a given target var (say acc_alim1) stratified by a given strat var (say the decile) in a subset of the survey based on filter_var == filter_value
-# there is no issue with the function as we find the same awkard 40% of richest agricultural households concerned about food availability through coherence checks -> it seems to be a result
-# mysvyr |>
-#   filter(n_is_agri_broad == "agri_broad") |>
-#   group_by(n_deciles_total) |>
-#   summarise(
-#     prop = survey_mean(n_acc_alim1 == 1, vartype = "ci")
-#   )
-#
-# svymean(
-#   ~ I(n_acc_alim1 == 1),
-#   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
-# )
-# mean(
-#   d$n_acc_alim1 == 1 &
-#     d$n_deciles_total == "D10" &
-#     d$n_is_agri_broad == "agri_broad"
-# )
-
-
-
-acc_alim1_decile <- get_proportion_IC_all(
+acc_alim1_decile <- get_proportion(
   design = mysvyr,
   strat_var = "n_deciles_total",
   target_var = "n_acc_alim1",
@@ -2479,30 +2506,49 @@ plot_acc_alim1_decile <- ggplot(
   )
 custom_save(plot_acc_alim1_decile)
 
+#NOTE :une dissociation entre revenu monétaire et sécurité alimentaire subjective : tant pour narrow que pour broad, la ruralité/agriculture crée une vulnérabilité spécifique, car dans la pop totalles plus riche ne sont pas très inquiet
+#WARN: The function is meant to be a handy way to compute proportions and confidence intervals of the proportions of a given target var (say acc_alim1) stratified by a given strat var (say the decile) in a subset of the survey based on filter_var == filter_value
+# there is no issue with the function as we find the same awkard 40% of richest agricultural households concerned about food availability through coherence checks -> it seems to be a result
+# mysvyr |>
+#   filter(n_is_agri_broad == "agri_broad") |>
+#   group_by(n_deciles_total) |>
+#   summarise(
+#     prop = survey_mean(n_acc_alim1 == 1, vartype = "ci")
+#   )
+#
+# svymean(
+#   ~ I(n_acc_alim1 == 1),
+#   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
+# )
+# mean(
+#   d$n_acc_alim1 == 1 &
+#     d$n_deciles_total == "D10" &
+#     d$n_is_agri_broad == "agri_broad"
+# )
+
 # Self-consumption ----
 ## from agro self employemnet ----
 
-share_autoconsumo_decile_pct <- get_ratio_by_quant(
+ratio_autocons_totprod_decile <- get_ratio(
   design = mysvyr,
-  numerator = n_autoconsumo1_agro,
-  denominator = n_size_val1_agro,
-  group_var = n_deciles_total,
-  filter_var = n_is_agri_broad,
-  filter_value = agri_broad
+  numerator = "n_autoconsumo1_agro",
+  denominator = "n_size_val1_agro",
+  strat_var = "n_deciles_total",
+  filter_var = "n_is_agri_broad",
+  filter_value = "agri_broad"
 ) |>
   mutate(
-    `Ratio (%)` = round(share * 100, 2),
-    SE_pct = round(SE * 100, 2),
-    `IC99 Lower (%)` = round(IC_low * 100, 2),
-    `IC99 Upper (%)` = round(IC_high * 100, 2)
-  ) |>
-  select(
-    Decile = quantile,
-    `Ratio (%)`,
-    SE_pct,
-    `IC99 Lower (%)`,
-    `IC99 Upper (%)`
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
   )
+
+# correct levels order
+decile_lvl <- levels(as.factor(d$n_deciles_total))
+ratio_autocons_totprod_decile <- ratio_autocons_totprod_decile |>
+  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
+  arrange(n_deciles_total, n_deciles_total)
 
 # ratios_table$Decile <- factor(
 #   ratios_table$Decile,
