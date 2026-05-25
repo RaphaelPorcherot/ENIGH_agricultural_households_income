@@ -1,6 +1,8 @@
 # PART 2 STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO
 
 #TODO: compute the contrafactural income distribution that would be the case w/o support or w/o new support or w/o new direct support
+#TODO : compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
+#TODO : regarde la part des vieux programmes agricoles dans le revenu agricole total par décile (sauf que les déciles varient lorsque cette part varie)
 
 # FUNCTIONS ----
 ## Detailed statistics in custom layout ----
@@ -1086,6 +1088,8 @@ plot_quantile_cutoff <- ggplot(
   theme_minimal(base_size = 13)
 
 custom_save(plot_quantile_cutoff, "fig")
+print(plot_quantile_cutoff)
+
 ## Detailed table ----
 t_mean <- make_tbl("mean (99% CI)", "{mean}", ci_method = "svymean") |>
   modify_header(
@@ -1480,7 +1484,8 @@ plot_farm_turnover_size_prod <- ggplot(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-custom_save(plot_farm_turnover_size_prod)
+custom_save(plot_farm_turnover_size_prod, "fig")
+print(plot_farm_turnover_size_prod)
 
 ### tbl and plot of relative proportions ----
 
@@ -1568,7 +1573,8 @@ plot_farm_turnover_size_prod_pct <- ggplot(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-custom_save(plot_farm_turnover_size_prod_pct)
+custom_save(plot_farm_turnover_size_prod_pct, "fig")
+print(plot_farm_turnover_size_prod_pct)
 
 # -----------
 
@@ -1719,7 +1725,8 @@ plot_agri_house_fni_decile_pct <- ggplot(df_plot, aes(x = decile)) +
   ) +
   theme_minimal(base_size = 14)
 
-custom_save(plot_agri_house_fni_decile_pct)
+custom_save(plot_agri_house_fni_decile_pct, "fig")
+print(plot_agri_house_fni_decile_pct)
 
 ## Farm annual turnover across income decile ----
 
@@ -1740,9 +1747,9 @@ custom_save(plot_agri_house_fni_decile_pct)
 #     d$n_deciles_total == "D10" &
 #     d$n_is_agri_broad == "agri_broad"
 # )
-
 # d |> filter(n_is_agri == "agri_narrow") |> group_by(n_deciles_total) |> summarise(mean_ing = mean(n_ing_cor_clean))
-#TODO: do the graph also for agri_narrow
+
+### agri_broad ----
 #INFO: chez les riches mexicains, la possession d’une ferme n’est pas uniquement productive : il y a plus de fermiers dans D10 que dans D9, mais manifestement les D10 ce n'est pas que de l'industrie agricole à grande échelle. Les fermes dans D10 ne sont pas la source principale de la richesse ? Pourtant effectivement qqchose comme 70 % du revenus de D10 vient des fermes
 # Une minorité de très grosses fermes capte l’essentiel du revenu agricole: D10 semble être lui-même dual !
 # D9 = bourgeoisie agricole productive
@@ -1781,7 +1788,7 @@ farm_turnover_decile_pct <- farm_turnover_decile_pct |>
   mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
   arrange(n_deciles_total, n_size_class_agro)
 
-plot_farm_turnover_decile_pct <- ggplot(
+plot_farm_turnover_decile_broad_pct <- ggplot(
   farm_turnover_decile_pct,
   aes(x = n_deciles_total, y = pct, fill = n_size_class_agro)
 ) +
@@ -1805,16 +1812,84 @@ plot_farm_turnover_decile_pct <- ggplot(
   ) +
   labs(
     title = "Mexican farms according to annual turnover and income decile of farmers",
+    subtitle = "Universe: broad definition of agricultural households",
     x = "Income decile",
-    y = "(%)",
-    # caption = "Note: Farm types have been defined considering the share of different production in the total revenues of farms.\nA farm is classified as specialised into a given production when its revenues represent at least two thirds of total turnover.\nIn mixed farms the threshold is not reached neither by crops cultivation nor by livestock production."
+    y = "(%)"
   ) +
   theme_minimal(base_size = 14) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-custom_save(plot_farm_turnover_decile_pct)
+custom_save(plot_farm_turnover_decile_broad_pct, "fig")
+print(plot_farm_turnover_decile_broad_pct)
+
+### agri_narrow ----
+
+farm_turnover_decile_pct <- get_proportion(
+  design = mysvyr,
+  strat_var = "n_deciles_total",
+  target_var = "n_size_class_agro",
+  # filter_var = "n_is_agri_broad",
+  # filter_value = "agri_broad"
+  filter_var = "n_is_agri",
+  filter_value = "agri_narrow"
+) |>
+  rename(
+    pct = prop,
+    pct_low = IC_low,
+    pct_upp = IC_high
+  ) |>
+  mutate(
+    pct_low = pct_low * 100,
+    pct_upp = pct_upp * 100,
+    pct = pct * 100,
+  )
+custom_save(farm_turnover_decile_pct)
+
+# correct levels order
+decile_lvl <- levels(as.factor(d$n_deciles_total))
+farm_turnover_decile_pct <- farm_turnover_decile_pct |>
+  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
+  arrange(n_deciles_total, n_size_class_agro)
+
+plot_farm_turnover_decile_narrow_pct <- ggplot(
+  farm_turnover_decile_pct,
+  aes(x = n_deciles_total, y = pct, fill = n_size_class_agro)
+) +
+  geom_col(
+    width = 0.7,
+    alpha = 0.8,
+    # position = position_dodge(width = 0.7)
+  ) +
+  geom_errorbar(
+    data = farm_turnover_decile_pct |>
+      dplyr::filter(n_size_class_agro == "[0; 2 000]"),
+    aes(x = n_deciles_total, ymin = 100 - pct_low, ymax = 100 - pct_upp),
+    width = 0.2,
+    inherit.aes = FALSE
+  ) +
+  scale_fill_viridis_d(
+    "Turnover (MXN)",
+    option = "mako",
+    begin = 1,
+    end = 0.2
+  ) +
+  labs(
+    title = "Mexican farms according to annual turnover and income decile of farmers",
+    subtitle = "Universe: narrow definition of agricultural households",
+    x = "Income decile",
+    y = "(%)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+custom_save(plot_farm_turnover_decile_narrow_pct, "fig")
+print(plot_farm_turnover_decile_narrow_pct)
+
+#NOTE: the previous observation applies, D10 agri households have smaller farm than D9.
 
 # Income inequalities compared ----
 ## on agri_broad ----
@@ -1890,6 +1965,9 @@ gini_lbl <- data.frame(
 
 ### Lorenz plot and tbl ----
 
+ggplot(df_plot, aes(quantile)) +
+  geom_ribbon(aes(ymin = IC_lower, ymax = IC_upper, group = group), alpha = 0.3)
+
 myconv <- convey_prep(mysvyr)
 # svylorenz(~ n_ing_equivaled,
 #   myconv,
@@ -1927,31 +2005,30 @@ df_plot <- data.frame(
   se_L = c(as.numeric(se_L_values[1, ]), as.numeric(se_L_values[2, ])),
   group = rep(c("agri_broad", "not_agri"), each = length(quantiles))
 )
-
 df_plot$IC_lower <- df_plot$L - z99 * df_plot$se_L
 df_plot$IC_upper <- df_plot$L + z99 * df_plot$se_L
 
 plot_lorenz_agri_broad <- ggplot(df_plot, aes(x = quantile)) +
-  geom_line(aes(y = L, color = group), linewidth = 1) +
   geom_ribbon(
-    aes(ymin = IC_lower, ymax = IC_upper, fill = group),
+    aes(ymin = IC_lower, ymax = IC_upper, group = group),
+    # color = NA,
     alpha = 0.2
   ) +
+  geom_line(aes(y = L, color = group), linewidth = 1) +
   scale_color_manual(
     values = c(
       "agri_broad" = viridis(10, option = "magma", direction = 1)[6],
-      "not_agri" = viridis(10, option = "cividis", direction = 1)[6]
+      "not_agri" = viridis(10, option = "cividis", direction = 1)[3]
     ),
     labels = c("Agricultural households (broad)", "Non-agricultural") # Renaming legend labels
   ) +
-
-  scale_fill_manual(
-    values = c(
-      "agri_broad" = viridis(10, option = "inferno", direction = 1)[10],
-      "not_agri" = viridis(10, option = "inferno", direction = 1)[1]
-    ),
-    labels = c("Agricultural households (broad)", "Non-agricultural") # Renaming legend labels
-  ) +
+  # scale_fill_manual(
+  #   values = c(
+  #     "agri_broad" = viridis(10, option = "inferno", direction = 1)[10],
+  #     "not_agri" = viridis(10, option = "inferno", direction = 1)[1]
+  #   ),
+  #   labels = c("Agricultural households (broad)", "Non-agricultural") # Renaming legend labels
+  # ) +
   geom_richtext(
     data = gini_lbl,
     aes(x = x, y = y, label = label),
@@ -1974,8 +2051,8 @@ plot_lorenz_agri_broad <- ggplot(df_plot, aes(x = quantile)) +
     subtitle = "Square root equivalence scale",
     y = "Cumulative share of equivaled income",
     x = "Cumulative share of population",
-    color = "group",
-    fill = "group"
+    color = "group"
+    # fill = "group"
   ) +
   theme_minimal(base_size = 14) +
   theme(
@@ -1983,10 +2060,11 @@ plot_lorenz_agri_broad <- ggplot(df_plot, aes(x = quantile)) +
     legend.title = element_blank(),
     legend.text = element_text(size = 11)
   )
+print(plot_lorenz_agri_broad)
 
-# kable(df_plot)
-custom_save(df_plot, "lorenz_agri_broad.csv")
-custom_save(plot_lorenz_agri_broad)
+custom_save(df_plot, "lorenz_agri_broad")
+custom_save(plot_lorenz_agri_broad, "fig")
+
 ## on agri_narrow ----
 ### Gini ----
 
@@ -2105,32 +2183,31 @@ df_plot$IC_lower <- df_plot$L - z99 * df_plot$se_L
 df_plot$IC_upper <- df_plot$L + z99 * df_plot$se_L
 
 plot_lorenz_agri_narrow <- ggplot(df_plot, aes(x = quantile)) +
-  geom_line(aes(y = L, color = group), linewidth = 1) +
   geom_ribbon(
-    aes(ymin = IC_lower, ymax = IC_upper, fill = group),
+    aes(ymin = IC_lower, ymax = IC_upper, group = group),
     alpha = 0.2
   ) +
+  geom_line(aes(y = L, color = group), linewidth = 1) +
   scale_color_manual(
     values = c(
       "sen_agri" = viridis(10, option = "magma", direction = 1)[6],
-      "sen_not_agri" = viridis(10, option = "cividis", direction = 1)[6]
+      "sen_not_agri" = viridis(10, option = "cividis", direction = 1)[3]
     ),
     labels = c(
       "Self-employed agricultural households",
       "Self-employed non-agricultural households "
     ) # Renaming legend labels
   ) +
-
-  scale_fill_manual(
-    values = c(
-      "sen_agri" = viridis(10, option = "turbo", direction = 1)[10],
-      "sen_not_agri" = viridis(10, option = "turbo", direction = 1)[1]
-    ),
-    labels = c(
-      "Self-employed agricultural households",
-      "Self-employed non-agricultural households "
-    ) # Renaming legend labels
-  ) +
+  # scale_fill_manual(
+  #   values = c(
+  #     "sen_agri" = viridis(10, option = "turbo", direction = 1)[10],
+  #     "sen_not_agri" = viridis(10, option = "turbo", direction = 1)[1]
+  #   ),
+  #   labels = c(
+  #     "Self-employed agricultural households",
+  #     "Self-employed non-agricultural households "
+  #   ) # Renaming legend labels
+  # ) +
   geom_richtext(
     data = gini_lbl,
     aes(x = x, y = y, label = label),
@@ -2153,8 +2230,8 @@ plot_lorenz_agri_narrow <- ggplot(df_plot, aes(x = quantile)) +
     subtitle = "Square root equivalence scale",
     y = "Cumulative share of equivaled income",
     x = "Cumulative share of population",
-    color = "group",
-    fill = "group"
+    color = "group"
+    # fill = "group"
   ) +
   theme_minimal(base_size = 14) +
   theme(
@@ -2162,11 +2239,14 @@ plot_lorenz_agri_narrow <- ggplot(df_plot, aes(x = quantile)) +
     legend.title = element_blank(),
     legend.text = element_text(size = 11)
   )
-# kable(df_plot)
-custom_save(df_plot, "lorenz_agriStrict.csv")
-custom_save(plot_lorenz_agri_narrow)
+print(plot_lorenz_agri_narrow)
+
+custom_save(df_plot, "lorenz_agri_narrow")
+custom_save(plot_lorenz_agri_narrow, "fig")
+
 # Drivers of inequalities ----
 ## general ----
+
 tbl_agri <- subset(tbl, n_is_agri_broad == "agricultural households")
 tbl_csv <- tbl_agri |>
   select(-n_is_agri_broad) |>
@@ -2312,17 +2392,13 @@ dr <- list(ethnic, age, gender)
 names(dr) <- c("ethnic", "age", "gender")
 ## Focus on ethnicity ----
 
-# svymean(
-#   ~ I(n_etnia == 1),
-#   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
-# )
-#
+### total ----
 etnia_decile_pct <- get_proportion(
   design = mysvyr,
   strat_var = "n_deciles_total",
-  target_var = "n_etnia",
-  filter_var = "n_is_agri_broad",
-  filter_value = "agri_broad"
+  target_var = "n_etnia"
+  # filter_var = "n_is_agri_broad",
+  # filter_value = "agri_broad"
 ) |>
   rename(
     pct = prop,
@@ -2368,13 +2444,11 @@ plot_etnia_decile_pct <- ggplot(
     inherit.aes = FALSE
   ) +
   labs(
-    title = "Ethnicity of agricultural households according to income decile",
-    subtitle = "Indigenous households are those whose reference person (jefe) self-identifies as indigenous",
+    title = "Ethnicity of households according to income decile",
+    subtitle = "Universe: whole population",
     x = "Income decile",
     y = "Percentage (%)",
     caption = paste(
-      "Agricultural households are defined according to the broad definition",
-      #TODO: check ethnicity according to agro_narrow
       "Households are classified according to the socio-demographic characteristics of the reference person (jefe).",
       "Indigenous households are those whose reference person answered yes to the question: ",
       "“De acuerdo con la sua cultura, ¿ella (él) se considera indígena?” (table POBLACION, question Autoadscripción étnica).",
@@ -2389,7 +2463,165 @@ plot_etnia_decile_pct <- ggplot(
     plot.subtitle = element_text(size = 12, face = "italic"),
     plot.caption = element_text(size = 10)
   )
-custom_save(plot_etnia_decile_pct)
+
+print(plot_etnia_decile_pct)
+custom_save(plot_etnia_decile_pct, "fig")
+
+### agri_broad ----
+# svymean(
+#   ~ I(n_etnia == 1),
+#   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
+# )
+
+etnia_decile_pct <- get_proportion(
+  design = mysvyr,
+  strat_var = "n_deciles_total",
+  target_var = "n_etnia",
+  filter_var = "n_is_agri_broad",
+  filter_value = "agri_broad"
+) |>
+  rename(
+    pct = prop,
+    pct_low = IC_low,
+    pct_upp = IC_high
+  ) |>
+  mutate(
+    pct_low = pct_low * 100,
+    pct_upp = pct_upp * 100,
+    pct = pct * 100,
+  ) |>
+  mutate(
+    n_etnia = ifelse(n_etnia == 1, "indigenous", "non-indigenous")
+  )
+custom_save(etnia_decile_pct)
+
+# correct levels order
+decile_lvl <- levels(as.factor(d$n_deciles_total))
+etnia_decile_pct <- etnia_decile_pct |>
+  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
+  arrange(n_deciles_total, n_etnia)
+
+# plot
+plot_etnia_decile_broad_pct <- ggplot(
+  etnia_decile_pct,
+  aes(x = n_deciles_total, y = pct, fill = n_etnia)
+) +
+  geom_col(
+    width = 0.7,
+    alpha = 0.8
+  ) +
+  scale_fill_viridis_d(
+    name = "Ethnic self-identification",
+    option = "mako",
+    begin = 0.2,
+    end = 0.8,
+    direction = -1
+  ) +
+  geom_errorbar(
+    data = etnia_decile_pct |> dplyr::filter(n_etnia == "non-indigenous"),
+    aes(x = n_deciles_total, ymin = pct_low, ymax = pct_upp),
+    width = 0.2,
+    inherit.aes = FALSE
+  ) +
+  labs(
+    title = "Ethnicity of agricultural households according to income decile",
+    subtitle = "Universe: agri_broad",
+    x = "Income decile",
+    y = "Percentage (%)",
+    caption = paste(
+      "Households are classified according to the socio-demographic characteristics of the reference person (jefe).",
+      "Indigenous households are those whose reference person answered yes to the question: ",
+      "“De acuerdo con la sua cultura, ¿ella (él) se considera indígena?” (table POBLACION, question Autoadscripción étnica).",
+      "Source: Based on ENIGH data.",
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 12, face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot_etnia_decile_broad_pct)
+custom_save(plot_etnia_decile_broad_pct, "fig")
+
+### agri_narrow ----
+
+etnia_decile_pct <- get_proportion(
+  design = mysvyr,
+  strat_var = "n_deciles_total",
+  target_var = "n_etnia",
+  filter_var = "n_is_agri",
+  filter_value = "agri_narrow"
+) |>
+  rename(
+    pct = prop,
+    pct_low = IC_low,
+    pct_upp = IC_high
+  ) |>
+  mutate(
+    pct_low = pct_low * 100,
+    pct_upp = pct_upp * 100,
+    pct = pct * 100,
+  ) |>
+  mutate(
+    n_etnia = ifelse(n_etnia == 1, "indigenous", "non-indigenous")
+  )
+custom_save(etnia_decile_pct)
+
+# correct levels order
+decile_lvl <- levels(as.factor(d$n_deciles_total))
+etnia_decile_pct <- etnia_decile_pct |>
+  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
+  arrange(n_deciles_total, n_etnia)
+
+# plot
+plot_etnia_decile_narrow_pct <- ggplot(
+  etnia_decile_pct,
+  aes(x = n_deciles_total, y = pct, fill = n_etnia)
+) +
+  geom_col(
+    width = 0.7,
+    alpha = 0.8
+  ) +
+  scale_fill_viridis_d(
+    name = "Ethnic self-identification",
+    option = "mako",
+    begin = 0.2,
+    end = 0.8,
+    direction = -1
+  ) +
+  geom_errorbar(
+    data = etnia_decile_pct |> dplyr::filter(n_etnia == "non-indigenous"),
+    aes(x = n_deciles_total, ymin = pct_low, ymax = pct_upp),
+    width = 0.2,
+    inherit.aes = FALSE
+  ) +
+  labs(
+    title = "Ethnicity of agricultural households according to income decile",
+    subtitle = "Universe: agri_narrow",
+    x = "Income decile",
+    y = "Percentage (%)",
+    caption = paste(
+      "Households are classified according to the socio-demographic characteristics of the reference person (jefe).",
+      "Indigenous households are those whose reference person answered yes to the question: ",
+      "“De acuerdo con la sua cultura, ¿ella (él) se considera indígena?” (table POBLACION, question Autoadscripción étnica).",
+      "Source: Based on ENIGH data.",
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 12, face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot_etnia_decile_narrow_pct)
+custom_save(plot_etnia_decile_narrow_pct, "fig")
 
 ## Odd ratio with controls ----
 #TODO: we should do this but on a relative poverty variable not on minimum wage which is an extreme and restrictive measure of poverty
@@ -2432,15 +2664,16 @@ tbl_or_poverty_ethnicity <- mod_poverty_ethnicity |>
   bold_labels()
 
 ## Focus on concerns for food ----
+### total ----
 
 acc_alim1_decile <- get_proportion(
   design = mysvyr,
   strat_var = "n_deciles_total",
-  target_var = "n_acc_alim1",
+  target_var = "n_acc_alim1"
   # filter_var = "n_is_agri",
   # filter_value = "agri_narrow"
-  filter_var = "n_is_agri_broad",
-  filter_value = "agri_broad"
+  # filter_var = "n_is_agri_broad",
+  # filter_value = "agri_broad"
 ) |>
   rename(
     pct = prop,
@@ -2485,12 +2718,11 @@ plot_acc_alim1_decile <- ggplot(
     inherit.aes = FALSE
   ) +
   labs(
-    title = "Agricultural households according to income decile and concern about food availability",
-    subtitle = "Self-reported concern by the household head in the last three months",
+    title = "Households according to income decile and concern about food availability",
+    subtitle = "Universe: whole population",
     x = "Income decile",
     y = "Percentage (%)",
     caption = paste(
-      "Households are defined as agricultural according to the broad definition.",
       "The “concern about food availability” is a self-reported condition expressed by the household head answering:",
       "«En los últimos tres meses, por falta de dinero o recursos ¿alguna vez usted se preocupó de que la comida se acabara?» (table HOGARES, variable acc_alim1).",
       "Source: Based on ENIGH data.",
@@ -2504,7 +2736,83 @@ plot_acc_alim1_decile <- ggplot(
     plot.subtitle = element_text(size = 12, face = "italic"),
     plot.caption = element_text(size = 10)
   )
-custom_save(plot_acc_alim1_decile)
+custom_save(plot_acc_alim1_decile, "fig")
+print(plot_acc_alim1_decile)
+
+### agri_broad ----
+
+acc_alim1_decile <- get_proportion(
+  design = mysvyr,
+  strat_var = "n_deciles_total",
+  target_var = "n_acc_alim1",
+  # filter_var = "n_is_agri",
+  # filter_value = "agri_narrow"
+  filter_var = "n_is_agri_broad",
+  filter_value = "agri_broad"
+) |>
+  rename(
+    pct = prop,
+    pct_low = IC_low,
+    pct_upp = IC_high
+  ) |>
+  mutate(
+    pct_low = pct_low * 100,
+    pct_upp = pct_upp * 100,
+    pct = pct * 100,
+  ) |>
+  mutate(
+    n_acc_alim1 = ifelse(n_acc_alim1 == 1, "yes", "no")
+  )
+custom_save(acc_alim1_decile)
+
+# correct levels order
+decile_lvl <- levels(as.factor(d$n_deciles_total))
+acc_alim1_decile <- acc_alim1_decile |>
+  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
+  arrange(n_deciles_total, acc_alim1_decile)
+
+plot_acc_alim1_decile_broad <- ggplot(
+  acc_alim1_decile,
+  aes(x = n_deciles_total, y = pct, fill = n_acc_alim1)
+) +
+  geom_col(
+    width = 0.7,
+    alpha = 0.8
+  ) +
+  scale_fill_viridis_d(
+    name = "Concern about\nfood availability",
+    option = "viridis",
+    begin = 0.2,
+    end = 0.8,
+    direction = -1
+  ) +
+  geom_errorbar(
+    data = acc_alim1_decile |> dplyr::filter(n_acc_alim1 == "yes"),
+    aes(x = n_deciles_total, ymin = pct_low, ymax = pct_upp),
+    width = 0.2,
+    inherit.aes = FALSE
+  ) +
+  labs(
+    title = "Agricultural households according to income decile and concern about food availability",
+    subtitle = "Universe: agri_broad",
+    x = "Income decile",
+    y = "Percentage (%)",
+    caption = paste(
+      "The “concern about food availability” is a self-reported condition expressed by the household head answering:",
+      "«En los últimos tres meses, por falta de dinero o recursos ¿alguna vez usted se preocupó de que la comida se acabara?» (table HOGARES, variable acc_alim1).",
+      "Source: Based on ENIGH data.",
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 12, face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+custom_save(plot_acc_alim1_decile_broad, "fig")
+print(plot_acc_alim1_decile_broad)
 
 #NOTE :une dissociation entre revenu monétaire et sécurité alimentaire subjective : tant pour narrow que pour broad, la ruralité/agriculture crée une vulnérabilité spécifique, car dans la pop totalles plus riche ne sont pas très inquiet
 #WARN: The function is meant to be a handy way to compute proportions and confidence intervals of the proportions of a given target var (say acc_alim1) stratified by a given strat var (say the decile) in a subset of the survey based on filter_var == filter_value
@@ -2526,9 +2834,90 @@ custom_save(plot_acc_alim1_decile)
 #     d$n_is_agri_broad == "agri_broad"
 # )
 
+### agri_narrow ----
+
+acc_alim1_decile <- get_proportion(
+  design = mysvyr,
+  strat_var = "n_deciles_total",
+  target_var = "n_acc_alim1",
+  filter_var = "n_is_agri",
+  filter_value = "agri_narrow"
+  # filter_var = "n_is_agri_broad",
+  # filter_value = "agri_broad"
+) |>
+  rename(
+    pct = prop,
+    pct_low = IC_low,
+    pct_upp = IC_high
+  ) |>
+  mutate(
+    pct_low = pct_low * 100,
+    pct_upp = pct_upp * 100,
+    pct = pct * 100,
+  ) |>
+  mutate(
+    n_acc_alim1 = ifelse(n_acc_alim1 == 1, "yes", "no")
+  )
+custom_save(acc_alim1_decile)
+
+# correct levels order
+decile_lvl <- levels(as.factor(d$n_deciles_total))
+acc_alim1_decile <- acc_alim1_decile |>
+  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
+  arrange(n_deciles_total, acc_alim1_decile)
+
+plot_acc_alim1_decile_narrow <- ggplot(
+  acc_alim1_decile,
+  aes(x = n_deciles_total, y = pct, fill = n_acc_alim1)
+) +
+  geom_col(
+    width = 0.7,
+    alpha = 0.8
+  ) +
+  scale_fill_viridis_d(
+    name = "Concern about\nfood availability",
+    option = "viridis",
+    begin = 0.2,
+    end = 0.8,
+    direction = -1
+  ) +
+  geom_errorbar(
+    data = acc_alim1_decile |> dplyr::filter(n_acc_alim1 == "yes"),
+    aes(x = n_deciles_total, ymin = pct_low, ymax = pct_upp),
+    width = 0.2,
+    inherit.aes = FALSE
+  ) +
+  labs(
+    title = "Agricultural households according to income decile and concern about food availability",
+    subtitle = "Universe: agri_broad",
+    x = "Income decile",
+    y = "Percentage (%)",
+    caption = paste(
+      "The “concern about food availability” is a self-reported condition expressed by the household head answering:",
+      "«En los últimos tres meses, por falta de dinero o recursos ¿alguna vez usted se preocupó de que la comida se acabara?» (table HOGARES, variable acc_alim1).",
+      "Source: Based on ENIGH data.",
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 12, face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+custom_save(plot_acc_alim1_decile_narrow, "fig")
+print(plot_acc_alim1_decile_narrow)
+
 # Self-consumption ----
+
+#WARN: we need to understand the discrpenacy between tipoact, which is encoded by INEGHI, and the self-declaration of the actiity which got the support fromsocial programs which may agri in a quite contradictory manner with the first element
+#TODO: décider si on le fait aussi pour la somme des deux valeurs de l'autoconsommation
+
 ## from agro self employemnet ----
 
+### agri_broad ----
 ratio_autocons_prod_decile <- get_ratio(
   design = mysvyr,
   numerator = "n_autoconsumo1_agro",
@@ -2550,99 +2939,271 @@ ratio_autocons_prod_decile <- ratio_autocons_prod_decile |>
   mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
   arrange(n_deciles_total, n_deciles_total)
 
-# ratios_table$Decile <- factor(
-#   ratios_table$Decile,
-#   levels = paste0("D", 1:10)
-# )
-#
+# Ratio of total (macro, this is not a mean of ratio which would be micro)
+
+design_agri <- subset(mysvyr, n_is_agri_broad == "agri_broad")
+
+mean_ratio <- svyratio(
+  numerator = ~n_autoconsumo1_agro,
+  denominator = ~n_size_val1_agro,
+  design = design_agri
+)
+#TODO: get_proportion, get_share, get_ratio need to be rewritten to get les means of individuals ratios for households of a given type  (agri or not) in a given decile
+#The aggregate share is substantially lower than the average household ratio, reflecting strong heterogeneity in farm size and a negative correlation between production scale and self-consumption
+##WARN : when we compute the ratio or the share etc it is always a macro value for the aggragated (agri) household in a given decile
+# We do not have a micro value which would be a mean of individual ratios.
+# In fact the mean of individual ratio for self-consumption is consierably higher -> many, many small farmers heavily rely on self-consumption
+# We need to decide which we want (and we might want both, why not)
 # # Moyenne nationale
-# mean_ratio <- mean(ratios_table$`Ratio (%)`)
-#
-# # Indicateur pour colorer les barres selon > ou < moyenne
-# ratios_table <- ratios_table |>
+# mean_ratio <- mysvyr |>
 #   mutate(
-#     above_mean = ifelse(`Ratio (%)` >= mean_ratio, "Above mean", "Below mean")
+#     ratio_autocons_prod = n_autoconsumo1_agro / n_size_val1_agro
+#   ) |>
+#   filter(n_is_agri_broad == "agri_broad") |>
+#   summarise(
+#     mean_ratio = survey_mean(ratio_autocons_prod, na.rm = TRUE)
 #   )
-#
-# # Graphique
-# ggplot(ratios_table, aes(x = Decile, y = `Ratio (%)`, fill = above_mean)) +
-#
-#   geom_col(width = 0.7, alpha = 0.9, color = "white") +
-#
-#   geom_errorbar(
-#     aes(ymin = `IC99 Lower (%)`, ymax = `IC99 Upper (%)`),
-#     width = 0.2,
-#     color = "grey30"
-#   ) +
-#
-#   geom_text(
-#     aes(label = paste0(round(`Ratio (%)`, 1), "%")),
-#     vjust = 1.5,
-#     color = "white",
-#     size = 3.8,
-#     fontface = "bold"
-#   ) +
-#
-#   geom_smooth(
-#     aes(group = 1),
-#     method = "loess",
-#     se = FALSE,
-#     color = "black",
-#     linewidth = 0.8,
-#     linetype = "dashed"
-#   ) +
-#
-#   geom_hline(
-#     yintercept = mean_ratio,
-#     color = "#D55E00",
-#     linetype = "dotted",
-#     size = 0.8
-#   ) +
-#
-#   scale_fill_manual(
-#     values = c(
-#       "Above mean" = "#006400", # dark green
-#       "Below mean" = "#90EE90" # light green
-#     ),
-#     name = "Comparison to mean"
-#   ) +
-#
-#   scale_y_continuous(
-#     expand = expansion(mult = c(0, 0.05)),
-#     labels = percent_format(scale = 1)
-#   ) +
-#
-#   labs(
-#     title = "Share of self-consumed production in total production by income decile",
-#     subtitle = "Agricultural households (agri_broad) — OECD square-root equivalence scale",
-#     x = "Income decile",
-#     y = "Share of production (%)",
-#     caption = paste(
-#       "Notes: 'Self-consumed production' corresponds to production consumed by the household rather than sold.",
-#       "The indicator reports the share of self-consumed production in total production by income decile.",
-#       "Bar colors indicate whether the decile is above (dark green) or below (light green) the national mean.",
-#       "The dashed black line shows the LOESS trend across deciles.",
-#       "The red dotted line represents the national average share.",
-#       "Error bars represent 99% confidence intervals.",
-#       "Source: Based on ENIGH data.",
-#       sep = "\n"
-#     )
-#   ) +
-#
-#   theme_minimal(base_size = 14) +
-#   theme(
-#     axis.text.x = element_text(size = 11),
-#     panel.grid.major.x = element_blank(),
-#     plot.title = element_text(face = "bold"),
-#     plot.subtitle = element_text(face = "italic"),
-#     plot.caption = element_text(size = 10)
+# mean_ratio <- mean(ratio_autocons_prod_decile$ratio)
+# For instance
+# Il faut qu'on écrive ca à un momen donné dans le papier: We report both (i) the average household-level self-consumption rate and (ii) the aggregate share of self-consumed production. The gap between the two reflects strong heterogeneity in farm size and production structure.
+#Si gap grand :
+# forte hétérogénéité
+# forte corrélation négative entre taille et autoconsommation
+# structure duale agriculture (subsistence vs commercial)
+# mysvyr <- mysvyr |>
+#   mutate(
+#     ratio_autocons_prod_agro = n_autoconsumo1_agro / n_size_val1_agro
 #   )
+# result <- mysvyr |>
+#   filter(!is.na(n_deciles_total)) |>
+#   group_by(n_deciles_total, n_is_agri_broad) |>
+#   summarise(
+#     mean_ratio = survey_mean(ratio_autocons_prod_agro, na.rm = TRUE),
+#     .groups = "drop"
+#   )
+# result <- result |>
+#   mutate(
+#     mean_ratio = mean_ratio * 100
+#   )
+
+# Indicateur pour colorer les barres selon > ou < moyenne
+# ratio agrégé de production autoconsommée sur production totale chez les ménages agricoles (pondéré survey)
+#
+ratio_est <- coef(mean_ratio)
+se_est <- SE(mean_ratio)
+z <- qnorm(0.995) # 99% CI
+IC_low <- ratio_est - z * se_est
+IC_high <- ratio_est + z * se_est
+
+ratio_autocons_prod_decile <- ratio_autocons_prod_decile |>
+  mutate(
+    above_mean = ifelse(
+      ratio >= ratio_est * 100,
+      "Above",
+      "Below"
+    )
+  )
+
+# Graphique
+plot_ratio_autocons_prod_decile_broad <- ggplot(
+  ratio_autocons_prod_decile,
+  aes(x = n_deciles_total, y = ratio, fill = above_mean)
+) +
+  geom_col(width = 0.7, alpha = 0.9, color = "white") +
+  geom_errorbar(
+    aes(ymin = IC_low, ymax = IC_high),
+    width = 0.2,
+    color = "grey30"
+  ) +
+  geom_text(
+    aes(label = paste0(round(ratio, 1), "%")),
+    vjust = 1.5,
+    color = "white",
+    size = 3.8,
+    fontface = "bold"
+  ) +
+  geom_smooth(
+    aes(group = 1),
+    method = "loess",
+    se = FALSE,
+    color = "black",
+    linewidth = 0.8,
+    linetype = "dashed"
+  ) +
+  # geom_ribbon(
+  #   aes(
+  #     ymin = IC_low ,
+  #     ymax = IC_high 
+  #   ),
+  #   color = "#D55E00",
+  #   alpha = 0.2
+  # ) +
+  # geom_hline(
+  #   yintercept = ratio_est * 100,
+  #   color = "#D55E00",
+  #   linetype = "dotted",
+  #   size = 0.8
+  # ) +
+  # geom_label(
+  #   aes(
+  #     x = 9.5,
+  #     y = ratio_est * 100 + 1,
+  #     label = paste0("Mean: ", round(ratio_est * 100, 1), "%")
+  #   ),
+  #   inherit.aes = FALSE,
+  #   fill = "white",
+  #   color = "#D55E00",
+  #   label.size = 0.2,
+  #   size = 3.8
+  # ) +
+  scale_fill_manual(
+    values = c(
+      "Above" = "#006400", # dark green
+      "Below" = "#90EE90" # light green
+    ),
+    name = "Comparison to overall ratio"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.05)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Share of self-consumed agricultural production in total production by income decile",
+    subtitle = "Universe: agri_broad",
+    x = "Income decile",
+    y = "Share of production (%)",
+    caption = paste(
+      "Notes: 'Self-consumed production' corresponds to production consumed by the household operating an agricultural production unit rather than sold.",
+      "Bar colors indicate whether the decile is above (dark green) or below (light green) the national mean.",
+      "The dashed black line shows the LOESS trend across deciles.",
+      "The red dotted line represents the national average share.",
+      "Error bars represent 99% confidence intervals.",
+      "Source: Based on ENIGH data.",
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(size = 11),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot_ratio_autocons_prod_decile_broad)
+custom_save(plot_ratio_autocons_prod_decile_broad, "fig")
+
+
+### agri_narrow ----
+
+ratio_autocons_prod_decile <- get_ratio(
+  design = mysvyr,
+  numerator = "n_autoconsumo1_agro",
+  denominator = "n_size_val1_agro",
+  strat_var = "n_deciles_total",
+  # filter_var = "n_is_agri_broad",
+  # filter_value = "agri_broad"
+  filter_var = "n_is_agri",
+  filter_value = "agri_narrow"
+) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+
+# correct levels order
+decile_lvl <- levels(as.factor(d$n_deciles_total))
+ratio_autocons_prod_decile <- ratio_autocons_prod_decile |>
+  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
+  arrange(n_deciles_total, n_deciles_total)
+
+# Moyenne nationale
+mean_ratio <- mean(ratio_autocons_prod_decile$ratio)
+
+# Indicateur pour colorer les barres selon > ou < moyenne
+ratio_autocons_prod_decile <- ratio_autocons_prod_decile |>
+  mutate(
+    above_mean = ifelse(ratio >= mean_ratio, "Above mean", "Below mean")
+  )
+
+# Graphique
+plot_ratio_autocons_prod_decile_narrow <- ggplot(
+  ratio_autocons_prod_decile,
+  aes(x = n_deciles_total, y = ratio, fill = above_mean)
+) +
+  geom_col(width = 0.7, alpha = 0.9, color = "white") +
+  geom_errorbar(
+    aes(ymin = IC_low, ymax = IC_high),
+    width = 0.2,
+    color = "grey30"
+  ) +
+  geom_text(
+    aes(label = paste0(round(ratio, 1), "%")),
+    vjust = 1.5,
+    color = "white",
+    size = 3.8,
+    fontface = "bold"
+  ) +
+  geom_smooth(
+    aes(group = 1),
+    method = "loess",
+    se = FALSE,
+    color = "black",
+    linewidth = 0.8,
+    linetype = "dashed"
+  ) +
+  geom_hline(
+    yintercept = mean_ratio,
+    color = "#D55E00",
+    linetype = "dotted",
+    size = 0.8
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Above mean" = "#006400", # dark green
+      "Below mean" = "#90EE90" # light green
+    ),
+    name = "Comparison to mean"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.05)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Share of self-consumed agricultural production in total production by income decile",
+    subtitle = "Universe: agri_narrow",
+    x = "Income decile",
+    y = "Share of production (%)",
+    caption = paste(
+      "Notes: 'Self-consumed production' corresponds to production consumed by the household operating an agricultural production unit rather than sold.",
+      "Bar colors indicate whether the decile is above (dark green) or below (light green) the national mean.",
+      "The dashed black line shows the LOESS trend across deciles.",
+      "The red dotted line represents the national average share.",
+      "Error bars represent 99% confidence intervals.",
+      "Source: Based on ENIGH data.",
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(size = 11),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot_ratio_autocons_prod_decile_narrow)
+custom_save(plot_ratio_autocons_prod_decile_narrow, "fig")
 
 ## from non agro self employment ----
-#TODO: still somehting to do
-## self-consumption from agro in all
-#TODO: we need to understand the discrpenacy between tipoact, which is encoded by INEGHI, and the self-declaration of the actiity which got the support fromsocial programs which may agri in a quite contradictory manner with the first element
 
+#TODO: still somehting to do; self-consumption from agro in all
+
+# Support in farm total ressources (entrate aziendale) ----
 #TODO : compute share support in valor prod (entrate aziendale : valore de la produzione vendita + autoconsumata + intercambiata + support) share apoyo a calculer dans part 2 (réintroduire au début +  vérifier : “entrate aziendali” = revenus/ressources d’exploitation et NON n_fni)
 # n_apoyo = case_when(
 #   n_size_val + n_support > 0 & n_size_val > 0 ~ n_support /
@@ -2650,10 +3211,27 @@ ratio_autocons_prod_decile <- ratio_autocons_prod_decile |>
 #   n_size_val + n_support > 0 & n_size_val == 0 ~ 1,
 #   TRUE ~ 0
 # ),
+
+## agri_broad ----
+#TODO: a faire
+
+## agri_narrow ----
+#TODO: a faire
+
+# Support in farm net income ----
 #TODO: compute share support in n_fni
+## agri_broad ----
+#TODO: a faire
+## agri_narrow ----
+#TODO: a faire
+
+# Support in total current income ----
 #TODO: compute share support in n_ing_cor
-#TODO : compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
-#TODO : regarde la part des vieux programmes agricoles dans le revenu agricole total par décile
+## agri_broad ----
+#TODO: a faire
+
+## agri_narrow ----
+#TODO: a faire
 
 # -----------
 # THE END ----
