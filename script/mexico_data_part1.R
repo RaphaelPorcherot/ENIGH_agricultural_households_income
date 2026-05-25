@@ -56,7 +56,7 @@ agroproductos_summary <- agroproductos_clean |>
   group_by(hogar, tipo) |>
   summarise(
     n = sum(count_prod, na.rm = TRUE), # number of subtypes by production type
-    cant = sum(cantidad, na.rm = TRUE), # volume of production, in kg
+    cant = sum(cantidad, na.rm = TRUE), # volume of production, in physical quantities
     cven = sum(cant_venta, na.rm = TRUE), # production sold
     val = sum(valor, na.rm = TRUE), # value of production
     ven = sum(val_venta, na.rm = TRUE), # value of sold production
@@ -109,7 +109,7 @@ agroproductos <- agroproductos |>
   )
 
 ## Farm typology ----
-tres_agri_spe <- 3 / 4
+tres_agri_spe <- 2 / 3
 
 agroproductos <- agroproductos |>
   mutate(
@@ -428,9 +428,9 @@ agro <- agro_clean |>
     n_autoconsumo1 = sum(auto_tri) * 4, # value of self consumed production from AGRO
     n_size_val1 = sum(size_val),
 
-    n_support = sum(support),
+    n_support = sum(support), # new supportprogram sin pago
     n_pro_agrogan = sum(pro_agrogan), # old support programs
-    n_nvo_tot = sum(nvo_tot_npago), # new support programs
+    n_nvo_tot = sum(nvo_tot), # new support programs
     n_apoyo_npago = sum(apoyo_npago), # other kind of social programs
 
     n_sembr_vida = sum(sembr_vida),
@@ -453,6 +453,8 @@ agro <- agro_clean |>
     )
   )
 
+# agro |> select(n_size_val1) |> skim()
+d |> select(smg) |> slice(1) |> pull() *4
 ## Add farm type + market orientation ----
 
 # avoid silent explosions through joining operations
@@ -799,7 +801,7 @@ noagro <- noagro_clean |>
     n_size_val1 = sum(size_val),
 
     n_support = sum(support),
-    n_nvo_tot = sum(nvo_tot_npago),
+    n_nvo_tot = sum(nvo_tot),
 
     n_sembr_vida = sum(sembr_vida),
     n_tand_bien = sum(tand_bien),

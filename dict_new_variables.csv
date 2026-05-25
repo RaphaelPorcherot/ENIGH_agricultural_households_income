@@ -91,7 +91,7 @@ n_desarollo_rur_noagro,numeric,NOAGRO,,received for non-agricultural activities
 n_estim_alqu,numeric,CONCENTRADOHOGAR,,imputed rent from owner-occupied housing
 n_fni_agro,numeric,AGRO,,"household's farm net income (from ing_tri, ero_tri, support, that is with all non-repayable support policies)"
 n_fni_agro_clean,numeric,AGRO,,same as n_fni_agro but no negative income
-n_ing_cor,numeric,AGRO;CONCENTRADOHOGAR;NOAGRO,,"household's total current income (n_fni_agro, n_ingr_noagro, n_trabajo, n_rentas, n_transfer, n_esti_alqui, n_otros_ingr)"
+n_ing_cor,numeric,AGRO;CONCENTRADOHOGAR;NOAGRO,,"household's total current income (n_fni_agro, n_ingr_noagro, n_trabajo, n_rentas, n_transfer, n_estim_alqui, n_otros_ingr)"
 n_ing_cor_clean,numeric,AGRO;CONCENTRADOHOGAR;NOAGRO,,same as n_ing_cor but no negative income
 n_ing_equivaled,numeric,AGRO;CONCENTRADOHOGAR;NOAGRO,,Equivaled income using n_ing_cor_clean and based on OECD square root scale
 n_ingr_noagro,numeric,NOAGRO,,"household's mixed income from non agricultural self employment (sum over all members, from ing_tri, ero_tri)"

@@ -1,6 +1,24 @@
 # CURRENT
 
-* [ ] annnual turnover factor levels needs to be corrected
+* [ ] annnual turnover factor levels needs to be corrected : we need to check whether they make sense (since minimum wage c'est 60000 par an, la on a des fermes avec moins de 2000 pesos de turnover)
+
+
+r$> agro |> select(n_size_val1) |> skim()
+── Data Summary ────────────────────────
+                           Values                   
+Name                       select(agro, n_size_val1)
+Number of rows             11697                    
+Number of columns          1                        
+_______________________                             
+Column type frequency:                              
+  numeric                  1                        
+________________________                            
+Group variables            None                     
+
+── Variable type: numeric ──────────────────────────────────────────────────────────────────────────────────
+  skim_variable n_missing complete_rate   mean      sd p0   p25    p50    p75      p100 hist 
+1 n_size_val1           0             1 64408. 425823.  0 3585. 12921. 43533. 40304348. ▇▁▁▁▁
+
 * [ ] farm specialisation : big change, no mixed 
 * [ ] sahre of fni much more unequal for some reasons (Gini also i assume)
 * [ ] some poor agri hosuehods have farms with > 50 000 anual turnover and richest have < 2000 turnover

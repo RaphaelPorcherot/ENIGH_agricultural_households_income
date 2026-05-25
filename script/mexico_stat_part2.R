@@ -1,6 +1,6 @@
 # PART 2 STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO
 
-#TODO: compute the contrafactural income distribution that would be the case w/o support
+#TODO: compute the contrafactural income distribution that would be the case w/o support or w/o new support or w/o new direct support
 
 # FUNCTIONS ----
 
@@ -58,16 +58,102 @@ survey_gini <- function(
   as_srvyr_result_df(out)
 }
 
+## Saving in csv and in res list ----
+
+res <- list()
+
+custom_save <- function(
+  object,
+  object_name = NULL,
+  type = "processed",
+  width = 12,
+  height = 8,
+  dpi = 300
+) {
+  stopifnot(requireNamespace("here", quietly = TRUE))
+  stopifnot(requireNamespace("readr", quietly = TRUE))
+
+  # save in res list
+  filename <- if (is.null(object_name)) {
+    deparse(substitute(object))
+  } else {
+    object_name
+  }
+  deparse(substitute(object))
+  res[[filename]] <<- object
+
+  if (is_tibble(object)) {
+    # create output dir if not already existing
+    output_dir <- here("output", type)
+    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+    # save in csv
+    output_path <- file.path(output_dir, str_c(filename, ".csv"))
+
+    readr::write_csv(object, output_path)
+
+    message("✅ TIBBLE saved in: ", output_path)
+    invisible(output_path)
+  } else if (is_ggplot(object)) {
+    # create output dir if not already existing
+    output_dir <- here("output", "fig")
+    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+    # save csv
+    output_path <- file.path(output_dir, str_c(filename, ".png"))
+
+    ggsave(
+      filename = output_path,
+      plot = object,
+      width = width,
+      height = height,
+      dpi = dpi,
+      units = "in"
+    )
+
+    message("✅ PLOT saved in:", output_path)
+    invisible(output_path)
+  }
+}
+
+## Function to correct negative income ----
+
+set.seed(123)
+replace_negatives <- function(x) {
+  pos <- x[x > 0]
+  if (length(pos) == 0) {
+    return(x)
+  } # pas de positifs
+  q1 <- quantile(pos, 0.25, na.rm = TRUE)
+  candidates <- pos[pos <= q1]
+  if (length(candidates) == 0) {
+    candidates <- min(pos)
+  }
+  neg_idx <- which(x < 0)
+  x[neg_idx] <- sample(candidates, length(neg_idx), replace = TRUE)
+  return(x)
+}
+
 ## Ratio ----
 ### PROPORTION des modalités de target_var stratifiés par strat_var, avec filtre optionnel (n_tipo_prod pour niveau de n_size_class) ----
+
 ### proportions et IC exacts beta pour tous les niveaux de target_var
 ### ex : n_tipo_prod pour tous les niveaux de n_size_class
 ### Utile car svyby/svymean ne gèrent pas facilement toutes les combinaisons ni les filtres dynamiques.
 
-# Advantages:
+### Advantages:
 # Produces a full conditional distribution of a categorical variable within each stratum, rather than a single mean or binary summary.
 # Provides greater flexibility in sample restriction and stratification, including dynamic filtering that is not easily handled by svyby().
 # Uses beta-based confidence intervals via svyciprop(), which are more robust than standard asymptotic (Wald) intervals for proportions.
+
+# design <- mysvyr
+# strat_var <- "n_deciles_total"
+# target_var <- "n_acc_alim1"
+# filter_var <- "n_is_agri_broad"
+# filter_value <- "agri_broad"
+# strat_levels <- unique(as.character(design$variables[[strat_var]]))
+# target_levels <- unique(as.character(design$variables[[target_var]]))
+# strat_level <- strat_levels[2]
+# target_level <- target_levels
+# method <- "beta"
 
 get_proportion_IC_all <- function(
   design,
@@ -75,31 +161,38 @@ get_proportion_IC_all <- function(
   target_var,
   filter_var = NULL,
   filter_value = NULL,
-  level = 0.99
+  level = 0.99,
+  method = "beta"
 ) {
-  # récupérer tous les niveaux
-  strat_levels <- levels(as.factor(design$variables[[strat_var]]))
-  target_levels <- levels(as.factor(design$variables[[target_var]]))
+  # récupérer tous les niveaux (et éliminer les faux niveua : les niveaux NA)
+  x <- design$variables[[strat_var]]
+  strat_levels <- unique(as.character(x[!is.na(x)]))
+  y <- design$variables[[target_var]]
+  target_levels <- unique(as.character(y[!is.na(y)]))
 
-  # créer tous les couples
   params <- tidyr::crossing(
-    strat_level = factor(strat_levels, levels = strat_levels),
-    target_level = factor(target_levels, levels = target_levels)
+    strat_level = strat_levels,
+    target_level = target_levels
   )
-
   # fonction interne pour un couple
   calc_prop <- function(strat_level, target_level) {
     # sous-design dynamique
     if (!is.null(filter_var) && !is.null(filter_value)) {
       design_sub <- subset(
         design,
-        get(filter_var) == filter_value & get(strat_var) == strat_level
+        !is.na(design$variables[[strat_var]]) &
+          as.character(design$variables[[strat_var]]) == strat_level &
+          !is.na(design$variables[[filter_var]]) &
+          as.character(design$variables[[filter_var]]) == filter_value
       )
     } else {
-      design_sub <- subset(design, get(strat_var) == strat_level)
+      design_sub <- subset(
+        design,
+        !is.na(design$variables[[strat_var]]) &
+          as.character(design$variables[[strat_var]]) == strat_level
+      )
     }
 
-    # si pas de données pour ce couple
     if (nrow(design_sub$variables) == 0) {
       return(tibble(
         strat_var = strat_level,
@@ -110,12 +203,13 @@ get_proportion_IC_all <- function(
       ))
     }
 
-    # formule dynamique
-    f <- reformulate(paste0("I(", target_var, " == '", target_level, "')"))
+    indicator <- as.character(design_sub$variables[[target_var]]) ==
+      target_level
+    indicator[is.na(indicator)] <- FALSE
 
-    # proportion avec IC exact (beta)
-    p <- svyciprop(f, design = design_sub, method = "beta")
+    design_sub <- update(design_sub, indicator = indicator)
 
+    p <- svyciprop(~indicator, design_sub, method = method)
     # extraire valeurs numériques
     prop_val <- as.numeric(coef(p))
     IC <- as.numeric(confint(p), level = level)
@@ -140,8 +234,25 @@ get_proportion_IC_all <- function(
       !!target_var := target_var
     )
 
-  return(results)
+  results
 }
+
+# svyr near equivalent (but less general and not as precise as beta method near 0 , 1 value)
+# get_proportion_srvyr <- function(data, strat, target, filter = NULL, value = NULL) {
+#
+#   d <- data
+#
+#   if (!is.null(filter)) {
+#     d <- d |> filter(.data[[filter]] == value)
+#   }
+#
+#   d |>
+#     group_by(.data[[strat]]) |>
+#     summarise(
+#       prop = survey_mean(.data[[target]] == 1, vartype = "ci"),
+#       .groups = "drop"
+#     )
+# }
 
 ### SHARES of total by subgroup ----
 
@@ -228,6 +339,7 @@ get_ratio_by_quant <- function(
   group_name <- deparse(substitute(group_var))
   num_name <- deparse(substitute(numerator))
   denom_name <- deparse(substitute(denominator))
+  filter_name <- deparse(substitute(filter_var))
 
   groups <- levels(as.factor(design$variables[[group_name]]))
 
@@ -236,7 +348,7 @@ get_ratio_by_quant <- function(
     if (!is.null(filter_var) && !is.null(filter_value)) {
       design_sub <- subset(
         design,
-        get(filter_var) == filter_value &
+        get(filter_name) == filter_value &
           get(group_name) == g
       )
     } else {
@@ -305,81 +417,6 @@ get_ratio_by_quant <- function(
   })
 }
 
-## Saving in csv and in res list ----
-
-res <- list()
-
-custom_save <- function(
-  object,
-  object_name = NULL,
-  type = "processed",
-  width = 12,
-  height = 8,
-  dpi = 300
-) {
-  stopifnot(requireNamespace("here", quietly = TRUE))
-  stopifnot(requireNamespace("readr", quietly = TRUE))
-
-  # save in res list
-  filename <- if (is.null(object_name)) {
-    deparse(substitute(object))
-  } else {
-    object_name
-  }
-  deparse(substitute(object))
-  res[[filename]] <<- object
-
-  if (is_tibble(object)) {
-    # create output dir if not already existing
-    output_dir <- here("output", type)
-    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-    # save in csv
-    output_path <- file.path(output_dir, str_c(filename, ".csv"))
-
-    readr::write_csv(object, output_path)
-
-    message("✅ TIBBLE saved in: ", output_path)
-    invisible(output_path)
-  } else if (is_ggplot(object)) {
-
-    # create output dir if not already existing
-    output_dir <- here("output", "fig")
-    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-    # save csv
-    output_path <- file.path(output_dir, str_c(filename, ".png"))
-
-    ggsave(
-      filename = output_path,
-      plot = object,
-      width = width,
-      height = height,
-      dpi = dpi,
-      units = "in"
-    )
-
-    message("✅ PLOT saved in:", output_path)
-    invisible(output_path)
-  }
-}
-
-## Function to correct negative income ----
-
-set.seed(123)
-replace_negatives <- function(x) {
-  pos <- x[x > 0]
-  if (length(pos) == 0) {
-    return(x)
-  } # pas de positifs
-  q1 <- quantile(pos, 0.25, na.rm = TRUE)
-  candidates <- pos[pos <= q1]
-  if (length(candidates) == 0) {
-    candidates <- min(pos)
-  }
-  neg_idx <- which(x < 0)
-  x[neg_idx] <- sample(candidates, length(neg_idx), replace = TRUE)
-  return(x)
-}
-
 # -----------
 #
 # LOADING and ADDING NEW VARIABLES ----
@@ -430,7 +467,7 @@ d <- d |>
     # human readable farm size
     n_size_class_agro = recode_factor(
       as.factor(n_size_class_agro),
-      "1" = "[0; 2000]",
+      "1" = "[0; 2 000]",
       "2" = "]2 000; 10 000]",
       "3" = "]10 000; 50 000]",
       "4" = "]50 000; 200 000]",
@@ -752,6 +789,7 @@ tres <- mysvyr |>
       qrule = "math"
     )
   )
+
 # Extraire les valeurs de seuils
 deciles <- tres |>
   select(starts_with("inc_q")) |>
@@ -764,6 +802,7 @@ deciles <- tres |>
   mutate(
     quantile = as.numeric(gsub("inc_q", "", quantile)) / 100
   )
+
 # Récupérer les bornes inférieures et supérieures des IC
 deciles_ic <- tres |>
   select(contains("_low"), contains("_upp")) |>
@@ -792,13 +831,47 @@ mysvyr <- mysvyr |>
     )
   )
 
-## save the main database ----
+#NOTE: they are more agri households in D10 than in D9.
+
+# mysvyr |>
+#   filter(n_is_agri_broad == "agri_broad") |>
+#   group_by(n_deciles_total) |>
+#   summarise(
+#     mean = survey_mean(n_ing_equivaled),
+#     n_unweighted = unweighted(n()),
+#     n_weighted = survey_total()
+#   )
+# d |> select(starts_with("n_")) |> colnames() |> sort()
+#NOTE:: the following code to check the pct of each income source in total income
+
+# check <- mysvyr |>
+#   # filter(n_is_agri == "agri_narrow") |>
+#   filter(n_is_agri_broad == "agri_broad") |>
+#   group_by(n_deciles_total) |>
+#   summarise(
+#     pct_fni_agro = survey_total(n_fni_agro) / survey_total(n_ing_cor_clean),
+#     pct_trabajo = survey_total(n_trabajo) / survey_total(n_ing_cor_clean),
+#     tot_ing_cor_clean = survey_total(n_ing_cor_clean),
+#     pct_ingr_noagro = survey_total(n_ingr_noagro) /
+#       survey_total(n_ing_cor_clean),
+#     pct_otros_ing = survey_total(n_otros_ing) / survey_total(n_ing_cor_clean),
+#     pct_rentas = survey_total(n_rentas) / survey_total(n_ing_cor_clean),
+#     pct_transfer = survey_total(n_transfer) / survey_total(n_ing_cor_clean),
+#     pct_n_estim_alqu = survey_total(n_estim_alqu) /
+#       survey_total(n_ing_cor_clean)
+#   )
+#
+# check |>
+#   select(-ends_with("_se"), -n_deciles_total, -tot_ing_cor_clean) #|>
+# mutate(sum = rowSums(across(everything()))) |>
+# select(sum)
+
+# save the main database ----
 ## (we should not be doing any further changes now)
 
 d <- mysvyr$variables
-str(d)
 custom_save(d, "main_database")
-d |> select(starts_with("n_")) |> colnames() |> sort()
+
 # UPDATE NEW VARIABLE DICTIONARY (append new variables if needed) ----
 
 vars_n <- sort(names(d)[str_starts(
@@ -897,7 +970,7 @@ if (any(test_new_var)) {
 }
 # -----------
 
-# TABLE and BO PLOT of QUANTILES ----
+# TABLE and BOX PLOT of QUANTILES ----
 ## Table of cutoff points ----
 tres_long <- mysvyr |>
   summarize(
@@ -1362,11 +1435,31 @@ custom_save(plot_farm_turnover_size_prod)
 
 ### tbl and plot of relative proportions ----
 
+# mysvyr |>
+#   filter(n_is_agri_broad == "agri_broad") |>
+#   group_by(n_deciles_total) |>
+#   summarise(
+#     prop = survey_mean(n_tipo_prod_agro == "Livestock", vartype = "ci")
+#   )
+#
+# svymean(
+#   ~ I(n_tipo_prod_agro == "Livestock"),
+#   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
+# )
+#
+# mean(
+#   d$n_tipo_prod_agro == "Livestock" &
+#     d$n_deciles_total == "D10" &
+#     d$n_is_agri_broad == "agri_broad"
+# )
+
 farm_turnover_size_prod_pct <- get_proportion_IC_all(
   design = mysvyr,
   strat_var = "n_size_class_agro",
   target_var = "n_tipo_prod_agro",
-  filter_var = "n_is_agri",
+  # filter_var = "n_is_agri",
+  # filter_value = "agri_narrow"
+  filter_var = "n_is_agri_broad",
   filter_value = "agri_broad"
 ) |>
   rename(
@@ -1379,8 +1472,18 @@ farm_turnover_size_prod_pct <- get_proportion_IC_all(
     pct_upp = pct_upp * 100,
     pct = pct * 100,
   )
-
 custom_save(farm_turnover_size_prod_pct)
+
+# correct levels order
+n_size_class_agro_lvl <- levels(as.factor(d$n_size_class_agro))
+farm_turnover_size_prod_pct <- farm_turnover_size_prod_pct |>
+  mutate(
+    n_size_class_agro = factor(
+      n_size_class_agro,
+      levels = n_size_class_agro_lvl
+    )
+  ) |>
+  arrange(n_size_class_agro, n_size_class_agro)
 
 plot_farm_turnover_size_prod_pct <- ggplot(
   farm_turnover_size_prod_pct,
@@ -1391,12 +1494,14 @@ plot_farm_turnover_size_prod_pct <- ggplot(
     alpha = 0.8,
     # position = position_dodge(width = 0.7)
   ) +
-  # geom_errorbar(
-  #   aes(ymin = pct_low, ymax = pct_upp, group = n_tipo_prod),
-  #   width = 0.2,
-  #   alpha = 0.6,
-  #   position = position_dodge(width = 0.7)
-  # ) +
+  geom_errorbar(
+    data = farm_turnover_size_prod_pct |>
+      dplyr::filter(n_tipo_prod_agro == "Crops") |>
+      mutate(pct_low = 100 - pct_low, pct_upp = 100 - pct_upp),
+    aes(x = n_size_class_agro, ymin = pct_low, ymax = pct_upp),
+    width = 0.2,
+    inherit.aes = FALSE
+  ) +
   scale_fill_viridis_d(
     "Production type",
     option = "rocket",
@@ -1407,18 +1512,12 @@ plot_farm_turnover_size_prod_pct <- ggplot(
     title = "Mexican farms according to annual turnover and production type",
     x = "Annual turnover (MXN)",
     y = "(%)",
-    caption = "Note: Farm types have been defined considering the share of different production in the total revenues of farms.\nA farm is classified as specialised into a given production when its revenues represent at least two thirds of total turnover.\nIn mixed farms the threshold is not reached neither by crops cultivation nor by livestock production."
+    caption = "Note: Farm types have been defined considering the share of different production in the total revenues of farms.\nA farm is classified as specialised into a given production when its revenues represent at least two thirds of total turnover.\nConfidence intervals are displayed only for the main production category (Crops) for visual clarity. Other categories exhibit similar or slightly larger uncertainty patterns."
   ) +
   theme_minimal(base_size = 14) +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
-
-# geom_errorbar(
-# aes(ymin = pct_low, ymax = pct_upp, group = n_tipo_prod),
-# width = 0.2,
-# # position = position_dodge(width = 0.6),
-# alpha = 0.5
 
 custom_save(plot_farm_turnover_size_prod_pct)
 
@@ -1574,12 +1673,45 @@ custom_save(plot_agri_house_fni_decile_pct)
 
 ## Farm annual turnover across income decile ----
 
+# d |> select(n_size_class_agro) |> distinct()
+# mysvyr |>
+#   filter(n_is_agri_broad == "agri_broad") |>
+#   group_by(n_deciles_total) |>
+#   summarise(
+#     prop = survey_mean(n_size_class_agro == "[0; 2 000]", vartype = "ci")
+#   )
+#
+# svymean(
+#   ~ I(n_acc_alim1 == 1),
+#   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
+# )
+# mean(
+#   d$n_acc_alim1 == 1 &
+#     d$n_deciles_total == "D10" &
+#     d$n_is_agri_broad == "agri_broad"
+# )
+
+# d |> filter(n_is_agri == "agri_narrow") |> group_by(n_deciles_total) |> summarise(mean_ing = mean(n_ing_cor_clean))
+#TODO: do the graph also for agri_narrow
+#INFO: chez les riches mexicains, la possession d’une ferme n’est pas uniquement productive : il y a plus de fermiers dans D10 que dans D9, mais manifestement les D10 ce n'est pas que de l'industrie agricole à grande échelle. Les fermes dans D10 ne sont pas la source principale de la richesse ? Pourtant effectivement qqchose comme 70 % du revenus de D10 vient des fermes
+# Une minorité de très grosses fermes capte l’essentiel du revenu agricole: D10 semble être lui-même dual ! 
+# D9 = bourgeoisie agricole productive
+# grandes exploitations commerciales
+# relativement homogènes
+# revenus encore diversifiés
+# D10 = élite économique rurale hybride
+# très grandes exploitations ultra-rentables
+# ménages riches avec petites fermes
+# forte dispersion patrimoniale
+
 farm_turnover_decile_pct <- get_proportion_IC_all(
   design = mysvyr,
   strat_var = "n_deciles_total",
   target_var = "n_size_class_agro",
-  filter_var = "n_is_agri",
+  filter_var = "n_is_agri_broad",
   filter_value = "agri_broad"
+  # filter_var = "n_is_agri",
+  # filter_value = "agri_narrow"
 ) |>
   rename(
     pct = prop,
@@ -1591,8 +1723,13 @@ farm_turnover_decile_pct <- get_proportion_IC_all(
     pct_upp = pct_upp * 100,
     pct = pct * 100,
   )
-
 custom_save(farm_turnover_decile_pct)
+
+# correct levels order
+decile_lvl <- levels(as.factor(d$n_deciles_total))
+farm_turnover_decile_pct <- farm_turnover_decile_pct |>
+  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
+  arrange(n_deciles_total, n_size_class_agro)
 
 plot_farm_turnover_decile_pct <- ggplot(
   farm_turnover_decile_pct,
@@ -1603,12 +1740,13 @@ plot_farm_turnover_decile_pct <- ggplot(
     alpha = 0.8,
     # position = position_dodge(width = 0.7)
   ) +
-  # geom_errorbar(
-  #   aes(ymin = pct_low, ymax = pct_upp, group = n_tipo_prod),
-  #   width = 0.2,
-  #   alpha = 0.6,
-  #   position = position_dodge(width = 0.7)
-  # ) +
+  geom_errorbar(
+    data = farm_turnover_decile_pct |>
+      dplyr::filter(n_size_class_agro == "[0; 2 000]"),
+    aes(x = n_deciles_total, ymin = 100 - pct_low, ymax = 100 - pct_upp),
+    width = 0.2,
+    inherit.aes = FALSE
+  ) +
   scale_fill_viridis_d(
     "Turnover (MXN)",
     option = "mako",
@@ -1627,6 +1765,7 @@ plot_farm_turnover_decile_pct <- ggplot(
   )
 
 custom_save(plot_farm_turnover_decile_pct)
+
 # Income inequalities compared ----
 ## on agri_broad ----
 ### Gini ----
@@ -1977,7 +2116,7 @@ plot_lorenz_agri_narrow <- ggplot(df_plot, aes(x = quantile)) +
 custom_save(df_plot, "lorenz_agriStrict.csv")
 custom_save(plot_lorenz_agri_narrow)
 # Drivers of inequalities ----
-## General ----
+## general ----
 tbl_agri <- subset(tbl, n_is_agri_broad == "agricultural households")
 tbl_csv <- tbl_agri |>
   select(-n_is_agri_broad) |>
@@ -1989,17 +2128,17 @@ tbl_csv <- tbl_agri |>
       all_categorical() ~ "{p} %"
     ),
     label = list(
-      n_is_agri = "Relation to agripastoral activities",
-      n_is_self_employed_narrow = "Occupational status",
-      tot_integ = "Total number of household members",
-      menores = "Number of household members below 12",
-      edad_jefe = "Household's head age",
-      sexo_jefe = "Household's head sex",
-      educa_jefe_group = "Household's head education",
-      est_socio = "Socio-economic status",
-      # n_etnia = "Ethnic self-description",
-      n_acc_alim1 = "Concerned about food availability (last month)",
-      n_below_smg_epc = "Income relative to minimum wage"
+      n_is_agri = "relation to agripastoral activities",
+      n_is_self_employed_narrow = "occupational status",
+      tot_integ = "total number of household members",
+      menores = "number of household members below 12",
+      edad_jefe = "household's head age",
+      sexo_jefe = "household's head sex",
+      educa_jefe_group = "household's head education",
+      est_socio = "socio-economic status",
+      # n_etnia = "ethnic self-description",
+      n_acc_alim1 = "concerned about food availability (last month)",
+      n_below_smg_epc = "income relative to minimum wage"
     )
   ) |>
   add_ci(
@@ -2014,14 +2153,14 @@ tbl_csv <- tbl_agri |>
       all_categorical() ~
         "{conf.low}%, {conf.high}%"
     ),
-    #  pattern = "{stat} (99% CI {ci})",
+    #  pattern = "{stat} (99% ci {ci})",
     style_fun = all_continuous() ~ purrr::partial(style_number, digits = 1)
   ) |>
   bold_labels() |>
   italicize_levels() |>
-  add_overall(last = TRUE) |>
+  add_overall(last = true) |>
   add_p()
-ethnic <- as_tibble(tbl_csv, col_labels = TRUE)
+ethnic <- as_tibble(tbl_csv, col_labels = true)
 
 tbl_csv <- tbl_agri |>
   select(-edad_jefe, -n_is_agri_broad) |>
@@ -2033,17 +2172,17 @@ tbl_csv <- tbl_agri |>
       all_categorical() ~ "{p} %"
     ),
     label = list(
-      n_is_agri = "Relation to agripastoral activities",
-      n_is_self_employed_narrow = "Occupational status",
-      tot_integ = "Total number of household members",
-      menores = "Number of household members below 12",
-      # edad_jefe="Household's head age",
-      sexo_jefe = "Household's head sex",
-      educa_jefe_group = "Household's head education",
-      est_socio = "Socio-economic status",
-      n_etnia = "Ethnic self-description",
-      n_acc_alim1 = "Concerned about food availability (last month)",
-      n_below_smg_epc = "Income relative to minimum wage"
+      n_is_agri = "relation to agripastoral activities",
+      n_is_self_employed_narrow = "occupational status",
+      tot_integ = "total number of household members",
+      menores = "number of household members below 12",
+      # edad_jefe="household's head age",
+      sexo_jefe = "household's head sex",
+      educa_jefe_group = "household's head education",
+      est_socio = "socio-economic status",
+      n_etnia = "ethnic self-description",
+      n_acc_alim1 = "concerned about food availability (last month)",
+      n_below_smg_epc = "income relative to minimum wage"
     )
   ) |>
   add_ci(
@@ -2058,17 +2197,17 @@ tbl_csv <- tbl_agri |>
       all_categorical() ~
         "{conf.low}%, {conf.high}%"
     ),
-    #  pattern = "{stat} (99% CI {ci})",
+    #  pattern = "{stat} (99% ci {ci})",
     style_fun = all_continuous() ~ purrr::partial(style_number, digits = 1)
   ) |>
   bold_labels() |>
   italicize_levels() |>
-  add_overall(last = TRUE) |>
+  add_overall(last = true) |>
   add_p()
-age <- as_tibble(tbl_csv, col_labels = TRUE)
+age <- as_tibble(tbl_csv, col_labels = true)
 
 tbl_csv <- tbl_agri |>
-  select(-n_edad_jefe_med, -n_is_agri_broad) |> # filter(decile_total %in% paste0("D", 1:10)) |>
+  select(-n_edad_jefe_med, -n_is_agri_broad) |> # filter(decile_total %in% paste0("d", 1:10)) |>
   tbl_svysummary(
     by = sexo_jefe,
     type = list(menores ~ "continuous"),
@@ -2077,17 +2216,17 @@ tbl_csv <- tbl_agri |>
       all_categorical() ~ "{p} %"
     ),
     label = list(
-      n_is_agri = "Relation to agripastoral activities",
-      n_is_self_employed_narrow = "Occupational status",
-      tot_integ = "Total number of household members",
-      menores = "Number of household members below 12",
-      edad_jefe = "Household's head age",
-      # sexo_jefe="Household's head sex",
-      educa_jefe_group = "Household's head education",
-      est_socio = "Socio-economic status",
-      n_etnia = "Ethnic self-description",
-      n_acc_alim1 = "Concerned about food availability (last month)",
-      n_below_smg_epc = "Income relative to minimum wage"
+      n_is_agri = "relation to agripastoral activities",
+      n_is_self_employed_narrow = "occupational status",
+      tot_integ = "total number of household members",
+      menores = "number of household members below 12",
+      edad_jefe = "household's head age",
+      # sexo_jefe="household's head sex",
+      educa_jefe_group = "household's head education",
+      est_socio = "socio-economic status",
+      n_etnia = "ethnic self-description",
+      n_acc_alim1 = "concerned about food availability (last month)",
+      n_below_smg_epc = "income relative to minimum wage"
     )
   ) |>
   add_ci(
@@ -2102,18 +2241,18 @@ tbl_csv <- tbl_agri |>
       all_categorical() ~
         "{conf.low}%, {conf.high}%"
     ),
-    #  pattern = "{stat} (99% CI {ci})",
+    #  pattern = "{stat} (99% ci {ci})",
     style_fun = all_continuous() ~ purrr::partial(style_number, digits = 1)
   ) |>
   bold_labels() |>
   italicize_levels() |>
-  add_overall(last = TRUE) |>
+  add_overall(last = true) |>
   add_p()
-gender <- as_tibble(tbl_csv, col_labels = TRUE)
-# The following warnings were returned during `add_p()`:
-# ! For variable `est_socio` (`sexo_jefe`) and "statistic" and "p.value"
-#   statistics: Chi-squared approximation may be incorrect
-# CAR TROP PEU D'OBS WOMEN  : 793 000
+gender <- as_tibble(tbl_csv, col_labels = true)
+# the following warnings were returned during `add_p()`:
+# ! for variable `est_socio` (`sexo_jefe`) and "statistic" and "p.value"
+#   statistics: chi-squared approximation may be incorrect
+# car trop peu d'obs women  : 793 000
 
 custom_save(ethnic, "basic_carac_ethnic.csv")
 custom_save(age, "basic_carac_age.csv")
@@ -2123,11 +2262,16 @@ dr <- list(ethnic, age, gender)
 names(dr) <- c("ethnic", "age", "gender")
 ## Focus on ethnicity ----
 
+# svymean(
+#   ~ I(n_etnia == 1),
+#   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
+# )
+#
 etnia_decile_pct <- get_proportion_IC_all(
   design = mysvyr,
   strat_var = "n_deciles_total",
   target_var = "n_etnia",
-  filter_var = "n_is_agri",
+  filter_var = "n_is_agri_broad",
   filter_value = "agri_broad"
 ) |>
   rename(
@@ -2145,6 +2289,13 @@ etnia_decile_pct <- get_proportion_IC_all(
   )
 custom_save(etnia_decile_pct)
 
+# correct levels order
+decile_lvl <- levels(as.factor(d$n_deciles_total))
+etnia_decile_pct <- etnia_decile_pct |>
+  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
+  arrange(n_deciles_total, n_etnia)
+
+# plot
 plot_etnia_decile_pct <- ggplot(
   etnia_decile_pct,
   aes(x = n_deciles_total, y = pct, fill = n_etnia)
@@ -2160,12 +2311,20 @@ plot_etnia_decile_pct <- ggplot(
     end = 0.8,
     direction = -1
   ) +
+  geom_errorbar(
+    data = etnia_decile_pct |> dplyr::filter(n_etnia == "non-indigenous"),
+    aes(x = n_deciles_total, ymin = pct_low, ymax = pct_upp),
+    width = 0.2,
+    inherit.aes = FALSE
+  ) +
   labs(
-    title = "Ethnicity of households according to income decile",
+    title = "Ethnicity of agricultural households according to income decile",
     subtitle = "Indigenous households are those whose reference person (jefe) self-identifies as indigenous",
     x = "Income decile",
     y = "Percentage (%)",
     caption = paste(
+      "Agricultural households are defined according to the broad definition",
+      #TODO: check ethnicity according to agro_narrow
       "Households are classified according to the socio-demographic characteristics of the reference person (jefe).",
       "Indigenous households are those whose reference person answered yes to the question: ",
       "“De acuerdo con la sua cultura, ¿ella (él) se considera indígena?” (table POBLACION, question Autoadscripción étnica).",
@@ -2223,14 +2382,37 @@ tbl_or_poverty_ethnicity <- mod_poverty_ethnicity |>
   bold_labels()
 
 ## Focus on concerns for food ----
-#WARN: maybe the richest agri households being concerned about food first are the poorest among the richest and also maybe there is an issue with the custom function
-# The function is meant to be a handy way to compute proportions and confidence intervals of the proportions of a given target var (say acc_alim1) stratified by a given strat var (say the decile) in a subset of the survey based on filter_var == filter_value
+
+
+#NOTE :une dissociation entre revenu monétaire et sécurité alimentaire subjective : tant pour narrow que pour broad, la ruralité/agriculture crée une vulnérabilité spécifique, car dans la pop totalles plus riche ne sont pas très inquiet
+#WARN: The function is meant to be a handy way to compute proportions and confidence intervals of the proportions of a given target var (say acc_alim1) stratified by a given strat var (say the decile) in a subset of the survey based on filter_var == filter_value
+# there is no issue with the function as we find the same awkard 40% of richest agricultural households concerned about food availability through coherence checks -> it seems to be a result
+# mysvyr |>
+#   filter(n_is_agri_broad == "agri_broad") |>
+#   group_by(n_deciles_total) |>
+#   summarise(
+#     prop = survey_mean(n_acc_alim1 == 1, vartype = "ci")
+#   )
+#
+# svymean(
+#   ~ I(n_acc_alim1 == 1),
+#   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
+# )
+# mean(
+#   d$n_acc_alim1 == 1 &
+#     d$n_deciles_total == "D10" &
+#     d$n_is_agri_broad == "agri_broad"
+# )
+
+
 
 acc_alim1_decile <- get_proportion_IC_all(
   design = mysvyr,
   strat_var = "n_deciles_total",
   target_var = "n_acc_alim1",
-  filter_var = "n_is_agri",
+  # filter_var = "n_is_agri",
+  # filter_value = "agri_narrow"
+  filter_var = "n_is_agri_broad",
   filter_value = "agri_broad"
 ) |>
   rename(
@@ -2248,6 +2430,12 @@ acc_alim1_decile <- get_proportion_IC_all(
   )
 custom_save(acc_alim1_decile)
 
+# correct levels order
+decile_lvl <- levels(as.factor(d$n_deciles_total))
+acc_alim1_decile <- acc_alim1_decile |>
+  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
+  arrange(n_deciles_total, acc_alim1_decile)
+
 plot_acc_alim1_decile <- ggplot(
   acc_alim1_decile,
   aes(x = n_deciles_total, y = pct, fill = n_acc_alim1)
@@ -2257,18 +2445,25 @@ plot_acc_alim1_decile <- ggplot(
     alpha = 0.8
   ) +
   scale_fill_viridis_d(
-    name = "Concern about food availability",
+    name = "Concern about\nfood availability",
     option = "viridis",
     begin = 0.2,
     end = 0.8,
     direction = -1
   ) +
+  geom_errorbar(
+    data = acc_alim1_decile |> dplyr::filter(n_acc_alim1 == "yes"),
+    aes(x = n_deciles_total, ymin = pct_low, ymax = pct_upp),
+    width = 0.2,
+    inherit.aes = FALSE
+  ) +
   labs(
-    title = "Households according to income decile and concern about food availability",
+    title = "Agricultural households according to income decile and concern about food availability",
     subtitle = "Self-reported concern by the household head in the last three months",
     x = "Income decile",
     y = "Percentage (%)",
     caption = paste(
+      "Households are defined as agricultural according to the broad definition.",
       "The “concern about food availability” is a self-reported condition expressed by the household head answering:",
       "«En los últimos tres meses, por falta de dinero o recursos ¿alguna vez usted se preocupó de que la comida se acabara?» (table HOGARES, variable acc_alim1).",
       "Source: Based on ENIGH data.",
@@ -2286,41 +2481,29 @@ custom_save(plot_acc_alim1_decile)
 
 # Self-consumption ----
 ## from agro self employemnet ----
-#
-# d |>
-#   filter(n_is_agri_broad == "agri_broad") |>
-#   select(n_size_val1_agro) |>
-#   distinct()
-#
-# d |>
-#   filter(n_is_agri_broad == "agri_broad") |>
-#   select(n_autoconsumo1_agro) |>
-#   distinct()
-#
-# share_autoconsumo_decile_pct <- get_ratio_by_quant(
-#   design = mysvyr,
-#   numerator = n_autoconsumo1_agro,
-#   denominator = n_size_val1_agro,
-#   group_var = n_deciles_total,
-#   filter_var = n_is_agri_broad,
-#   filter_value = "agri_broad"
-# ) |>
-#   # Préparer la table pour ggplot
-#   ratios_table <- ratios_all |>
-#   mutate(
-#     `Ratio (%)` = round(share * 100, 2),
-#     SE_pct = round(SE * 100, 2),
-#     `IC99 Lower (%)` = round(IC_low * 100, 2),
-#     `IC99 Upper (%)` = round(IC_high * 100, 2)
-#   ) |>
-#   select(
-#     Decile = quantile,
-#     `Ratio (%)`,
-#     SE_pct,
-#     `IC99 Lower (%)`,
-#     `IC99 Upper (%)`
-#   )
-#
+
+share_autoconsumo_decile_pct <- get_ratio_by_quant(
+  design = mysvyr,
+  numerator = n_autoconsumo1_agro,
+  denominator = n_size_val1_agro,
+  group_var = n_deciles_total,
+  filter_var = n_is_agri_broad,
+  filter_value = agri_broad
+) |>
+  mutate(
+    `Ratio (%)` = round(share * 100, 2),
+    SE_pct = round(SE * 100, 2),
+    `IC99 Lower (%)` = round(IC_low * 100, 2),
+    `IC99 Upper (%)` = round(IC_high * 100, 2)
+  ) |>
+  select(
+    Decile = quantile,
+    `Ratio (%)`,
+    SE_pct,
+    `IC99 Lower (%)`,
+    `IC99 Upper (%)`
+  )
+
 # ratios_table$Decile <- factor(
 #   ratios_table$Decile,
 #   levels = paste0("D", 1:10)
@@ -2423,6 +2606,8 @@ custom_save(plot_acc_alim1_decile)
 # ),
 #TODO: compute share support in n_fni
 #TODO: compute share support in n_ing_cor
+#TODO : compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
+#TODO : regarde la part des vieux programmes agricoles dans le revenu agricole total par décile
 
 # -----------
 # THE END ----
