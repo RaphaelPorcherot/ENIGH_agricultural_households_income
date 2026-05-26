@@ -1,5 +1,9 @@
 # PART 2 STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO
+#TODO: now that we have corrected the weird D10 deciles starts with farm dual's structure and review the comment and noe.
 
+#TODO: compute the contrafactural income distribution that would be the case w/o support or w/o new support or w/o new direct support
+#TODO : compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
+#TODO:: mettre tous sur un seul graphique: overall pop : agri_broad / non agri / sen_agri / non_sen_agri
 #WARN : when we compute the ratio or the share etc it is always a macro value for the aggragated (agri) household in a given decile
 #The aggregate share is substantially lower than the average household ratio, reflecting strong heterogeneity in farm size and a negative correlation between production scale and self-consumption
 # In fact the mean of individual ratio for self-consumption is consierably higher -> many, many small farmers heavily rely on self-consumption
@@ -646,6 +650,12 @@ d <- d |>
   ) |>
   # correcting negative income from autonomous (agri and not agri) employment
   mutate(
+    #NOTE: do we have to do that on the part ? Could we in fact no do that on n_ing_cor directly ?
+    # in ENIGH they have balance in CONCENTRADOHOGAR, corresponding to business losses
+    # this means that business loss may be reduced by other income of the household
+    # replace_negative() on n_ing_cor would mean less negative to be replaced
+    # HOWEVER: we could not in that case construct precent_agro to classify households
+
     # make sure there is no NA in n_fn
     n_fni_agro = coalesce(n_fni_agro, 0),
     n_fni_agro_clean = replace_negatives(n_fni_agro),
@@ -975,7 +985,7 @@ message("-----------------------\n\n")
 
 ## Save edges cases after correction ----
 
-custom_save(edge_cases_after, "diagnostics")
+custom_save(edge_cases_after, type = "diagnostics")
 
 # GENERATE the survey object and add quantile based on equivaled income ----
 mysvyr <- d |> as_survey_design(upm, strata = est_dis, weights = factor)
@@ -1074,7 +1084,7 @@ mysvyr <- mysvyr |>
 ## (we should not be doing any further changes now)
 
 d <- mysvyr$variables
-custom_save(d, "main_database")
+custom_save(d, "_main_database")
 
 # UPDATE NEW VARIABLE DICTIONARY (append new variables if needed) ----
 
@@ -1878,11 +1888,10 @@ plot_agri_house_fni_decile_pct <- ggplot(df_plot, aes(x = decile)) +
   ) +
   theme_minimal(base_size = 14)
 
-custom_save(plot_agri_house_fni_decile_pct, type = "fig")
+custom_save(plot_agri_house_fni_decile_pct, type = type = "fig")
 print(plot_agri_house_fni_decile_pct)
 
 ## Farm annual turnover across income decile ----
-
 # d |> select(n_size_class_agro) |> distinct()
 # mysvyr |>
 #   filter(n_is_agri_broad == "agri_broad") |>
@@ -2045,11 +2054,6 @@ print(plot_farm_turnover_decile_narrow_pct)
 #NOTE: the previous observation applies, D10 agri households have smaller farm than D9.
 
 # Income inequalities compared ----
-
-#TODO: compute the contrafactural income distribution that would be the case w/o support or w/o new support or w/o new direct support
-#TODO : compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
-#TODO:: mettre tous sur un seul graphique: overall pop : agri_broad / non agri / sen_agri / non_sen_agri
-
 ## on agri_broad ----
 ### Gini ----
 myconv <- mysvyr |> convey_prep()
@@ -2403,6 +2407,7 @@ custom_save(plot_lorenz_agri_narrow, type = "fig")
 # Drivers of inequalities ----
 ## general ----
 
+#TODO: there is something missing here check the .qmd. Most likely the tbl of HOUSEHOLD characteristic
 tbl_agri <- subset(tbl, n_is_agri_broad == "agricultural households")
 tbl_csv <- tbl_agri |>
   select(-n_is_agri_broad) |>
@@ -3730,13 +3735,14 @@ custom_save(
 
 #TODO: still somehting to do; self-consumption from agro in all
 # Support in farm total ressources (entrate aziendale) ----
-d |>
-  filter(n_is_agri_broad == "agri_broad", n_deciles_total == "D10") |>
-  summarise(
-    mean_apoyo_npago  = mean(n_apoyo_npago_agro, na.rm = TRUE),
-    mean_pro_agrogan  = mean(n_pro_agrogan_agro, na.rm = TRUE),
-    mean_nvo_tot_npago = mean(n_support_agro - n_pro_agrogan_agro - n_apoyo_npago_agro, na.rm = TRUE)
-  )
+
+# d |>
+#   filter(n_is_agri_broad == "agri_broad", n_deciles_total == "D10") |>
+#   summarise(
+#     mean_apoyo_npago  = mean(n_apoyo_npago_agro, na.rm = TRUE),
+#     mean_pro_agrogan  = mean(n_pro_agrogan_agro, na.rm = TRUE),
+#     mean_nvo_tot_npago = mean(n_support_agro - n_pro_agrogan_agro - n_apoyo_npago_agro, na.rm = TRUE)
+#   )
 # mysvyr$variables |>
 #   filter(n_is_agri_broad == "agri_broad",
 #          n_deciles_total == "D10") |>
@@ -3756,6 +3762,7 @@ d |>
 #     mean_ratio      = mean(n_support_agro / n_ftr1_agro, na.rm = TRUE),
 #     n               = n()
 #   )
+
 ### MACRO agri_broad ----
 # # Vert
 # values = c("Above" = "#33a02c", "Below" = "#b2df8a")
@@ -3765,9 +3772,10 @@ d |>
 # values = c("Above" = "#ff7f00", "Below" = "#fdbf6f")
 # # Violet
 # values = c("Above" = "#6a3d9a", "Below" = "#cab2d6")
-# # Marron/beige
-# values = c("Above" = "#b15928", "Below" = "#ffff99")
 
+# Marron/beige
+col_above <- "#b15928"
+col_below <- "#ffff99"
 name <- "macro_ratio_support_ftr1_decile"
 universe <- "n_is_agri_broad"
 filter <- "agri_broad"
@@ -3886,7 +3894,8 @@ plot <- ggplot(
     size = 3.8
   ) +
   scale_fill_manual(
-    values = c("Above" = "#b15928", "Below" = "#ffff99"),
+    values = c("Above" = col_above, "Below" = col_below),
+    # values = c("Above" = "#b15928", "Below" = "#ffff99"),
     name = "Comparison to overall ratio"
   ) +
   scale_y_continuous(
@@ -3932,12 +3941,27 @@ custom_save(
 
 ### MACRO agri_narrow ----
 
-name <- "macro_ratio_autocons_prod_decile"
+# # Vert
+# values = c("Above" = "#33a02c", "Below" = "#b2df8a")
+# # Rouge/orange
+# values = c("Above" = "#e31a1c", "Below" = "#fb9a99")
+# # Orange
+# values = c("Above" = "#ff7f00", "Below" = "#fdbf6f")
+# # Violet
+# values = c("Above" = "#6a3d9a", "Below" = "#cab2d6")
+
+# Marron/beige
+col_above <- "#b15928"
+col_below <- "#ffff99"
+name <- "macro_ratio_support_ftr1_decile"
+# universe <- "n_is_agri_broad"
+# filter <- "agri_broad"
 universe <- "n_is_agri"
 filter <- "agri_narrow"
+
 strat <- "n_deciles_total"
-num <- "n_autoconsumo1_agro"
-den <- "n_size_val1_agro"
+num <- "n_support_agro"
+den <- "n_ftr1_agro"
 
 tbl <- get_ratio_macro(
   design = mysvyr,
@@ -4049,7 +4073,7 @@ plot <- ggplot(
     size = 3.8
   ) +
   scale_fill_manual(
-    values = c("Above" = "#006400", "Below" = "#90EE90"),
+    values = c("Above" = col_above, "Below" = col_below),
     name = "Comparison to overall ratio"
   ) +
   scale_y_continuous(
@@ -4057,13 +4081,14 @@ plot <- ggplot(
     labels = percent_format(scale = 1)
   ) +
   labs(
-    title = "Share of self-consumed agricultural production in total production by income decile",
+    title = "Share of direct policy payments in total farm resources across income decile",
     subtitle = str_c("Universe: ", filter),
     x = "Income decile",
-    y = "Share of production (%)",
+    y = "Share of total farm resources (%)",
     caption = paste(
-      "Notes: 'Self-consumed production' corresponds to production consumed by the household operating an agricultural production unit rather than sold.",
-      "Bar colors indicate whether the decile is above (dark green) or below (light green) the national mean.",
+      "Notes: Farm total resources includes sales value, estimated value of self-consumption and of non-monetary exchanges and direct policy payments",
+      "Direct policy payments correspond to non-repayable financial support received by agricultural activities, including all social programs, old and new. It excludes for instance microcredits.",
+      "Bar colors indicate whether the decile is above (darker) or below (lighter) the national mean share.",
       "The dashed black line shows the LOESS trend across deciles.",
       "The red dotted line and shaded band represent the overall ratio and its 99% confidence interval.",
       "Error bars represent 99% confidence intervals.",

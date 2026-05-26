@@ -100,17 +100,18 @@ n_ingr_noagro_clean,numeric,NOAGRO,,same as n_ingr_noagro but no negative income
 n_nacion_fert,numeric,AGRO;NOAGRO,,Nacional de Fertilizantes (TOTAL = _agro + _noagro)
 n_nacion_fert_agro,numeric,AGRO,,Nacional de Fertilizantes received for agricultural activities
 n_nacion_fert_noagro,numeric,NOAGRO,,Nacional de Fertilizantes received for non-agricultural activities
-n_nvo_npago,numeric,AGRO;NOAGRO,,"NEW policies - non-repayable new support policies (TOTAL, sembr_vid, agromercados, precios_gar, nacion_fert,desarollo_rur,otros_prog : all except repayable policies : tand_bien,credito_gan)"
+n_nvo_npago,numeric,AGRO;NOAGRO,,"NEW policies - non-repayable new support policies (sembr_vid, agromercados, precios_gar, nacion_fert,desarollo_rur,otros_prog : all except repayable policies : tand_bien,credito_gan)"
 n_nvo_npago_agro,numeric,AGRO,,NEW policies - non-repayable new support policies received for agricultural activities
 n_nvo_npago_noagro,numeric,NOAGRO,,NEW policies - non-repayable new support policies received for non agricultural activities
-n_nvo_tot,numeric,,,
-n_nvo_tot_agro,numeric,,,
-n_nvo_tot_noagro,numeric,,,
+n_nvo_tot,numeric,AGRO;NOAGRO,,NEW Policies - total received for all independant activities
+n_nvo_tot_agro,numeric,AGRO,,NEW Policies - total received for agricultural independant activities
+n_nvo_tot_noagro,numeric,NOAGRO,,NEW Policies - total received for non agricultural independant activities
 n_otros_ing,numeric,CONCENTRADOHOGAR,,household's other incomes
 n_otros_ing_bundled,numeric,CONCENTRADOHOGAR,,sum of n_rentas + n_estim_alqu + n_otros_ing
 n_otros_prog,numeric,AGRO;NOAGRO,,Otros programas sociales (TOTAL = _agro + _noagro in NEW policies)
 n_otros_prog_agro,numeric,AGRO,,Otros programas sociales (in NEW policies) received for agricultural activities
 n_otros_prog_noagro,numeric,NOAGRO,,Otros programas sociales (in NEW policies) received for non-agricultural activities
+n_otros_trab,numeric,,,Other income from dependant labour 
 n_precios_gar,numeric,AGRO;NOAGRO,,Precios de Garantía a Productos Alimentarios Básicos (TOTAL = _agro + _noagro)
 n_precios_gar_agro,numeric,AGRO,,Precios de Garantía a Productos Alimentarios Básicos received for agricultural activities
 n_precios_gar_noagro,numeric,NOAGRO,,Precios de Garantía a Productos Alimentarios Básicos received for non-agricultural activities
