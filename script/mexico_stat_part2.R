@@ -1,7 +1,19 @@
 # PART 2 STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO
 
+##WARN : when we compute the ratio or the share etc it is always a macro value for the aggragated (agri) household in a given decile
+#The aggregate share is substantially lower than the average household ratio, reflecting strong heterogeneity in farm size and a negative correlation between production scale and self-consumption
+# In fact the mean of individual ratio for self-consumption is consierably higher -> many, many small farmers heavily rely on self-consumption
+# We need to decide which we want (and we might want both, why not)
+# For instance
+# Il faut qu'on écrive ca à un momen donné dans le papier: We report both (i) the average household-level self-consumption rate and (ii) the aggregate share of self-consumed production. The gap between the two reflects strong heterogeneity in farm size and production structure.
+#Si gap grand :
+# forte hétérogénéité
+# forte corrélation négative entre taille et autoconsommation
+# structure duale agriculture (subsistence vs commercial)
+
 #TODO : regarde la part des vieux programmes agricoles dans le revenu agricole total par décile (sauf que les déciles varient lorsque cette part varie)
-#TODO : decile cut off point rajouter smg as line 
+#TODO : decile cut off point rajouter smg as line
+
 # FUNCTIONS ----
 ## Detailed statistics in custom layout ----
 
@@ -207,10 +219,10 @@ get_proportion <- function(
 
     design_sub <- update(design_sub, indicator = indicator)
 
-    p <- svyciprop(~indicator, design_sub, method = method)
+    p <- svyciprop(~indicator, design_sub, method = method, level = level)
     # extraire valeurs numériques
     prop_val <- as.numeric(coef(p))
-    IC <- as.numeric(confint(p), level = level)
+    IC <- as.numeric(confint(p)) #level = level)
 
     tibble(
       strat_var = strat_level,
@@ -252,7 +264,7 @@ get_proportion <- function(
 #     )
 # }
 
-### SHARES of total by subgroup ----
+### MACRO SHARES of total by subgroup ----
 
 ### svyciprop ne sait pas faire part d’une variable dans un total continu (acc_alim1 is 1/0, while n_fni is continuous) en stratifiant par decile (ou autre sous-groupe)
 ### based on delta method at 99%
@@ -274,7 +286,7 @@ get_proportion <- function(
 # level <- 0.99
 # z <- qnorm((1 + level) / 2)
 
-get_share <- function(
+get_share_macro <- function(
   design,
   target_var,
   strat_var,
@@ -362,7 +374,7 @@ get_share <- function(
     )
 }
 
-### RATIO of a variable by the total of that continous variable in a subgroup (decile) ----
+### MACRO RATIO of a variable by the total of that continous variable in a subgroup (decile) ----
 
 # unit test
 # design <- mysvyr
@@ -375,7 +387,7 @@ get_share <- function(
 # strat_levels <- unique(as.character(design$variables[[strat_var]]))
 # strat_level <- strat_levels[2]
 
-get_ratio <- function(
+get_ratio_macro <- function(
   design,
   numerator,
   denominator,
@@ -466,6 +478,149 @@ get_ratio <- function(
     dplyr::rename(!!strat_var := strat_var)
 }
 
+### MICRO RATIO : moyenne des ratios individuels par sous-groupe ----
+# Contrairement à get_ratio() qui calcule num_total / den_total (ratio de totaux agrégés),
+# get_ratio_micro() calcule mean(num_i / den_i) — la moyenne des ratios individuels.
+# Utilise srvyr::survey_mean() sur la variable ratio pré-calculée.
+# Avantage : reflète le ménage "typique" plutôt que la structure agrégée de production.
+
+get_ratio_micro <- function(
+  design,
+  numerator,
+  denominator,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL,
+  level = 0.99
+) {
+  z <- qnorm((1 + level) / 2)
+
+  # subset global (domain restriction)
+  if (!is.null(filter_var) && !is.null(filter_value)) {
+    design <- subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        design$variables[[filter_var]] == filter_value
+    )
+  }
+
+  # ratio individuel
+  ratio_var <- paste0(".ratio_micro_", numerator, "_", denominator)
+  design <- update(
+    design,
+    .ratio = design$variables[[numerator]] / design$variables[[denominator]]
+  )
+
+  # protection NA Inf
+  design$variables$.ratio <- ifelse(
+    is.finite(design$variables$.ratio),
+    design$variables$.ratio,
+    NA_real_
+  )
+
+  # niveaux de stratification
+  strat_levels <- unique(as.character(design$variables[[strat_var]]))
+  strat_levels <- strat_levels[!is.na(strat_levels)]
+
+  calc_ratio_micro <- function(strat_level) {
+    design_sub <- subset(
+      design,
+      !is.na(design$variables[[strat_var]]) &
+        as.character(design$variables[[strat_var]]) == strat_level
+    )
+
+    res <- design_sub |>
+      srvyr::as_survey() |>
+      srvyr::summarise(
+        mean_ratio = srvyr::survey_mean(.ratio, na.rm = TRUE, vartype = "se")
+      )
+
+    se <- res$mean_ratio_se
+    est <- res$mean_ratio
+
+    tibble::tibble(
+      strat_var = strat_level,
+      ratio = est,
+      SE = se,
+      IC_low = est - z * se,
+      IC_high = est + z * se
+    )
+  }
+
+  purrr::map_dfr(strat_levels, calc_ratio_micro) |>
+    dplyr::rename(!!strat_var := strat_var)
+}
+
+### NO USE CASE MICRO SHARE : moyenne des parts individuelles par sous-groupe ----
+# # Contrairement à get_share() qui calcule total_groupe / total_global (share agrégé),
+# # get_share_micro() calcule mean(var_i / total_var_i) au niveau individuel.
+# # Cas typique : part d'une source de revenu dans le revenu total du ménage.
+# # Avantage : chaque ménage contribue également, indépendamment de sa taille.
+#
+# get_share_micro <- function(
+#   design,
+#   numerator, # ex: "n_fni_agro" — la partie
+#   denominator, # ex: "n_income_total" — le tout
+#   strat_var,
+#   filter_var = NULL,
+#   filter_value = NULL,
+#   level = 0.99
+# ) {
+#   z <- qnorm((1 + level) / 2)
+#
+#   # subset global
+#   if (!is.null(filter_var) && !is.null(filter_value)) {
+#     design <- subset(
+#       design,
+#       !is.na(design$variables[[filter_var]]) &
+#         design$variables[[filter_var]] == filter_value
+#     )
+#   }
+#
+#   # share individuel
+#   design <- update(
+#     design,
+#     .share = design$variables[[numerator]] / design$variables[[denominator]]
+#   )
+#   # protection Inf/NaN
+#   design$variables$.share <- ifelse(
+#     is.finite(design$variables$.share),
+#     design$variables$.share,
+#     NA_real_
+#   )
+#   # niveaux
+#   strat_levels <- unique(as.character(design$variables[[strat_var]]))
+#   strat_levels <- strat_levels[!is.na(strat_levels)]
+#
+#   calc_share_micro <- function(strat_level) {
+#     design_sub <- subset(
+#       design,
+#       !is.na(design$variables[[strat_var]]) &
+#         as.character(design$variables[[strat_var]]) == strat_level
+#     )
+#
+#     res <- design_sub |>
+#       srvyr::as_survey() |>
+#       srvyr::summarise(
+#         mean_share = srvyr::survey_mean(.share, na.rm = TRUE, vartype = "se")
+#       )
+#
+#     se <- res$mean_share_se
+#     est <- res$mean_share
+#
+#     tibble::tibble(
+#       strat_var = strat_level,
+#       share = est,
+#       SE = se,
+#       IC_low = est - z * se,
+#       IC_high = est + z * se
+#     )
+#   }
+#
+#   purrr::map_dfr(strat_levels, calc_share_micro) |>
+#     dplyr::rename(!!strat_var := strat_var)
+# }
+#
 # -----------
 #
 # LOADING and ADDING NEW VARIABLES ----
@@ -522,8 +677,8 @@ d <- d |>
       "4" = "]50 000; 200 000]",
       "5" = "> 200 000"
     ),
-    # total farm ressources is : (sales + self-consumption + non monetary exchanges) + subsidies
-    n_tot_farm_resources1_agro = n_support_agro + n_size_val1_agro,
+    # farm total ressources is : (sales + self-consumption + non monetary exchanges) + subsidies
+    n_ftr1_agro = n_support_agro + n_size_val1_agro,
 
     n_is_loc_rural = if_else(tam_loc == 4, "rural", "not_rural"),
     # create a new group for other sources of income
@@ -1579,7 +1734,7 @@ print(plot_farm_turnover_size_prod_pct)
 # Farm dual's structure ----
 ## Shares of n_fni by decile ----
 
-share_fni_decile_pct <- get_share(
+share_fni_decile_pct <- get_share_macro(
   design = mysvyr,
   target_var = "n_fni_agro_clean",
   strat_var = "n_deciles_total"
@@ -2915,15 +3070,25 @@ print(plot_acc_alim1_decile_narrow)
 #WARN: we need to understand the discrpenacy between tipoact, which is encoded by INEGHI, and the self-declaration of the actiity which got the support fromsocial programs which may agri in a quite contradictory manner with the first element
 #TODO: décider si on le fait aussi pour la somme des deux valeurs de l'autoconsommation
 ## from agro self employemnet ----
+### MACRO agri_broad ----
 
-### agri_broad ----
-ratio_autocons_prod_decile <- get_ratio(
+name <- "macro_ratio_autocons_prod_decile"
+universe <- "n_is_agri_broad"
+filter <- "agri_broad"
+
+strat <- "n_deciles_total"
+num <- "n_autoconsumo1_agro"
+den <- "n_size_val1_agro"
+
+tbl <- get_ratio_macro(
   design = mysvyr,
-  numerator = "n_autoconsumo1_agro",
-  denominator = "n_size_val1_agro",
-  strat_var = "n_deciles_total",
-  filter_var = "n_is_agri_broad",
-  filter_value = "agri_broad"
+  numerator = num,
+  denominator = den,
+  strat_var = strat,
+  # filter_var = "n_is_agri_broad",
+  # filter_value = "agri_broad"
+  filter_var = universe,
+  filter_value = filter
 ) |>
   mutate(
     ratio = round(ratio * 100, 2),
@@ -2933,81 +3098,57 @@ ratio_autocons_prod_decile <- get_ratio(
   )
 
 # correct levels order
-decile_lvl <- levels(as.factor(d$n_deciles_total))
-ratio_autocons_prod_decile <- ratio_autocons_prod_decile |>
-  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
-  arrange(n_deciles_total, n_deciles_total)
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
 
 # Ratio of total (macro, this is not a mean of ratio which would be micro)
+overall <- get_ratio_macro(
+  mysvyr,
+  numerator = num,
+  denominator = den,
+  strat_var = universe, # juste pour avoir le bon subset
+  filter_var = universe,
+  filter_value = filter
+) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+colnames(overall)[1] <- colnames(tbl)[1]
 
-design_agri <- subset(mysvyr, n_is_agri_broad == "agri_broad")
-
-mean_ratio <- svyratio(
-  numerator = ~n_autoconsumo1_agro,
-  denominator = ~n_size_val1_agro,
-  design = design_agri
-)
-#TODO: get_proportion, get_share, get_ratio need to be rewritten to get les means of individuals ratios for households of a given type  (agri or not) in a given decile
-#The aggregate share is substantially lower than the average household ratio, reflecting strong heterogeneity in farm size and a negative correlation between production scale and self-consumption
-##WARN : when we compute the ratio or the share etc it is always a macro value for the aggragated (agri) household in a given decile
-# We do not have a micro value which would be a mean of individual ratios.
-# In fact the mean of individual ratio for self-consumption is consierably higher -> many, many small farmers heavily rely on self-consumption
-# We need to decide which we want (and we might want both, why not)
-# # Moyenne nationale
-# mean_ratio <- mysvyr |>
-#   mutate(
-#     ratio_autocons_prod = n_autoconsumo1_agro / n_size_val1_agro
-#   ) |>
-#   filter(n_is_agri_broad == "agri_broad") |>
-#   summarise(
-#     mean_ratio = survey_mean(ratio_autocons_prod, na.rm = TRUE)
-#   )
-# mean_ratio <- mean(ratio_autocons_prod_decile$ratio)
-# For instance
-# Il faut qu'on écrive ca à un momen donné dans le papier: We report both (i) the average household-level self-consumption rate and (ii) the aggregate share of self-consumed production. The gap between the two reflects strong heterogeneity in farm size and production structure.
-#Si gap grand :
-# forte hétérogénéité
-# forte corrélation négative entre taille et autoconsommation
-# structure duale agriculture (subsistence vs commercial)
-# mysvyr <- mysvyr |>
-#   mutate(
-#     ratio_autocons_prod_agro = n_autoconsumo1_agro / n_size_val1_agro
-#   )
-# result <- mysvyr |>
-#   filter(!is.na(n_deciles_total)) |>
-#   group_by(n_deciles_total, n_is_agri_broad) |>
-#   summarise(
-#     mean_ratio = survey_mean(ratio_autocons_prod_agro, na.rm = TRUE),
-#     .groups = "drop"
-#   )
-# result <- result |>
-#   mutate(
-#     mean_ratio = mean_ratio * 100
-#   )
-
-# Indicateur pour colorer les barres selon > ou < moyenne
-# ratio agrégé de production autoconsommée sur production totale chez les ménages agricoles (pondéré survey)
-#
-ratio_est <- coef(mean_ratio)
-se_est <- SE(mean_ratio)
-z <- qnorm(0.995) # 99% CI
-IC_low <- ratio_est - z * se_est
-IC_high <- ratio_est + z * se_est
-
-ratio_autocons_prod_decile <- ratio_autocons_prod_decile |>
+tbl <- tbl |>
   mutate(
     above_mean = ifelse(
-      ratio >= ratio_est * 100,
+      ratio >= overall$ratio,
       "Above",
       "Below"
     )
   )
 
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", str_remove(filter, ".*_"))
+)
+
 # Graphique
-plot_ratio_autocons_prod_decile_broad <- ggplot(
-  ratio_autocons_prod_decile,
-  aes(x = n_deciles_total, y = ratio, fill = above_mean)
+plot <- ggplot(
+  tbl,
+  aes(x = .data[[names(tbl)[1]]], y = ratio, fill = above_mean)
 ) +
+  # ribbon overall : x en numérique pour couvrir tout le graphe
+  annotate(
+    "rect",
+    xmin = 0.5,
+    xmax = 10.5,
+    ymin = overall$IC_low,
+    ymax = overall$IC_high,
+    fill = "#D55E00",
+    alpha = 0.15
+  ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
   geom_errorbar(
     aes(ymin = IC_low, ymax = IC_high),
@@ -3022,44 +3163,34 @@ plot_ratio_autocons_prod_decile_broad <- ggplot(
     fontface = "bold"
   ) +
   geom_smooth(
-    aes(group = 1),
+    aes(group = 1, fill = NULL), # annule l'héritage du fill global
     method = "loess",
     se = FALSE,
     color = "black",
     linewidth = 0.8,
     linetype = "dashed"
   ) +
-  # geom_ribbon(
-  #   aes(
-  #     ymin = IC_low ,
-  #     ymax = IC_high 
-  #   ),
-  #   color = "#D55E00",
-  #   alpha = 0.2
-  # ) +
-  # geom_hline(
-  #   yintercept = ratio_est * 100,
-  #   color = "#D55E00",
-  #   linetype = "dotted",
-  #   size = 0.8
-  # ) +
-  # geom_label(
-  #   aes(
-  #     x = 9.5,
-  #     y = ratio_est * 100 + 1,
-  #     label = paste0("Mean: ", round(ratio_est * 100, 1), "%")
-  #   ),
-  #   inherit.aes = FALSE,
-  #   fill = "white",
-  #   color = "#D55E00",
-  #   label.size = 0.2,
-  #   size = 3.8
-  # ) +
-  scale_fill_manual(
-    values = c(
-      "Above" = "#006400", # dark green
-      "Below" = "#90EE90" # light green
+  geom_hline(
+    yintercept = overall$ratio,
+    color = "#D55E00",
+    linetype = "dotted",
+    linewidth = 0.8
+  ) +
+  geom_label(
+    data = data.frame(x = "D9", y = overall$ratio + 1.2),
+    aes(
+      x = x,
+      y = y,
+      label = paste0("Overall: ", round(overall$ratio, 1), "%")
     ),
+    inherit.aes = FALSE,
+    fill = "white",
+    color = "#D55E00",
+    linewidth = 0.2, # <-- ici
+    size = 3.8
+  ) +
+  scale_fill_manual(
+    values = c("Above" = "#006400", "Below" = "#90EE90"),
     name = "Comparison to overall ratio"
   ) +
   scale_y_continuous(
@@ -3068,14 +3199,14 @@ plot_ratio_autocons_prod_decile_broad <- ggplot(
   ) +
   labs(
     title = "Share of self-consumed agricultural production in total production by income decile",
-    subtitle = "Universe: agri_broad",
+    subtitle = str_c("Universe: ", filter),
     x = "Income decile",
     y = "Share of production (%)",
     caption = paste(
       "Notes: 'Self-consumed production' corresponds to production consumed by the household operating an agricultural production unit rather than sold.",
       "Bar colors indicate whether the decile is above (dark green) or below (light green) the national mean.",
       "The dashed black line shows the LOESS trend across deciles.",
-      "The red dotted line represents the national average share.",
+      "The red dotted line and shaded band represent the overall ratio and its 99% confidence interval.",
       "Error bars represent 99% confidence intervals.",
       "Source: Based on ENIGH data.",
       sep = "\n"
@@ -3090,19 +3221,35 @@ plot_ratio_autocons_prod_decile_broad <- ggplot(
     plot.caption = element_text(size = 10)
   )
 
-print(plot_ratio_autocons_prod_decile_broad)
-custom_save(plot_ratio_autocons_prod_decile_broad, type = "fig")
-### agri_narrow ----
+print(plot)
+custom_save(
+  plot,
+  str_c(
+    "plot_",
+    name,
+    "_",
+    str_remove(filter, ".*_")
+  ),
+  type = "fig"
+)
+### MACRO agri_narrow ----
 
-ratio_autocons_prod_decile <- get_ratio(
+name <- "macro_ratio_autocons_prod_decile"
+universe <- "n_is_agri"
+filter <- "agri_narrow"
+strat <- "n_deciles_total"
+num <- "n_autoconsumo1_agro"
+den <- "n_size_val1_agro"
+
+tbl <- get_ratio_macro(
   design = mysvyr,
-  numerator = "n_autoconsumo1_agro",
-  denominator = "n_size_val1_agro",
-  strat_var = "n_deciles_total",
+  numerator = num,
+  denominator = den,
+  strat_var = strat,
   # filter_var = "n_is_agri_broad",
   # filter_value = "agri_broad"
-  filter_var = "n_is_agri",
-  filter_value = "agri_narrow"
+  filter_var = universe,
+  filter_value = filter
 ) |>
   mutate(
     ratio = round(ratio * 100, 2),
@@ -3112,25 +3259,57 @@ ratio_autocons_prod_decile <- get_ratio(
   )
 
 # correct levels order
-decile_lvl <- levels(as.factor(d$n_deciles_total))
-ratio_autocons_prod_decile <- ratio_autocons_prod_decile |>
-  mutate(n_deciles_total = factor(n_deciles_total, levels = decile_lvl)) |>
-  arrange(n_deciles_total, n_deciles_total)
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
 
-# Moyenne nationale
-mean_ratio <- mean(ratio_autocons_prod_decile$ratio)
-
-# Indicateur pour colorer les barres selon > ou < moyenne
-ratio_autocons_prod_decile <- ratio_autocons_prod_decile |>
+# Ratio of total (macro, this is not a mean of ratio which would be micro)
+overall <- get_ratio_macro(
+  mysvyr,
+  numerator = num,
+  denominator = den,
+  strat_var = universe, # juste pour avoir le bon subset
+  filter_var = universe,
+  filter_value = filter
+) |>
   mutate(
-    above_mean = ifelse(ratio >= mean_ratio, "Above mean", "Below mean")
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+colnames(overall)[1] <- colnames(tbl)[1]
+
+tbl <- tbl |>
+  mutate(
+    above_mean = ifelse(
+      ratio >= overall$ratio,
+      "Above",
+      "Below"
+    )
   )
 
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", str_remove(filter, ".*_"))
+)
+
 # Graphique
-plot_ratio_autocons_prod_decile_narrow <- ggplot(
-  ratio_autocons_prod_decile,
-  aes(x = n_deciles_total, y = ratio, fill = above_mean)
+plot <- ggplot(
+  tbl,
+  aes(x = .data[[names(tbl)[1]]], y = ratio, fill = above_mean)
 ) +
+  # ribbon overall : x en numérique pour couvrir tout le graphe
+  annotate(
+    "rect",
+    xmin = 0.5,
+    xmax = 10.5,
+    ymin = overall$IC_low,
+    ymax = overall$IC_high,
+    fill = "#D55E00",
+    alpha = 0.15
+  ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
   geom_errorbar(
     aes(ymin = IC_low, ymax = IC_high),
@@ -3145,7 +3324,7 @@ plot_ratio_autocons_prod_decile_narrow <- ggplot(
     fontface = "bold"
   ) +
   geom_smooth(
-    aes(group = 1),
+    aes(group = 1, fill = NULL), # annule l'héritage du fill global
     method = "loess",
     se = FALSE,
     color = "black",
@@ -3153,17 +3332,27 @@ plot_ratio_autocons_prod_decile_narrow <- ggplot(
     linetype = "dashed"
   ) +
   geom_hline(
-    yintercept = mean_ratio,
+    yintercept = overall$ratio,
     color = "#D55E00",
     linetype = "dotted",
-    size = 0.8
+    linewidth = 0.8
+  ) +
+  geom_label(
+    data = data.frame(x = "D9", y = overall$ratio + 1.2),
+    aes(
+      x = x,
+      y = y,
+      label = paste0("Overall: ", round(overall$ratio, 1), "%")
+    ),
+    inherit.aes = FALSE,
+    fill = "white",
+    color = "#D55E00",
+    linewidth = 0.2, # <-- ici
+    size = 3.8
   ) +
   scale_fill_manual(
-    values = c(
-      "Above mean" = "#006400", # dark green
-      "Below mean" = "#90EE90" # light green
-    ),
-    name = "Comparison to mean"
+    values = c("Above" = "#006400", "Below" = "#90EE90"),
+    name = "Comparison to overall ratio"
   ) +
   scale_y_continuous(
     expand = expansion(mult = c(0, 0.05)),
@@ -3171,14 +3360,14 @@ plot_ratio_autocons_prod_decile_narrow <- ggplot(
   ) +
   labs(
     title = "Share of self-consumed agricultural production in total production by income decile",
-    subtitle = "Universe: agri_narrow",
+    subtitle = str_c("Universe: ", filter),
     x = "Income decile",
     y = "Share of production (%)",
     caption = paste(
       "Notes: 'Self-consumed production' corresponds to production consumed by the household operating an agricultural production unit rather than sold.",
       "Bar colors indicate whether the decile is above (dark green) or below (light green) the national mean.",
       "The dashed black line shows the LOESS trend across deciles.",
-      "The red dotted line represents the national average share.",
+      "The red dotted line and shaded band represent the overall ratio and its 99% confidence interval.",
       "Error bars represent 99% confidence intervals.",
       "Source: Based on ENIGH data.",
       sep = "\n"
@@ -3193,29 +3382,713 @@ plot_ratio_autocons_prod_decile_narrow <- ggplot(
     plot.caption = element_text(size = 10)
   )
 
-print(plot_ratio_autocons_prod_decile_narrow)
-custom_save(plot_ratio_autocons_prod_decile_narrow, type = "fig")
+print(plot)
+custom_save(
+  plot,
+  str_c(
+    "plot_",
+    name,
+    "_",
+    str_remove(filter, ".*_")
+  ),
+  type = "fig"
+)
+
+### MICRO agri_broad ----
+
+name <- "micro_ratio_autocons_prod_decile"
+universe <- "n_is_agri_broad"
+filter <- "agri_broad"
+
+strat <- "n_deciles_total"
+num <- "n_autoconsumo1_agro"
+den <- "n_size_val1_agro"
+
+tbl <- get_ratio_micro(
+  design = mysvyr,
+  numerator = num,
+  denominator = den,
+  strat_var = strat,
+  # filter_var = "n_is_agri_broad",
+  # filter_value = "agri_broad"
+  filter_var = universe,
+  filter_value = filter
+) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+
+# correct levels order
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
+
+# Overall mean of individual ratios on total pop or subpop
+overall <- get_ratio_micro(
+  mysvyr,
+  numerator = num,
+  denominator = den,
+  strat_var = universe, # juste pour avoir le bon subset
+  filter_var = universe,
+  filter_value = filter
+) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+colnames(overall)[1] <- colnames(tbl)[1]
+
+tbl <- tbl |>
+  mutate(
+    above_mean = ifelse(
+      ratio >= overall$ratio,
+      "Above",
+      "Below"
+    )
+  )
+
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", str_remove(filter, ".*_"))
+)
+
+# Graphique
+plot <- ggplot(
+  tbl,
+  aes(x = .data[[names(tbl)[1]]], y = ratio, fill = above_mean)
+) +
+  # ribbon overall : x en numérique pour couvrir tout le graphe
+  annotate(
+    "rect",
+    xmin = 0.5,
+    xmax = 10.5,
+    ymin = overall$IC_low,
+    ymax = overall$IC_high,
+    fill = "#D55E00",
+    alpha = 0.15
+  ) +
+  geom_col(width = 0.7, alpha = 0.9, color = "white") +
+  geom_errorbar(
+    aes(ymin = IC_low, ymax = IC_high),
+    width = 0.2,
+    color = "grey30"
+  ) +
+  geom_text(
+    aes(label = paste0(round(ratio, 1), "%")),
+    vjust = 1.5,
+    color = "white",
+    size = 3.8,
+    fontface = "bold"
+  ) +
+  geom_smooth(
+    aes(group = 1, fill = NULL), # annule l'héritage du fill global
+    method = "loess",
+    se = FALSE,
+    color = "black",
+    linewidth = 0.8,
+    linetype = "dashed"
+  ) +
+  geom_hline(
+    yintercept = overall$ratio,
+    color = "#D55E00",
+    linetype = "dotted",
+    linewidth = 0.8
+  ) +
+  geom_label(
+    data = data.frame(x = "D9", y = overall$ratio + 1.2),
+    aes(
+      x = x,
+      y = y,
+      label = paste0("Overall: ", round(overall$ratio, 1), "%")
+    ),
+    inherit.aes = FALSE,
+    fill = "white",
+    color = "#D55E00",
+    linewidth = 0.2, # <-- ici
+    size = 3.8
+  ) +
+  scale_fill_manual(
+    values = c("Above" = "#006400", "Below" = "#90EE90"),
+    name = "Comparison to overall ratio"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.05)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Average individual share of self-consumed production in total production by income decile",
+    subtitle = str_c("Universe: ", filter),
+    x = "Income decile",
+    y = "Mean individual share (%)",
+    caption = paste(
+      "Notes: Bars represent the average of household-level ratios (autoconsumption / total production) within each decile.",
+      "Each household contributes equally regardless of production size.",
+      "Bar colors indicate whether the decile is above (dark green) or below (light green) the overall mean.",
+      "The dashed black line shows the LOESS trend across deciles.",
+      "The red dotted line and shaded band represent the overall mean ratio and its 99% confidence interval.",
+      "Error bars represent 99% confidence intervals.",
+      "Source: Based on ENIGH data.",
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(size = 11),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot)
+custom_save(
+  plot,
+  str_c(
+    "plot_",
+    name,
+    "_",
+    str_remove(filter, ".*_")
+  ),
+  type = "fig"
+)
+### MICRO agri_narrow ----
+# means of individual ratios
+
+name <- "micro_ratio_autocons_prod_decile"
+universe <- "n_is_agri"
+filter <- "agri_narrow"
+strat <- "n_deciles_total"
+num <- "n_autoconsumo1_agro"
+den <- "n_size_val1_agro"
+
+tbl <- get_ratio_micro(
+  design = mysvyr,
+  numerator = num,
+  denominator = den,
+  strat_var = strat,
+  # filter_var = "n_is_agri_broad",
+  # filter_value = "agri_broad"
+  filter_var = universe,
+  filter_value = filter
+) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+
+# correct levels order
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
+
+# Overall mean of individual ratios on total pop or subpop
+overall <- get_ratio_micro(
+  mysvyr,
+  numerator = num,
+  denominator = den,
+  strat_var = universe, # juste pour avoir le bon subset
+  filter_var = universe,
+  filter_value = filter
+) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+colnames(overall)[1] <- colnames(tbl)[1]
+
+tbl <- tbl |>
+  mutate(
+    above_mean = ifelse(
+      ratio >= overall$ratio,
+      "Above",
+      "Below"
+    )
+  )
+
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", str_remove(filter, ".*_"))
+)
+
+# Graphique
+plot <- ggplot(
+  tbl,
+  aes(x = .data[[names(tbl)[1]]], y = ratio, fill = above_mean)
+) +
+  # ribbon overall : x en numérique pour couvrir tout le graphe
+  annotate(
+    "rect",
+    xmin = 0.5,
+    xmax = 10.5,
+    ymin = overall$IC_low,
+    ymax = overall$IC_high,
+    fill = "#D55E00",
+    alpha = 0.15
+  ) +
+  geom_col(width = 0.7, alpha = 0.9, color = "white") +
+  geom_errorbar(
+    aes(ymin = IC_low, ymax = IC_high),
+    width = 0.2,
+    color = "grey30"
+  ) +
+  geom_text(
+    aes(label = paste0(round(ratio, 1), "%")),
+    vjust = 1.5,
+    color = "white",
+    size = 3.8,
+    fontface = "bold"
+  ) +
+  geom_smooth(
+    aes(group = 1, fill = NULL), # annule l'héritage du fill global
+    method = "loess",
+    se = FALSE,
+    color = "black",
+    linewidth = 0.8,
+    linetype = "dashed"
+  ) +
+  geom_hline(
+    yintercept = overall$ratio,
+    color = "#D55E00",
+    linetype = "dotted",
+    linewidth = 0.8
+  ) +
+  geom_label(
+    data = data.frame(x = "D9", y = overall$ratio + 1.2),
+    aes(
+      x = x,
+      y = y,
+      label = paste0("Overall: ", round(overall$ratio, 1), "%")
+    ),
+    inherit.aes = FALSE,
+    fill = "white",
+    color = "#D55E00",
+    linewidth = 0.2, # <-- ici
+    size = 3.8
+  ) +
+  scale_fill_manual(
+    values = c("Above" = "#006400", "Below" = "#90EE90"),
+    name = "Comparison to overall ratio"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.05)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Average individual share of self-consumed production in total production by income decile",
+    subtitle = str_c("Universe: ", filter),
+    x = "Income decile",
+    y = "Mean individual share (%)",
+    caption = paste(
+      "Notes: Bars represent the average of household-level ratios (autoconsumption / total production) within each decile.",
+      "Each household contributes equally regardless of production size.",
+      "Bar colors indicate whether the decile is above (dark green) or below (light green) the overall mean.",
+      "The dashed black line shows the LOESS trend across deciles.",
+      "The red dotted line and shaded band represent the overall mean ratio and its 99% confidence interval.",
+      "Error bars represent 99% confidence intervals.",
+      "Source: Based on ENIGH data.",
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(size = 11),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot)
+custom_save(
+  plot,
+  str_c(
+    "plot_",
+    name,
+    "_",
+    str_remove(filter, ".*_")
+  ),
+  type = "fig"
+)
 
 ## from non agro self employment ----
 
 #TODO: still somehting to do; self-consumption from agro in all
-
 # Support in farm total ressources (entrate aziendale) ----
-#TODO : compute share support in valor prod (entrate aziendale : valore de la produzione vendita + autoconsumata + intercambiata + support) share apoyo a calculer dans part 2 (réintroduire au début +  vérifier : “entrate aziendali” = revenus/ressources d’exploitation et NON n_fni)
-# n_apoyo = case_when(
-#   n_size_val + n_support > 0 & n_size_val > 0 ~ n_support /
-#     (n_size_val + n_support),
-#   n_size_val + n_support > 0 & n_size_val == 0 ~ 1,
-#   TRUE ~ 0
-# ),
+d |>
+  filter(n_is_agri_broad == "agri_broad", n_deciles_total == "D10") |>
+  summarise(
+    mean_apoyo_npago  = mean(n_apoyo_npago_agro, na.rm = TRUE),
+    mean_pro_agrogan  = mean(n_pro_agrogan_agro, na.rm = TRUE),
+    mean_nvo_tot_npago = mean(n_support_agro - n_pro_agrogan_agro - n_apoyo_npago_agro, na.rm = TRUE)
+  )
+# mysvyr$variables |>
+#   filter(n_is_agri_broad == "agri_broad",
+#          n_deciles_total == "D10") |>
+#   summarise(
+#     mean_support = mean(n_support_agro, na.rm = TRUE),
+#     mean_ftr     = mean(n_ftr1_agro, na.rm = TRUE),
+#     n            = n()
+#   )
+# d |>
+#   filter(n_is_agri_broad == "agri_broad", n_deciles_total == "D10") |>
+#   summarise(
+#     mean_support    = mean(n_support_agro, na.rm = TRUE),
+#     mean_apoyo_npago    = mean(n_apoyo_npago_agro, na.rm = TRUE),
+#     mean_nvo_tot_npago    = mean(n_nvo_tot_npago_agro, na.rm = TRUE),
+#     mean_pro_agrogan = mean(n_pro_agrogan_agro, na.rm = TRUE),
+#     mean_size_val   = mean(n_size_val1_agro, na.rm = TRUE),
+#     mean_ratio      = mean(n_support_agro / n_ftr1_agro, na.rm = TRUE),
+#     n               = n()
+#   )
+### MACRO agri_broad ----
+# # Vert
+# values = c("Above" = "#33a02c", "Below" = "#b2df8a")
+# # Rouge/orange
+# values = c("Above" = "#e31a1c", "Below" = "#fb9a99")
+# # Orange
+# values = c("Above" = "#ff7f00", "Below" = "#fdbf6f")
+# # Violet
+# values = c("Above" = "#6a3d9a", "Below" = "#cab2d6")
+# # Marron/beige
+# values = c("Above" = "#b15928", "Below" = "#ffff99")
 
-## agri_broad ----
-#TODO: a faire
+name <- "macro_ratio_support_ftr1_decile"
+universe <- "n_is_agri_broad"
+filter <- "agri_broad"
 
-## agri_narrow ----
-#TODO: a faire
+strat <- "n_deciles_total"
+num <- "n_support_agro"
+den <- "n_ftr1_agro"
+
+tbl <- get_ratio_macro(
+  design = mysvyr,
+  numerator = num,
+  denominator = den,
+  strat_var = strat,
+  # filter_var = "n_is_agri_broad",
+  # filter_value = "agri_broad"
+  filter_var = universe,
+  filter_value = filter
+) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+
+# correct levels order
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
+
+# Ratio of total (macro, this is not a mean of ratio which would be micro)
+overall <- get_ratio_macro(
+  mysvyr,
+  numerator = num,
+  denominator = den,
+  strat_var = universe, # juste pour avoir le bon subset
+  filter_var = universe,
+  filter_value = filter
+) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+colnames(overall)[1] <- colnames(tbl)[1]
+
+tbl <- tbl |>
+  mutate(
+    above_mean = ifelse(
+      ratio >= overall$ratio,
+      "Above",
+      "Below"
+    )
+  )
+
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", str_remove(filter, ".*_"))
+)
+
+# Graphique
+plot <- ggplot(
+  tbl,
+  aes(x = .data[[names(tbl)[1]]], y = ratio, fill = above_mean)
+) +
+  # ribbon overall : x en numérique pour couvrir tout le graphe
+  annotate(
+    "rect",
+    xmin = 0.5,
+    xmax = 10.5,
+    ymin = overall$IC_low,
+    ymax = overall$IC_high,
+    fill = "#D55E00",
+    alpha = 0.15
+  ) +
+  geom_col(width = 0.7, alpha = 0.9, color = "white") +
+  geom_errorbar(
+    aes(ymin = IC_low, ymax = IC_high),
+    width = 0.2,
+    color = "grey30"
+  ) +
+  geom_text(
+    aes(label = paste0(round(ratio, 1), "%")),
+    vjust = 1.5,
+    color = "white",
+    size = 3.8,
+    fontface = "bold"
+  ) +
+  geom_smooth(
+    aes(group = 1, fill = NULL), # annule l'héritage du fill global
+    method = "loess",
+    se = FALSE,
+    color = "black",
+    linewidth = 0.8,
+    linetype = "dashed"
+  ) +
+  geom_hline(
+    yintercept = overall$ratio,
+    color = "#D55E00",
+    linetype = "dotted",
+    linewidth = 0.8
+  ) +
+  geom_label(
+    data = data.frame(x = "D9", y = overall$ratio + 1.2),
+    aes(
+      x = x,
+      y = y,
+      label = paste0("Overall: ", round(overall$ratio, 1), "%")
+    ),
+    inherit.aes = FALSE,
+    fill = "white",
+    color = "#D55E00",
+    linewidth = 0.2, # <-- ici
+    size = 3.8
+  ) +
+  scale_fill_manual(
+    values = c("Above" = "#b15928", "Below" = "#ffff99"),
+    name = "Comparison to overall ratio"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.05)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Share of direct policy payments in total farm resources across income decile",
+    subtitle = str_c("Universe: ", filter),
+    x = "Income decile",
+    y = "Share of total farm resources (%)",
+    caption = paste(
+      "Notes: Farm total resources includes sales value, estimated value of self-consumption and of non-monetary exchanges and direct policy payments",
+      "Direct policy payments correspond to non-repayable financial support received by agricultural activities, including all social programs, old and new. It excludes for instance microcredits.",
+      "Bar colors indicate whether the decile is above (darker) or below (lighter) the national mean share.",
+      "The dashed black line shows the LOESS trend across deciles.",
+      "The red dotted line and shaded band represent the overall ratio and its 99% confidence interval.",
+      "Error bars represent 99% confidence intervals.",
+      "Source: Based on ENIGH data.",
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(size = 11),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot)
+custom_save(
+  plot,
+  str_c(
+    "plot_",
+    name,
+    "_",
+    str_remove(filter, ".*_")
+  ),
+  type = "fig"
+)
+
+### MACRO agri_narrow ----
+
+name <- "macro_ratio_autocons_prod_decile"
+universe <- "n_is_agri"
+filter <- "agri_narrow"
+strat <- "n_deciles_total"
+num <- "n_autoconsumo1_agro"
+den <- "n_size_val1_agro"
+
+tbl <- get_ratio_macro(
+  design = mysvyr,
+  numerator = num,
+  denominator = den,
+  strat_var = strat,
+  # filter_var = "n_is_agri_broad",
+  # filter_value = "agri_broad"
+  filter_var = universe,
+  filter_value = filter
+) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+
+# correct levels order
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
+
+# Ratio of total (macro, this is not a mean of ratio which would be micro)
+overall <- get_ratio_macro(
+  mysvyr,
+  numerator = num,
+  denominator = den,
+  strat_var = universe, # juste pour avoir le bon subset
+  filter_var = universe,
+  filter_value = filter
+) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+colnames(overall)[1] <- colnames(tbl)[1]
+
+tbl <- tbl |>
+  mutate(
+    above_mean = ifelse(
+      ratio >= overall$ratio,
+      "Above",
+      "Below"
+    )
+  )
+
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", str_remove(filter, ".*_"))
+)
+
+# Graphique
+plot <- ggplot(
+  tbl,
+  aes(x = .data[[names(tbl)[1]]], y = ratio, fill = above_mean)
+) +
+  # ribbon overall : x en numérique pour couvrir tout le graphe
+  annotate(
+    "rect",
+    xmin = 0.5,
+    xmax = 10.5,
+    ymin = overall$IC_low,
+    ymax = overall$IC_high,
+    fill = "#D55E00",
+    alpha = 0.15
+  ) +
+  geom_col(width = 0.7, alpha = 0.9, color = "white") +
+  geom_errorbar(
+    aes(ymin = IC_low, ymax = IC_high),
+    width = 0.2,
+    color = "grey30"
+  ) +
+  geom_text(
+    aes(label = paste0(round(ratio, 1), "%")),
+    vjust = 1.5,
+    color = "white",
+    size = 3.8,
+    fontface = "bold"
+  ) +
+  geom_smooth(
+    aes(group = 1, fill = NULL), # annule l'héritage du fill global
+    method = "loess",
+    se = FALSE,
+    color = "black",
+    linewidth = 0.8,
+    linetype = "dashed"
+  ) +
+  geom_hline(
+    yintercept = overall$ratio,
+    color = "#D55E00",
+    linetype = "dotted",
+    linewidth = 0.8
+  ) +
+  geom_label(
+    data = data.frame(x = "D9", y = overall$ratio + 1.2),
+    aes(
+      x = x,
+      y = y,
+      label = paste0("Overall: ", round(overall$ratio, 1), "%")
+    ),
+    inherit.aes = FALSE,
+    fill = "white",
+    color = "#D55E00",
+    linewidth = 0.2, # <-- ici
+    size = 3.8
+  ) +
+  scale_fill_manual(
+    values = c("Above" = "#006400", "Below" = "#90EE90"),
+    name = "Comparison to overall ratio"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.05)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Share of self-consumed agricultural production in total production by income decile",
+    subtitle = str_c("Universe: ", filter),
+    x = "Income decile",
+    y = "Share of production (%)",
+    caption = paste(
+      "Notes: 'Self-consumed production' corresponds to production consumed by the household operating an agricultural production unit rather than sold.",
+      "Bar colors indicate whether the decile is above (dark green) or below (light green) the national mean.",
+      "The dashed black line shows the LOESS trend across deciles.",
+      "The red dotted line and shaded band represent the overall ratio and its 99% confidence interval.",
+      "Error bars represent 99% confidence intervals.",
+      "Source: Based on ENIGH data.",
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(size = 11),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot)
+custom_save(
+  plot,
+  str_c(
+    "plot_",
+    name,
+    "_",
+    str_remove(filter, ".*_")
+  ),
+  type = "fig"
+)
 
 # Support in farm net income ----
+
 #TODO: compute share support in n_fni
 ## agri_broad ----
 #TODO: a faire
@@ -3223,12 +4096,969 @@ custom_save(plot_ratio_autocons_prod_decile_narrow, type = "fig")
 #TODO: a faire
 
 # Support in total current income ----
+#NOTE: The micro and macro estimators of income composition yield very similar results across deciles because the denominator — total household income — is precisely the variable used to construct the deciles, making it relatively homogeneous within each group.
+#This contrasts sharply with the autoconsumption-to-production ratio, where the denominator varies by orders of magnitude within deciles, driving a large wedge between the two estimators. For income composition stratified by income deciles, the choice between micro and macro estimators is therefore largely inconsequential, and both can be reported interchangeably.
+
 #TODO: compute share support in n_ing_cor
 ## agri_broad ----
 #TODO: a faire
 
 ## agri_narrow ----
 #TODO: a faire
+
+# Composition of income by decile ----
+
+## MACRO pop ----
+
+name <- "macro_composition_income_decile"
+universe <- NULL
+filter <- NULL
+suffix <- if (is.null(filter)) "total" else str_remove(filter, ".*_")
+strat <- "n_deciles_total"
+den <- "n_ing_cor_clean"
+components <- list(
+  agri = "n_fni_agro_clean",
+  no_agri = "n_ingr_noagro_clean",
+  wage = "n_trabajo",
+  transfer = "n_transfer",
+  other = "n_otros_ing_bundled"
+)
+component_labels <- c(
+  agri = "Farm net income",
+  no_agri = "Non-agricultural self-employment income",
+  wage = "Wage income",
+  transfer = "Social and family transfers",
+  other = "Other income sources"
+)
+
+# --- calcul ---
+tbl <- map_dfr(names(components), function(comp_name) {
+  get_ratio_macro(
+    design = mysvyr,
+    numerator = components[[comp_name]],
+    denominator = den,
+    strat_var = strat,
+    filter_var = universe,
+    filter_value = filter
+  ) |>
+    mutate(component = comp_name)
+}) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+
+# correct levels order
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
+
+# --- calcul overall : gestion NULL ---
+overall <- map_dfr(names(components), function(comp_name) {
+  if (is.null(universe)) {
+    design_tmp <- update(mysvyr, .total = "Total")
+    get_ratio_macro(
+      design = design_tmp,
+      numerator = components[[comp_name]],
+      denominator = den,
+      strat_var = ".total"
+    ) |>
+      mutate(component = comp_name) # <-- manquait ici
+  } else {
+    get_ratio_macro(
+      design = mysvyr,
+      numerator = components[[comp_name]],
+      denominator = den,
+      strat_var = universe,
+      filter_var = universe,
+      filter_value = filter
+    ) |>
+      mutate(component = comp_name)
+  }
+}) |>
+  mutate(across(c(ratio, SE, IC_low, IC_high), ~ round(. * 100, 2)))
+
+colnames(overall)[1] <- colnames(tbl)[1]
+
+# dans custom_save
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", suffix)
+)
+# --- plot ---
+
+overall_plot <- overall |>
+  mutate(!!strat := "Total")
+colnames(overall_plot)[1] <- strat # au cas où
+
+plot_data <- tbl |>
+  bind_rows(overall_plot) |>
+  mutate(
+    !!strat := factor(.data[[strat]], levels = strat_lvl_with_total),
+    component = factor(
+      component,
+      levels = names(component_labels),
+      labels = component_labels
+    )
+  )
+
+plot <- ggplot(
+  plot_data,
+  aes(x = .data[[names(plot_data)[1]]], y = ratio, fill = component)
+) +
+  geom_col(width = 0.7, alpha = 0.8, color = "white") +
+  geom_text(
+    aes(label = ifelse(ratio > 5, paste0(round(ratio, 1), "%"), "")),
+    position = position_stack(vjust = 0.5),
+    color = "white",
+    size = 3.5
+  ) +
+  geom_vline(
+    xintercept = 10.5, # entre D10 (position 10) et Total (position 11)
+    linetype = "dashed",
+    color = "grey50"
+  ) +
+  scale_fill_viridis_d(
+    option = "cividis",
+    direction = 1,
+    name = "Income component"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.02)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Composition of household income across income deciles",
+    subtitle = str_c(
+      "Breakdown by main income sources — ",
+      if (is.null(filter)) "total population" else str_remove(filter, ".*_"),
+      " households"
+    ),
+    x = "Income decile",
+    y = "Share of total current household income (%)",
+    caption = paste(
+      "Notes: Shares represent the ratio of aggregated component totals to aggregated total income within each decile (macro estimator).",
+      "Farm net income: agricultural self-employment income net of production taxes with policy-related payments.",
+      "Transfers: monetary or in-kind contributions received by household members without compensation.",
+      "Other income sources: capital income, imputed rent and other residual income sources.",
+      "Error bars not shown — see saved table for 99% confidence intervals by component and decile.",
+      str_c(
+        "Universe: ",
+        if (is.null(filter)) "total population" else filter,
+        " | Source: Based on ENIGH data."
+      ),
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 12, face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot)
+
+custom_save(
+  plot,
+  str_c("plot_", name, "_", suffix),
+  type = "fig"
+)
+
+## MACRO agri_broad ----
+
+name <- "macro_composition_income_decile"
+universe <- "n_is_agri_broad"
+filter <- "agri_broad"
+strat <- "n_deciles_total"
+den <- "n_ing_cor_clean"
+components <- list(
+  agri = "n_fni_agro_clean",
+  no_agri = "n_ingr_noagro_clean",
+  wage = "n_trabajo",
+  transfer = "n_transfer",
+  other = "n_otros_ing_bundled"
+)
+component_labels <- c(
+  agri = "Farm net income",
+  no_agri = "Non-agricultural self-employment income",
+  wage = "Wage income",
+  transfer = "Social and family transfers",
+  other = "Other income sources"
+)
+
+# --- calcul ---
+tbl <- map_dfr(names(components), function(comp_name) {
+  get_ratio_macro(
+    design = mysvyr,
+    numerator = components[[comp_name]],
+    denominator = den,
+    strat_var = strat,
+    filter_var = universe,
+    filter_value = filter
+  ) |>
+    mutate(component = comp_name)
+}) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+
+# correct levels order
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
+
+# --- total overall (toutes deciles confondus) ---
+overall <- map_dfr(names(components), function(comp_name) {
+  get_ratio_macro(
+    design = mysvyr,
+    numerator = components[[comp_name]],
+    denominator = den,
+    strat_var = universe,
+    filter_var = universe,
+    filter_value = filter
+  ) |>
+    mutate(component = comp_name)
+}) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+colnames(overall)[1] <- colnames(tbl)[1]
+
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", str_remove(filter, ".*_"))
+)
+
+# --- plot ---
+
+overall_plot <- overall |>
+  mutate(!!strat := "Total")
+colnames(overall_plot)[1] <- strat # au cas où
+
+plot_data <- tbl |>
+  bind_rows(overall_plot) |>
+  mutate(
+    !!strat := factor(.data[[strat]], levels = strat_lvl_with_total),
+    component = factor(
+      component,
+      levels = names(component_labels),
+      labels = component_labels
+    )
+  )
+
+plot <- ggplot(
+  plot_data,
+  aes(x = .data[[names(plot_data)[1]]], y = ratio, fill = component)
+) +
+  geom_col(width = 0.7, alpha = 0.8, color = "white") +
+  geom_text(
+    aes(label = ifelse(ratio > 5, paste0(round(ratio, 1), "%"), "")),
+    position = position_stack(vjust = 0.5),
+    color = "white",
+    size = 3.5
+  ) +
+  geom_vline(
+    xintercept = 10.5, # entre D10 (position 10) et Total (position 11)
+    linetype = "dashed",
+    color = "grey50"
+  ) +
+  scale_fill_viridis_d(
+    option = "cividis",
+    direction = 1,
+    name = "Income component"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.02)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Composition of household income across income deciles",
+    subtitle = str_c(
+      "Breakdown by main income sources — ",
+      str_remove(filter, ".*_"),
+      " households"
+    ),
+    x = "Income decile",
+    y = "Share of total current household income (%)",
+    caption = paste(
+      "Notes: Shares represent the ratio of aggregated component totals to aggregated total income within each decile (macro estimator).",
+      "Farm net income: agricultural self-employment income net of production taxes with policy-related payments.",
+      "Transfers: monetary or in-kind contributions received by household members without compensation.",
+      "Other income sources: capital income, imputed rent and other residual income sources.",
+      "Error bars not shown — see saved table for 99% confidence intervals by component and decile.",
+      str_c("Universe: ", filter, " | Source: Based on ENIGH data."),
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 12, face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot)
+
+custom_save(
+  plot,
+  str_c("plot_", name, "_", str_remove(filter, ".*_")),
+  type = "fig"
+)
+
+## MACRO agri_narrow ----
+
+name <- "macro_composition_income_decile"
+universe <- "n_is_agri"
+filter <- "agri_narrow"
+strat <- "n_deciles_total"
+den <- "n_ing_cor_clean"
+
+components <- list(
+  agri = "n_fni_agro_clean",
+  no_agri = "n_ingr_noagro_clean",
+  wage = "n_trabajo",
+  transfer = "n_transfer",
+  other = "n_otros_ing_bundled"
+)
+component_labels <- c(
+  agri = "Farm net income",
+  no_agri = "Non-agricultural self-employment income",
+  wage = "Wage income",
+  transfer = "Social and family transfers",
+  other = "Other income sources"
+)
+
+# --- calcul ---
+tbl <- map_dfr(names(components), function(comp_name) {
+  get_ratio_macro(
+    design = mysvyr,
+    numerator = components[[comp_name]],
+    denominator = den,
+    strat_var = strat,
+    filter_var = universe,
+    filter_value = filter
+  ) |>
+    mutate(component = comp_name)
+}) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+
+# correct levels order
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
+
+# --- total overall (toutes deciles confondus) ---
+overall <- map_dfr(names(components), function(comp_name) {
+  get_ratio_macro(
+    design = mysvyr,
+    numerator = components[[comp_name]],
+    denominator = den,
+    strat_var = universe,
+    filter_var = universe,
+    filter_value = filter
+  ) |>
+    mutate(component = comp_name)
+}) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+colnames(overall)[1] <- colnames(tbl)[1]
+
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", str_remove(filter, ".*_"))
+)
+
+# --- plot ---
+
+overall_plot <- overall |>
+  mutate(!!strat := "Total")
+colnames(overall_plot)[1] <- strat # au cas où
+
+plot_data <- tbl |>
+  bind_rows(overall_plot) |>
+  mutate(
+    !!strat := factor(.data[[strat]], levels = strat_lvl_with_total),
+    component = factor(
+      component,
+      levels = names(component_labels),
+      labels = component_labels
+    )
+  )
+
+plot <- ggplot(
+  plot_data,
+  aes(x = .data[[names(plot_data)[1]]], y = ratio, fill = component)
+) +
+  geom_col(width = 0.7, alpha = 0.8, color = "white") +
+  geom_text(
+    aes(label = ifelse(ratio > 5, paste0(round(ratio, 1), "%"), "")),
+    position = position_stack(vjust = 0.5),
+    color = "white",
+    size = 3.5
+  ) +
+  geom_vline(
+    xintercept = 10.5, # entre D10 (position 10) et Total (position 11)
+    linetype = "dashed",
+    color = "grey50"
+  ) +
+  scale_fill_viridis_d(
+    option = "cividis",
+    direction = 1,
+    name = "Income component"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.02)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Composition of household income across income deciles",
+    subtitle = str_c(
+      "Breakdown by main income sources — ",
+      str_remove(filter, ".*_"),
+      " households"
+    ),
+    x = "Income decile",
+    y = "Share of total current household income (%)",
+    caption = paste(
+      "Notes: Shares represent the ratio of aggregated component totals to aggregated total income within each decile (macro estimator).",
+      "Farm net income: agricultural self-employment income net of production taxes with policy-related payments.",
+      "Transfers: monetary or in-kind contributions received by household members without compensation.",
+      "Other income sources: capital income, imputed rent and other residual income sources.",
+      "Error bars not shown — see saved table for 99% confidence intervals by component and decile.",
+      str_c("Universe: ", filter, " | Source: Based on ENIGH data."),
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 12, face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot)
+
+custom_save(
+  plot,
+  str_c("plot_", name, "_", str_remove(filter, ".*_")),
+  type = "fig"
+)
+
+## MICRO pop ----
+
+name <- "micro_composition_income_decile"
+universe <- NULL
+filter <- NULL
+suffix <- if (is.null(filter)) "total" else str_remove(filter, ".*_")
+strat <- "n_deciles_total"
+den <- "n_ing_cor_clean"
+components <- list(
+  agri = "n_fni_agro_clean",
+  no_agri = "n_ingr_noagro_clean",
+  wage = "n_trabajo",
+  transfer = "n_transfer",
+  other = "n_otros_ing_bundled"
+)
+component_labels <- c(
+  agri = "Farm net income",
+  no_agri = "Non-agricultural self-employment income",
+  wage = "Wage income",
+  transfer = "Social and family transfers",
+  other = "Other income sources"
+)
+
+# --- calcul ---
+tbl <- map_dfr(names(components), function(comp_name) {
+  get_ratio_micro(
+    design = mysvyr,
+    numerator = components[[comp_name]],
+    denominator = den,
+    strat_var = strat,
+    filter_var = universe,
+    filter_value = filter
+  ) |>
+    mutate(component = comp_name)
+}) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+
+# correct levels order
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
+
+# --- calcul overall : gestion NULL ---
+overall <- map_dfr(names(components), function(comp_name) {
+  if (is.null(universe)) {
+    design_tmp <- update(mysvyr, .total = "Total")
+    get_ratio_micro(
+      design = design_tmp,
+      numerator = components[[comp_name]],
+      denominator = den,
+      strat_var = ".total"
+    ) |>
+      mutate(component = comp_name) # <-- manquait ici
+  } else {
+    get_ratio_macro(
+      design = mysvyr,
+      numerator = components[[comp_name]],
+      denominator = den,
+      strat_var = universe,
+      filter_var = universe,
+      filter_value = filter
+    ) |>
+      mutate(component = comp_name)
+  }
+}) |>
+  mutate(across(c(ratio, SE, IC_low, IC_high), ~ round(. * 100, 2)))
+
+colnames(overall)[1] <- colnames(tbl)[1]
+
+# dans custom_save
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", suffix)
+)
+# --- plot ---
+
+overall_plot <- overall |>
+  mutate(!!strat := "Total")
+colnames(overall_plot)[1] <- strat # au cas où
+
+plot_data <- tbl |>
+  bind_rows(overall_plot) |>
+  mutate(
+    !!strat := factor(.data[[strat]], levels = strat_lvl_with_total),
+    component = factor(
+      component,
+      levels = names(component_labels),
+      labels = component_labels
+    )
+  )
+
+plot <- ggplot(
+  plot_data,
+  aes(x = .data[[names(plot_data)[1]]], y = ratio, fill = component)
+) +
+  geom_col(width = 0.7, alpha = 0.8, color = "white") +
+  geom_text(
+    aes(label = ifelse(ratio > 5, paste0(round(ratio, 1), "%"), "")),
+    position = position_stack(vjust = 0.5),
+    color = "white",
+    size = 3.5
+  ) +
+  geom_vline(
+    xintercept = 10.5, # entre D10 (position 10) et Total (position 11)
+    linetype = "dashed",
+    color = "grey50"
+  ) +
+  scale_fill_viridis_d(
+    option = "cividis",
+    direction = 1,
+    name = "Income component"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.02)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Average household income composition across income deciles",
+    subtitle = str_c(
+      "Breakdown by main income sources — average individual shares — ",
+      if (is.null(filter)) "total population" else str_remove(filter, ".*_"),
+      " households"
+    ),
+    y = "Mean share of total household income (%)",
+    caption = paste(
+      "Notes: Shares represent the average of household-level ratios (component / total income) within each decile (micro estimator).",
+      "Each household contributes equally regardless of income size, reflecting the 'typical household' rather than the aggregate structure.",
+      "Farm net income: agricultural self-employment income net of production taxes with policy-related payments.",
+      "Transfers: monetary or in-kind contributions received by household members without compensation.",
+      "Other income sources: capital income, imputed rent and other residual income sources.",
+      str_c(
+        "Universe: ",
+        if (is.null(filter)) "total population" else filter,
+        " | Source: Based on ENIGH data."
+      ),
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 12, face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot)
+
+custom_save(
+  plot,
+  str_c("plot_", name, "_", suffix),
+  type = "fig"
+)
+
+## MICRO agri_broad ----
+
+name <- "micro_composition_income_decile"
+universe <- "n_is_agri_broad"
+filter <- "agri_broad"
+suffix <- if (is.null(filter)) "total" else str_remove(filter, ".*_")
+strat <- "n_deciles_total"
+den <- "n_ing_cor_clean"
+components <- list(
+  agri = "n_fni_agro_clean",
+  no_agri = "n_ingr_noagro_clean",
+  wage = "n_trabajo",
+  transfer = "n_transfer",
+  other = "n_otros_ing_bundled"
+)
+component_labels <- c(
+  agri = "Farm net income",
+  no_agri = "Non-agricultural self-employment income",
+  wage = "Wage income",
+  transfer = "Social and family transfers",
+  other = "Other income sources"
+)
+
+# --- calcul ---
+tbl <- map_dfr(names(components), function(comp_name) {
+  get_ratio_micro(
+    design = mysvyr,
+    numerator = components[[comp_name]],
+    denominator = den,
+    strat_var = strat,
+    filter_var = universe,
+    filter_value = filter
+  ) |>
+    mutate(component = comp_name)
+}) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+
+# correct levels order
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
+
+# --- calcul overall : gestion NULL ---
+overall <- map_dfr(names(components), function(comp_name) {
+  if (is.null(universe)) {
+    design_tmp <- update(mysvyr, .total = "Total")
+    get_ratio_micro(
+      design = design_tmp,
+      numerator = components[[comp_name]],
+      denominator = den,
+      strat_var = ".total"
+    ) |>
+      mutate(component = comp_name) # <-- manquait ici
+  } else {
+    get_ratio_macro(
+      design = mysvyr,
+      numerator = components[[comp_name]],
+      denominator = den,
+      strat_var = universe,
+      filter_var = universe,
+      filter_value = filter
+    ) |>
+      mutate(component = comp_name)
+  }
+}) |>
+  mutate(across(c(ratio, SE, IC_low, IC_high), ~ round(. * 100, 2)))
+
+colnames(overall)[1] <- colnames(tbl)[1]
+
+# dans custom_save
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", suffix)
+)
+# --- plot ---
+
+overall_plot <- overall |>
+  mutate(!!strat := "Total")
+colnames(overall_plot)[1] <- strat # au cas où
+
+plot_data <- tbl |>
+  bind_rows(overall_plot) |>
+  mutate(
+    !!strat := factor(.data[[strat]], levels = strat_lvl_with_total),
+    component = factor(
+      component,
+      levels = names(component_labels),
+      labels = component_labels
+    )
+  )
+
+plot <- ggplot(
+  plot_data,
+  aes(x = .data[[names(plot_data)[1]]], y = ratio, fill = component)
+) +
+  geom_col(width = 0.7, alpha = 0.8, color = "white") +
+  geom_text(
+    aes(label = ifelse(ratio > 5, paste0(round(ratio, 1), "%"), "")),
+    position = position_stack(vjust = 0.5),
+    color = "white",
+    size = 3.5
+  ) +
+  geom_vline(
+    xintercept = 10.5, # entre D10 (position 10) et Total (position 11)
+    linetype = "dashed",
+    color = "grey50"
+  ) +
+  scale_fill_viridis_d(
+    option = "cividis",
+    direction = 1,
+    name = "Income component"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.02)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Average household income composition across income deciles",
+    subtitle = str_c(
+      "Breakdown by main income sources — average individual shares — ",
+      if (is.null(filter)) "total population" else str_remove(filter, ".*_"),
+      " households"
+    ),
+    y = "Mean share of total household income (%)",
+    caption = paste(
+      "Notes: Shares represent the average of household-level ratios (component / total income) within each decile (micro estimator).",
+      "Each household contributes equally regardless of income size, reflecting the 'typical household' rather than the aggregate structure.",
+      "Farm net income: agricultural self-employment income net of production taxes with policy-related payments.",
+      "Transfers: monetary or in-kind contributions received by household members without compensation.",
+      "Other income sources: capital income, imputed rent and other residual income sources.",
+      str_c(
+        "Universe: ",
+        if (is.null(filter)) "total population" else filter,
+        " | Source: Based on ENIGH data."
+      ),
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 12, face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot)
+
+custom_save(
+  plot,
+  str_c("plot_", name, "_", suffix),
+  type = "fig"
+)
+
+## MICRO agri_narrow ----
+
+name <- "micro_composition_income_decile"
+universe <- "n_is_agri"
+filter <- "agri_narrow"
+suffix <- if (is.null(filter)) "total" else str_remove(filter, ".*_")
+strat <- "n_deciles_total"
+den <- "n_ing_cor_clean"
+components <- list(
+  agri = "n_fni_agro_clean",
+  no_agri = "n_ingr_noagro_clean",
+  wage = "n_trabajo",
+  transfer = "n_transfer",
+  other = "n_otros_ing_bundled"
+)
+component_labels <- c(
+  agri = "Farm net income",
+  no_agri = "Non-agricultural self-employment income",
+  wage = "Wage income",
+  transfer = "Social and family transfers",
+  other = "Other income sources"
+)
+
+# --- calcul ---
+tbl <- map_dfr(names(components), function(comp_name) {
+  get_ratio_micro(
+    design = mysvyr,
+    numerator = components[[comp_name]],
+    denominator = den,
+    strat_var = strat,
+    filter_var = universe,
+    filter_value = filter
+  ) |>
+    mutate(component = comp_name)
+}) |>
+  mutate(
+    ratio = round(ratio * 100, 2),
+    SE = round(SE * 100, 2),
+    IC_low = round(IC_low * 100, 2),
+    IC_high = round(IC_high * 100, 2)
+  )
+
+# correct levels order
+strat_lvl <- levels(as.factor(d[[strat]]))
+tbl <- tbl |>
+  mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+  arrange(.data[[strat]])
+
+# --- calcul overall : gestion NULL ---
+overall <- map_dfr(names(components), function(comp_name) {
+  if (is.null(universe)) {
+    design_tmp <- update(mysvyr, .total = "Total")
+    get_ratio_micro(
+      design = design_tmp,
+      numerator = components[[comp_name]],
+      denominator = den,
+      strat_var = ".total"
+    ) |>
+      mutate(component = comp_name) # <-- manquait ici
+  } else {
+    get_ratio_macro(
+      design = mysvyr,
+      numerator = components[[comp_name]],
+      denominator = den,
+      strat_var = universe,
+      filter_var = universe,
+      filter_value = filter
+    ) |>
+      mutate(component = comp_name)
+  }
+}) |>
+  mutate(across(c(ratio, SE, IC_low, IC_high), ~ round(. * 100, 2)))
+
+colnames(overall)[1] <- colnames(tbl)[1]
+
+# dans custom_save
+custom_save(
+  bind_rows(tbl, overall),
+  str_c(name, "_", suffix)
+)
+# --- plot ---
+
+overall_plot <- overall |>
+  mutate(!!strat := "Total")
+colnames(overall_plot)[1] <- strat # au cas où
+
+plot_data <- tbl |>
+  bind_rows(overall_plot) |>
+  mutate(
+    !!strat := factor(.data[[strat]], levels = strat_lvl_with_total),
+    component = factor(
+      component,
+      levels = names(component_labels),
+      labels = component_labels
+    )
+  )
+
+plot <- ggplot(
+  plot_data,
+  aes(x = .data[[names(plot_data)[1]]], y = ratio, fill = component)
+) +
+  geom_col(width = 0.7, alpha = 0.8, color = "white") +
+  geom_text(
+    aes(label = ifelse(ratio > 5, paste0(round(ratio, 1), "%"), "")),
+    position = position_stack(vjust = 0.5),
+    color = "white",
+    size = 3.5
+  ) +
+  geom_vline(
+    xintercept = 10.5, # entre D10 (position 10) et Total (position 11)
+    linetype = "dashed",
+    color = "grey50"
+  ) +
+  scale_fill_viridis_d(
+    option = "cividis",
+    direction = 1,
+    name = "Income component"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.02)),
+    labels = percent_format(scale = 1)
+  ) +
+  labs(
+    title = "Average household income composition across income deciles",
+    subtitle = str_c(
+      "Breakdown by main income sources — average individual shares — ",
+      if (is.null(filter)) "total population" else str_remove(filter, ".*_"),
+      " households"
+    ),
+    y = "Mean share of total household income (%)",
+    caption = paste(
+      "Notes: Shares represent the average of household-level ratios (component / total income) within each decile (micro estimator).",
+      "Each household contributes equally regardless of income size, reflecting the 'typical household' rather than the aggregate structure.",
+      "Farm net income: agricultural self-employment income net of production taxes with policy-related payments.",
+      "Transfers: monetary or in-kind contributions received by household members without compensation.",
+      "Other income sources: capital income, imputed rent and other residual income sources.",
+      str_c(
+        "Universe: ",
+        if (is.null(filter)) "total population" else filter,
+        " | Source: Based on ENIGH data."
+      ),
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 12, face = "italic"),
+    plot.caption = element_text(size = 10)
+  )
+
+print(plot)
+
+custom_save(
+  plot,
+  str_c("plot_", name, "_", suffix),
+  type = "fig"
+)
 
 # -----------
 # THE END ----

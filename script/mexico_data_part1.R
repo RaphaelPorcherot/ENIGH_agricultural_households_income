@@ -334,68 +334,69 @@ agro_clean <- agro_raw |>
       ~ replace_na(.x, 0)
     ),
 
-    # NOTE: SUPPORT from MONTHLY to YEARLY data
+    # NOTE: SUPPORT are ALREADY YEARLY 
+    # WARN: this was a MAJOR issue because we treated them as if they were monthly
 
     # Apoyo con pago (con necesidad de devolver la ayuda de vuelta)
     # resp : Apoyo de gobierno federal, estatal, municipal, no gubernamental con pago
-    apoyo_pago = (apoyo_1 + apoyo_2 + apoyo_3 + apoyo_7) * 12,
+    apoyo_pago = (apoyo_1 + apoyo_2 + apoyo_3 + apoyo_7), 
     # Apoyo sin pago (sin terner que devolverlo)
     # resp : Apoyo de gobierno federal, estatal, municipal, no gubernamental sin pago
-    apoyo_npago = (apoyo_4 + apoyo_5 + apoyo_6 + apoyo_8) * 12,
+    apoyo_npago = (apoyo_4 + apoyo_5 + apoyo_6 + apoyo_8),
 
     #Apoyo Procampu y Progan
     ## proagro: PROCAMPO / ProAgro / Bienestar
     ## PROCAMPO se dirige al sector agrícola con pagos por hectárea de superficie elegible (basada en cultivos de 1993-1995),
     ## progan: PROGAN
     ## PROGAN apoya al sector pecuario mediante estímulos por unidad animal bajo condiciones de sustentabilidad y ordenamiento. Strangely, only NA in this column in the data
-    pro_agrogan = (proagro + progan) * 12,
+    pro_agrogan = (proagro + progan),
     #Total support from new social programmes
     ## households could answer three diff kind of programs
-    #TODO: by comparing nvo_tot and nvo_toto_npago we could assess the distribution of direct subsidies. Do lower income households receive more credits as a % of total nvo?
-    nvo_tot = (nvo_cant1 + nvo_cant2 + nvo_cant3) * 12,
+    #TODO: by comparing nvo_tot and nvo__npago we could assess the distribution of direct subsidies. Do lower income households receive more credits as a % of total nvo?
+    nvo_tot = (nvo_cant1 + nvo_cant2 + nvo_cant3),
     # Sembrando vida : 2001, 2002
     nvo1 = case_when(nvo_prog1 %in% c(2001, 2002) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2001, 2002) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2001, 2002) ~ nvo_cant3, TRUE ~ 0),
-    sembr_vida = (nvo1 + nvo2 + nvo3) * 12,
+    sembr_vida = (nvo1 + nvo2 + nvo3),
     #Tandas para el Bienestar (Microcréditos para el Bienestar)
     nvo1 = case_when(nvo_prog1 %in% c(2003, 2004) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2003, 2004) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2003, 2004) ~ nvo_cant3, TRUE ~ 0),
-    tand_bien = (nvo1 + nvo2 + nvo3) * 12,
+    tand_bien = (nvo1 + nvo2 + nvo3),
     # Agromercados Sociales y Sustentables
     nvo1 = case_when(nvo_prog1 %in% c(2005, 2006) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2005, 2006) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2005, 2006) ~ nvo_cant3, TRUE ~ 0),
-    agromercados = (nvo1 + nvo2 + nvo3) * 12,
+    agromercados = (nvo1 + nvo2 + nvo3),
     # Precios de garantia
     nvo1 = case_when(nvo_prog1 %in% c(2007, 2008) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2007, 2008) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2007, 2008) ~ nvo_cant3, TRUE ~ 0),
-    precios_gar = (nvo1 + nvo2 + nvo3) * 12,
+    precios_gar = (nvo1 + nvo2 + nvo3),
     # Credito Ganadero a la Palabra (creditos)
     nvo1 = case_when(nvo_prog1 %in% c(2009, 2010) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2009, 2010) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2009, 2010) ~ nvo_cant3, TRUE ~ 0),
-    credito_gan = (nvo1 + nvo2 + nvo3) * 12,
+    credito_gan = (nvo1 + nvo2 + nvo3),
     # Programa Nacional de Fertilizantes
     nvo1 = case_when(nvo_prog1 %in% c(2011, 2012) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2011, 2012) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2011, 2012) ~ nvo_cant3, TRUE ~ 0),
-    nacion_fer = (nvo1 + nvo2 + nvo3) * 12,
+    nacion_fer = (nvo1 + nvo2 + nvo3),
     # Desarollo rural
     nvo1 = case_when(nvo_prog1 %in% c(2013, 2014) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2013, 2014) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2013, 2014) ~ nvo_cant3, TRUE ~ 0),
-    desarollo_rur = (nvo1 + nvo2 + nvo3) * 12,
+    desarollo_rur = (nvo1 + nvo2 + nvo3),
     # Otros programas
     nvo1 = case_when(nvo_prog1 %in% c(2015, 2016) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2015, 2016) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2015, 2016) ~ nvo_cant3, TRUE ~ 0),
-    otros_prog = (nvo1 + nvo2 + nvo3) * 12,
+    otros_prog = (nvo1 + nvo2 + nvo3),
 
     #direct payments new social programmes (sin pago : sin necesidad de devolverlo)
-    nvo_tot_npago = sembr_vida +
+    nvo_npago = sembr_vida +
       agromercados +
       precios_gar +
       nacion_fer +
@@ -412,7 +413,7 @@ agro_clean <- agro_raw |>
     # INFO: turnover inclut autoconsommation y Otros montos no monetarios trimestrales (pago de trabajadores, deudas del negocio, deudas del hogar e intercambios)
     size_val = (ventas_tri + auto_tri + otros_tri) * 4,
 
-    support = apoyo_npago + pro_agrogan + nvo_tot_npago,
+    support = apoyo_npago + pro_agrogan + nvo_npago,
 
     fni_year = (ing_tri - ero_tri) * 4 + support
   )
@@ -429,9 +430,11 @@ agro <- agro_clean |>
     n_size_val1 = sum(size_val),
 
     n_support = sum(support), # new supportprogram sin pago
-    n_pro_agrogan = sum(pro_agrogan), # old support programs
-    n_nvo_tot = sum(nvo_tot), # new support programs
     n_apoyo_npago = sum(apoyo_npago), # other kind of social programs
+    n_nvo_tot = sum(nvo_tot), # all new support programs
+    n_pro_agrogan = sum(pro_agrogan), # old support programs
+    
+    n_nvo_npago = sum(nvo_npago), # non repayable new support programs
 
     n_sembr_vida = sum(sembr_vida),
     n_tand_bien = sum(tand_bien),
@@ -726,57 +729,57 @@ noagro_clean <- noagro_raw |>
       ~ replace_na(.x, 0)
     ),
 
-    #NOTE: SUPPORT from monthly to yearly data
+    #NOTE: SUPPORT are ALREADY YEARLY data
 
     # no old social program, only the new one
     # NOTE: in NOAGRO, some activities received support from new programs. the activity for whcih support is received is specificied by the surveyed person, but the latter appear in NOAGRO because they are registered as either industrial (1) or commercail (2) or else services (3)
 
     #Total support from new social programmes
     ## households could answer three diff kind of programs
-    nvo_tot = (nvo_cant1 + nvo_cant2 + nvo_cant3) * 12,
+    nvo_tot = (nvo_cant1 + nvo_cant2 + nvo_cant3),
     # Sembrando vida : 2001, 2002
     nvo1 = case_when(nvo_prog1 %in% c(2001, 2002) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2001, 2002) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2001, 2002) ~ nvo_cant3, TRUE ~ 0),
-    sembr_vida = (nvo1 + nvo2 + nvo3) * 12,
+    sembr_vida = (nvo1 + nvo2 + nvo3),
     #Tandas para el Bienestar (Microcréditos para el Bienestar)
     nvo1 = case_when(nvo_prog1 %in% c(2003, 2004) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2003, 2004) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2003, 2004) ~ nvo_cant3, TRUE ~ 0),
-    tand_bien = (nvo1 + nvo2 + nvo3) * 12,
+    tand_bien = (nvo1 + nvo2 + nvo3),
     # Agromercados Sociales y Sustentables
     nvo1 = case_when(nvo_prog1 %in% c(2005, 2006) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2005, 2006) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2005, 2006) ~ nvo_cant3, TRUE ~ 0),
-    agromercados = (nvo1 + nvo2 + nvo3) * 12,
+    agromercados = (nvo1 + nvo2 + nvo3),
     # Precios de garantia
     nvo1 = case_when(nvo_prog1 %in% c(2007, 2008) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2007, 2008) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2007, 2008) ~ nvo_cant3, TRUE ~ 0),
-    precios_gar = (nvo1 + nvo2 + nvo3) * 12,
+    precios_gar = (nvo1 + nvo2 + nvo3),
     # Credito Ganadero a la Palabra (creditos)
     nvo1 = case_when(nvo_prog1 %in% c(2009, 2010) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2009, 2010) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2009, 2010) ~ nvo_cant3, TRUE ~ 0),
-    credito_gan = (nvo1 + nvo2 + nvo3) * 12,
+    credito_gan = (nvo1 + nvo2 + nvo3),
     # Programa Nacional de Fertilizantes
     nvo1 = case_when(nvo_prog1 %in% c(2011, 2012) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2011, 2012) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2011, 2012) ~ nvo_cant3, TRUE ~ 0),
-    nacion_fer = (nvo1 + nvo2 + nvo3) * 12,
+    nacion_fer = (nvo1 + nvo2 + nvo3),
     # Desarollo rural
     nvo1 = case_when(nvo_prog1 %in% c(2013, 2014) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2013, 2014) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2013, 2014) ~ nvo_cant3, TRUE ~ 0),
-    desarollo_rur = (nvo1 + nvo2 + nvo3) * 12,
+    desarollo_rur = (nvo1 + nvo2 + nvo3),
     # Otros programas
     nvo1 = case_when(nvo_prog1 %in% c(2015, 2016) ~ nvo_cant1, TRUE ~ 0),
     nvo2 = case_when(nvo_prog2 %in% c(2015, 2016) ~ nvo_cant2, TRUE ~ 0),
     nvo3 = case_when(nvo_prog3 %in% c(2015, 2016) ~ nvo_cant3, TRUE ~ 0),
-    otros_prog = (nvo1 + nvo2 + nvo3) * 12,
+    otros_prog = (nvo1 + nvo2 + nvo3),
 
     #direct payments new social programmes (sin pago : sin necesidad de devolverlo)
-    nvo_tot_npago = sembr_vida +
+    nvo_npago = sembr_vida +
       agromercados +
       precios_gar +
       nacion_fer +
@@ -785,7 +788,7 @@ noagro_clean <- noagro_raw |>
 
     # note: quadrimestrial to yearly data
     size_val = (ventas_tri + auto_tri + otros_tri) * 4,
-    support = nvo_tot_npago,
+    support = nvo_npago,
     # annualized non-agricultural self-employed income
     n_ingr_noagr = (ing_tri - ero_tri) * 4 + support
   )
@@ -800,8 +803,8 @@ noagro <- noagro_clean |>
     n_autoconsumo1 = sum(auto_tri) * 4,
     n_size_val1 = sum(size_val),
 
-    n_support = sum(support),
-    n_nvo_tot = sum(nvo_tot),
+    n_support = sum(support), # c'est la même chose que nvo_npago
+    n_nvo_tot = sum(nvo_tot), # c'est nvo_npago + tandas etc
 
     n_sembr_vida = sum(sembr_vida),
     n_tand_bien = sum(tand_bien),
