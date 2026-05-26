@@ -1,9 +1,7 @@
 # PART 2 STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO
 
-#TODO: compute the contrafactural income distribution that would be the case w/o support or w/o new support or w/o new direct support
-#TODO : compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
 #TODO : regarde la part des vieux programmes agricoles dans le revenu agricole total par décile (sauf que les déciles varient lorsque cette part varie)
-
+#TODO : decile cut off point rajouter smg as line 
 # FUNCTIONS ----
 ## Detailed statistics in custom layout ----
 
@@ -287,7 +285,7 @@ get_share <- function(
   z <- qnorm((1 + level) / 2)
 
   # Domaine d'analyse éventuel
-  # Si variable qui a du sens sur l'ensemble de la pop, on ne filtre pas (ex: farm net income, les non agri ont 0)
+  # Si variable qui a du sens sur l'ensemble de la pop, on ne filtre pas (ex: farm net income, les non agri ont 0
   # Si variable qui n'a de sens que sur sous-ensemble, on filtre (ex: rendement/hectare, qui n'a pas de sens pour ceux qui n'ont pas de fermes)
   if (!is.null(filter_var) && !is.null(filter_value)) {
     design <- subset(
@@ -685,7 +683,7 @@ message("-----------------------\n\n")
 
 ## Save edges cases tbl ----
 
-custom_save(edge_cases, "diagnostics")
+custom_save(edge_cases, type = "diagnostics")
 
 ## Correct edges cases ----
 d |> select(n_is_agri_broad) |> distinct()
@@ -1087,7 +1085,7 @@ plot_quantile_cutoff <- ggplot(
   ) +
   theme_minimal(base_size = 13)
 
-custom_save(plot_quantile_cutoff, "fig")
+custom_save(plot_quantile_cutoff, type = "fig")
 print(plot_quantile_cutoff)
 
 ## Detailed table ----
@@ -1112,7 +1110,7 @@ quantile_detail <- tbl_stack(
   quiet = TRUE
 )
 
-custom_save(as_tibble(quantile_detail))
+custom_save(as_tibble(quantile_detail), "basic_quantiles_details")
 
 # DATASET description ----
 
@@ -1484,7 +1482,7 @@ plot_farm_turnover_size_prod <- ggplot(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-custom_save(plot_farm_turnover_size_prod, "fig")
+custom_save(plot_farm_turnover_size_prod, type = "fig")
 print(plot_farm_turnover_size_prod)
 
 ### tbl and plot of relative proportions ----
@@ -1573,7 +1571,7 @@ plot_farm_turnover_size_prod_pct <- ggplot(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-custom_save(plot_farm_turnover_size_prod_pct, "fig")
+custom_save(plot_farm_turnover_size_prod_pct, type = "fig")
 print(plot_farm_turnover_size_prod_pct)
 
 # -----------
@@ -1725,7 +1723,7 @@ plot_agri_house_fni_decile_pct <- ggplot(df_plot, aes(x = decile)) +
   ) +
   theme_minimal(base_size = 14)
 
-custom_save(plot_agri_house_fni_decile_pct, "fig")
+custom_save(plot_agri_house_fni_decile_pct, type = "fig")
 print(plot_agri_house_fni_decile_pct)
 
 ## Farm annual turnover across income decile ----
@@ -1821,7 +1819,7 @@ plot_farm_turnover_decile_broad_pct <- ggplot(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-custom_save(plot_farm_turnover_decile_broad_pct, "fig")
+custom_save(plot_farm_turnover_decile_broad_pct, type = "fig")
 print(plot_farm_turnover_decile_broad_pct)
 
 ### agri_narrow ----
@@ -1886,12 +1884,17 @@ plot_farm_turnover_decile_narrow_pct <- ggplot(
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-custom_save(plot_farm_turnover_decile_narrow_pct, "fig")
+custom_save(plot_farm_turnover_decile_narrow_pct, type = "fig")
 print(plot_farm_turnover_decile_narrow_pct)
 
 #NOTE: the previous observation applies, D10 agri households have smaller farm than D9.
 
 # Income inequalities compared ----
+
+#TODO: compute the contrafactural income distribution that would be the case w/o support or w/o new support or w/o new direct support
+#TODO : compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
+#TODO:: mettre tous sur un seul graphique: overall pop : agri_broad / non agri / sen_agri / non_sen_agri
+
 ## on agri_broad ----
 ### Gini ----
 myconv <- mysvyr |> convey_prep()
@@ -1931,7 +1934,7 @@ gini_result_renamed <- gini_result |>
 #                 position = "center") |>
 #   row_spec(0, bold = TRUE, color = "white", background = "#4B8BBE")
 
-custom_save(gini_result_renamed, "gini_agri_broad.csv")
+custom_save(gini_result_renamed, "gini_agri_broad")
 
 gini_lbl <- gini_result |>
   mutate(
@@ -2063,7 +2066,7 @@ plot_lorenz_agri_broad <- ggplot(df_plot, aes(x = quantile)) +
 print(plot_lorenz_agri_broad)
 
 custom_save(df_plot, "lorenz_agri_broad")
-custom_save(plot_lorenz_agri_broad, "fig")
+custom_save(plot_lorenz_agri_broad, type = "fig")
 
 ## on agri_narrow ----
 ### Gini ----
@@ -2106,7 +2109,7 @@ gini_result_renamed <- gini_result |>
 #                 position = "center") |>
 #   row_spec(0, bold = TRUE, color = "white", background = "#4B8BBE")
 
-custom_save(gini_result_renamed, "gini_agri_narrow.csv")
+custom_save(gini_result_renamed, "gini_agri_narrow")
 
 gini_lbl <- gini_result |>
   mutate(
@@ -2240,9 +2243,7 @@ plot_lorenz_agri_narrow <- ggplot(df_plot, aes(x = quantile)) +
     legend.text = element_text(size = 11)
   )
 print(plot_lorenz_agri_narrow)
-
-custom_save(df_plot, "lorenz_agri_narrow")
-custom_save(plot_lorenz_agri_narrow, "fig")
+custom_save(plot_lorenz_agri_narrow, type = "fig")
 
 # Drivers of inequalities ----
 ## general ----
@@ -2288,9 +2289,9 @@ tbl_csv <- tbl_agri |>
   ) |>
   bold_labels() |>
   italicize_levels() |>
-  add_overall(last = true) |>
+  add_overall(last = TRUE) |>
   add_p()
-ethnic <- as_tibble(tbl_csv, col_labels = true)
+ethnic <- as_tibble(tbl_csv, col_labels = TRUE)
 
 tbl_csv <- tbl_agri |>
   select(-edad_jefe, -n_is_agri_broad) |>
@@ -2332,9 +2333,9 @@ tbl_csv <- tbl_agri |>
   ) |>
   bold_labels() |>
   italicize_levels() |>
-  add_overall(last = true) |>
+  add_overall(last = TRUE) |>
   add_p()
-age <- as_tibble(tbl_csv, col_labels = true)
+age <- as_tibble(tbl_csv, col_labels = TRUE)
 
 tbl_csv <- tbl_agri |>
   select(-n_edad_jefe_med, -n_is_agri_broad) |> # filter(decile_total %in% paste0("d", 1:10)) |>
@@ -2376,9 +2377,9 @@ tbl_csv <- tbl_agri |>
   ) |>
   bold_labels() |>
   italicize_levels() |>
-  add_overall(last = true) |>
+  add_overall(last = TRUE) |>
   add_p()
-gender <- as_tibble(tbl_csv, col_labels = true)
+gender <- as_tibble(tbl_csv, col_labels = TRUE)
 # the following warnings were returned during `add_p()`:
 # ! for variable `est_socio` (`sexo_jefe`) and "statistic" and "p.value"
 #   statistics: chi-squared approximation may be incorrect
@@ -2465,7 +2466,7 @@ plot_etnia_decile_pct <- ggplot(
   )
 
 print(plot_etnia_decile_pct)
-custom_save(plot_etnia_decile_pct, "fig")
+custom_save(plot_etnia_decile_pct, type = "fig")
 
 ### agri_broad ----
 # svymean(
@@ -2545,7 +2546,7 @@ plot_etnia_decile_broad_pct <- ggplot(
   )
 
 print(plot_etnia_decile_broad_pct)
-custom_save(plot_etnia_decile_broad_pct, "fig")
+custom_save(plot_etnia_decile_broad_pct, type = "fig")
 
 ### agri_narrow ----
 
@@ -2621,7 +2622,7 @@ plot_etnia_decile_narrow_pct <- ggplot(
   )
 
 print(plot_etnia_decile_narrow_pct)
-custom_save(plot_etnia_decile_narrow_pct, "fig")
+custom_save(plot_etnia_decile_narrow_pct, type = "fig")
 
 ## Odd ratio with controls ----
 #TODO: we should do this but on a relative poverty variable not on minimum wage which is an extreme and restrictive measure of poverty
@@ -2736,7 +2737,7 @@ plot_acc_alim1_decile <- ggplot(
     plot.subtitle = element_text(size = 12, face = "italic"),
     plot.caption = element_text(size = 10)
   )
-custom_save(plot_acc_alim1_decile, "fig")
+custom_save(plot_acc_alim1_decile, type = "fig")
 print(plot_acc_alim1_decile)
 
 ### agri_broad ----
@@ -2811,7 +2812,7 @@ plot_acc_alim1_decile_broad <- ggplot(
     plot.subtitle = element_text(size = 12, face = "italic"),
     plot.caption = element_text(size = 10)
   )
-custom_save(plot_acc_alim1_decile_broad, "fig")
+custom_save(plot_acc_alim1_decile_broad, type = "fig")
 print(plot_acc_alim1_decile_broad)
 
 #NOTE :une dissociation entre revenu monétaire et sécurité alimentaire subjective : tant pour narrow que pour broad, la ruralité/agriculture crée une vulnérabilité spécifique, car dans la pop totalles plus riche ne sont pas très inquiet
@@ -2907,14 +2908,12 @@ plot_acc_alim1_decile_narrow <- ggplot(
     plot.caption = element_text(size = 10)
   )
 
-custom_save(plot_acc_alim1_decile_narrow, "fig")
+custom_save(plot_acc_alim1_decile_narrow, type = "fig")
 print(plot_acc_alim1_decile_narrow)
 
 # Self-consumption ----
-
 #WARN: we need to understand the discrpenacy between tipoact, which is encoded by INEGHI, and the self-declaration of the actiity which got the support fromsocial programs which may agri in a quite contradictory manner with the first element
 #TODO: décider si on le fait aussi pour la somme des deux valeurs de l'autoconsommation
-
 ## from agro self employemnet ----
 
 ### agri_broad ----
@@ -3092,9 +3091,7 @@ plot_ratio_autocons_prod_decile_broad <- ggplot(
   )
 
 print(plot_ratio_autocons_prod_decile_broad)
-custom_save(plot_ratio_autocons_prod_decile_broad, "fig")
-
-
+custom_save(plot_ratio_autocons_prod_decile_broad, type = "fig")
 ### agri_narrow ----
 
 ratio_autocons_prod_decile <- get_ratio(
@@ -3197,7 +3194,7 @@ plot_ratio_autocons_prod_decile_narrow <- ggplot(
   )
 
 print(plot_ratio_autocons_prod_decile_narrow)
-custom_save(plot_ratio_autocons_prod_decile_narrow, "fig")
+custom_save(plot_ratio_autocons_prod_decile_narrow, type = "fig")
 
 ## from non agro self employment ----
 
