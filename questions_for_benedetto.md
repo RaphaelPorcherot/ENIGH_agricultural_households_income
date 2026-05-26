@@ -1,5 +1,71 @@
 # CURRENT
 
+ing_cor est la sommme ingtra + ce qu'on a 
+ingtra c'est negocio (agrope et noagrope) + trabajo + otro_trab 
+-> il faut qu'on rajoute otros_trab dans trabajo 
+
+dans transf_hog il y a bene_gob mais est ce que apoyo est dans bene_gob ? 
+
+ingreos.ing_tri : dans cette variabel de la table INGRESO, comment est reporté l'ing_tri de AGRO ? c'est ing_tri - ero_tri normalisé par zéro ? 
+ing_tri et ventas_tri, c'est quoi la différence ? 
+
+alcune domande sulla survey :
+
+c'e una variabile ing_cor in CONCENTRADOHOGAR
+
+ing_cor = ingtra + rentas + estim_alqui + transfer + otros_ing
+
+ingtra = trabajo + otros_trab + negocio
+
+negocio = agrope + noagrope
+
+agrope e la suma de ing_tri nella tabella INGRESOS quando e una attivita agricola
+
+Noi riconstruiamo ing_cor.
+
+la nostra e 
+
+n_ing_cor = trabajo + rentas + estim_alqui + transfer + otros_ing + fni + ingr_noagr
+
+fni = (ing_tri - ero_tri) + support
+
+ingr_noagr = (ing_tri - ero_tri) + support
+
+
+Le domande:
+
+1. non abbiamo incluido otros_tra, dovremmo aggiungerla, vero? O era a proposito che la hai lasciato fuori ? 
+
+2. in transfer c'e transf_hog, in transf_hog c'e bene_gob per esempio : solo per essere sicuro, non sono incluso qua i programi sociali ? 
+
+3. In AGRO valori dei programi soziali non possono essere mensuale (se no : assurdita in ratio di support/entrate aziendale) : ti ricordi perche avevi considerato che erano mensuali ? Mi sembra che sono annuali, sei di accordo ? 
+
+4. in AGRO c'e ing_tri, che dopo pasa a INGRESOS.ing_tri y di la a negocio in CONCENTRADOHOGAR. Non capisco perche i appogi dai programmi soziali non erano incluiti in ing_tri da AGRO. Mi sembra incoerente con il resto del survey. Sei sicuro che non vanno registrati e che dobbiamo incluirli in fni e ingr_nogr ? 
+
+5. in AGRO c'e venta_tri al lato di ing_tri. Cual e la differenzia ? Mi hai spiegato qualcosa su una variabile di cui loro gia transfornano i valori negativi in valore zero. Era ventas_tri ? 
+
+6. Hai capito come fanno per pasare i redditi dalle attivita agricole da AGRO a INGRESOS ? Che cos'e la cosa che passano da una tabella all'altra ? ing_tri - ero_tri ? 
+
+Mi sembra illogico che fosse ing_tri - ero_tri gia che in INGRESO la variabile si chiama ing_tri.
+
+Pero si è ing_tri che passano da una tabella all'altra, allora dove passano ero_tri dalle attivita del negozio ? c'e balance, che sono le perdite di un negozio, ma non c'e ero_tri.
+
+Cambia il senso di ing_cor da ENIGH verso n_ing_cor da noi : noi avremmo ing_cor - ero_tri_agro * 4 - ero_tri_noagro * 4, quindi una variabile di reddito fra reddito corriente e reddito disponibile, ma comunque concettualmente distinto da ing_cor.
+
+mi sembra di ricordarmi che ing_tri era la varibilie di cui loro normizavano i valori negativi a zero.
+
+in questo caso, e sbagliato di usare come facciamo fin'ad ora
+
+    fni_year = (ing_tri - ero_tri) * 4 + support
+
+e dovremmo usare :
+
+    fni_year = (ventas_tri - ero_tri) * 4 + support
+
+In questo caso, in INGRESO c'e solo redditi corrienti, il nostro n_ing_cor e un reddito corriente totale como il ing_cor dal ENIGH. 
+
+* [ ] il faudrait vérifier la construction de notre variable de revenu en regardant les totaux
+* [ ] ing_tri is not used we reconstruit agrope et no a partir de (ing - ero) * 4 + support (l'ingreso est net des erogaciones), le n_ing_cor_clean est nette des erogaciones liés au travail indépendant
 * [ ] annnual turnover factor levels needs to be corrected : we need to check whether they make sense (since minimum wage c'est 60000 par an, la on a des fermes avec moins de 2000 pesos de turnover)
 
 

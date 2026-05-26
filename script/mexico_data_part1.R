@@ -334,12 +334,12 @@ agro_clean <- agro_raw |>
       ~ replace_na(.x, 0)
     ),
 
-    # NOTE: SUPPORT are ALREADY YEARLY 
+    # NOTE: SUPPORT are ALREADY YEARLY
     # WARN: this was a MAJOR issue because we treated them as if they were monthly
 
     # Apoyo con pago (con necesidad de devolver la ayuda de vuelta)
     # resp : Apoyo de gobierno federal, estatal, municipal, no gubernamental con pago
-    apoyo_pago = (apoyo_1 + apoyo_2 + apoyo_3 + apoyo_7), 
+    apoyo_pago = (apoyo_1 + apoyo_2 + apoyo_3 + apoyo_7),
     # Apoyo sin pago (sin terner que devolverlo)
     # resp : Apoyo de gobierno federal, estatal, municipal, no gubernamental sin pago
     apoyo_npago = (apoyo_4 + apoyo_5 + apoyo_6 + apoyo_8),
@@ -414,8 +414,9 @@ agro_clean <- agro_raw |>
     size_val = (ventas_tri + auto_tri + otros_tri) * 4,
 
     support = apoyo_npago + pro_agrogan + nvo_npago,
-
-    fni_year = (ing_tri - ero_tri) * 4 + support
+    
+    fni_year = (ventas_tri - ero_tri) * 4 + support
+    # fni_year = (ing_tri - ero_tri) * 4 + support
   )
 
 ## Household aggregation ----
@@ -431,10 +432,10 @@ agro <- agro_clean |>
 
     n_support = sum(support), # new supportprogram sin pago
     n_apoyo_npago = sum(apoyo_npago), # other kind of social programs
-    n_nvo_tot = sum(nvo_tot), # all new support programs
-    n_pro_agrogan = sum(pro_agrogan), # old support programs
-    
     n_nvo_npago = sum(nvo_npago), # non repayable new support programs
+    n_pro_agrogan = sum(pro_agrogan), # old support programs
+
+    n_nvo_tot = sum(nvo_tot), # all new support programs
 
     n_sembr_vida = sum(sembr_vida),
     n_tand_bien = sum(tand_bien),
@@ -457,7 +458,7 @@ agro <- agro_clean |>
   )
 
 # agro |> select(n_size_val1) |> skim()
-d |> select(smg) |> slice(1) |> pull() *4
+# d |> select(smg) |> slice(1) |> pull() * 4
 ## Add farm type + market orientation ----
 
 # avoid silent explosions through joining operations
@@ -790,7 +791,8 @@ noagro_clean <- noagro_raw |>
     size_val = (ventas_tri + auto_tri + otros_tri) * 4,
     support = nvo_npago,
     # annualized non-agricultural self-employed income
-    n_ingr_noagr = (ing_tri - ero_tri) * 4 + support
+    # n_ingr_noagr = (ing_tri - ero_tri) * 4 + support
+    n_ingr_noagr = (ventas_tri - ero_tri) * 4 + support
   )
 
 ## Household-level aggregation ----
@@ -869,6 +871,7 @@ concentradohogar_clean <- concentradohogar_raw |>
     folioviv,
     foliohog,
     trabajo,
+    otros_trab,
     rentas,
     transfer,
     estim_alqu,
@@ -985,6 +988,7 @@ concentradohogar_features <- concentradohogar_enriched |>
   mutate(
     # annual income components
     n_trabajo = trabajo * 4, #annual income from employed labour
+    n_otros_trab = otros_trab * 4, #annual income from other labour
     n_rentas = rentas * 4, #annual income from owned assets
     n_transfer = transfer * 4, #annual income from social and private transfers
     n_estim_alqu = estim_alqu * 4, #annual implicit rent from property dwelling
@@ -994,6 +998,7 @@ concentradohogar_features <- concentradohogar_enriched |>
     n_ing_cor = n_fni_agro + # containts support from apoyo, nvo, and agrogan
       n_ingr_noagro + # contains support from nvo
       n_trabajo +
+      n_otros_trab +
       n_rentas +
       n_transfer +
       n_estim_alqu +
@@ -1336,4 +1341,3 @@ if (any(test_new_var)) {
 }
 
 # THE END ----
-

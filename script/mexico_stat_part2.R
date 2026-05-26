@@ -1,6 +1,6 @@
 # PART 2 STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO
 
-##WARN : when we compute the ratio or the share etc it is always a macro value for the aggragated (agri) household in a given decile
+#WARN : when we compute the ratio or the share etc it is always a macro value for the aggragated (agri) household in a given decile
 #The aggregate share is substantially lower than the average household ratio, reflecting strong heterogeneity in farm size and a negative correlation between production scale and self-consumption
 # In fact the mean of individual ratio for self-consumption is consierably higher -> many, many small farmers heavily rely on self-consumption
 # We need to decide which we want (and we might want both, why not)
@@ -622,7 +622,7 @@ get_ratio_micro <- function(
 # }
 #
 # -----------
-#
+
 # LOADING and ADDING NEW VARIABLES ----
 
 # open input
@@ -3067,7 +3067,12 @@ custom_save(plot_acc_alim1_decile_narrow, type = "fig")
 print(plot_acc_alim1_decile_narrow)
 
 # Self-consumption ----
-#WARN: we need to understand the discrpenacy between tipoact, which is encoded by INEGHI, and the self-declaration of the actiity which got the support fromsocial programs which may agri in a quite contradictory manner with the first element
+#WARN: we need to understand the discrpenacy between tipoact, which is encoded by INEGHI, and the self-declaration of the actiity which got the support fromsocial programs which may agri in a quite contradictory manner with the first element:
+# two possible explanation
+# in NOAGRO are classified activities that are in 1 to 3, so not agricultural. But not agriculturla activities may have agriculturla input (fertilizantes for a small shop growing its own food or whatever)
+# NVO have been extended to non agricultural activities such as Microcredits for instance
+# La présence de bénéficiaires de programmes agricoles dans la table NOAGRO ne constitue pas nécessairement une incohérence statistique. La classification NOAGRO repose sur l’activité du negocio codée par l’enquête, tandis que l’activité associée au programme est auto-déclarée par le répondant. Cette dissociation reflète probablement la forte pluriactivité des ménages ruraux mexicains ainsi que le caractère transversal des nouveaux programmes sociaux, qui peuvent soutenir des activités agricoles secondaires au sein de ménages principalement engagés dans des activités commerciales, industrielles ou de services.
+# TODO: check what kind of combination exists in NOAGRO between tipoact and nvo_act1, nvo_act2
 #TODO: décider si on le fait aussi pour la somme des deux valeurs de l'autoconsommation
 ## from agro self employemnet ----
 ### MACRO agri_broad ----
