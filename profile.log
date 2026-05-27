@@ -1,0 +1,683 @@
+FUNCTION  provider#clipboard#Call()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/autoload/provider/clipboard.vim:344
+Called 9 times
+Total time:   0.895375
+ Self time:   0.001016
+
+count  total (s)   self (s)
+    9              0.000268   if get(s:, 'here', v:false)  " Clipboard provider must not recurse. #7184
+                                return 0
+    9              0.000026   endif
+    9              0.000085   let s:here = v:true
+    9              0.000025   try
+    9   0.894693   0.000334     return call(s:clipboard[a:method],a:args,s:clipboard)
+    9              0.000031   finally
+    9              0.000053     let s:here = v:false
+    9              0.000028   endtry
+
+FUNCTION  2()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/autoload/provider/clipboard.vim:270
+Called 6 times
+Total time:   0.609138
+ Self time:   0.001122
+
+count  total (s)   self (s)
+    6              0.000127   if s:selections[a:reg].owner > 0
+                                return s:selections[a:reg].data
+    6              0.000012   end
+                            
+    6   0.608313   0.000297   let clipboard_data = type(s:paste[a:reg]) == v:t_func ? s:paste[a:reg]() : s:try_cmd(s:paste[a:reg])
+    6              0.000486   if match(&clipboard, '\v(unnamed|unnamedplus)') >= 0 && type(clipboard_data) == v:t_list && get(s:selections[a:reg].data, 0, []) ==# clipboard_data
+                                " When system clipboard return is same as our cache return the cache
+                                " as it contains regtype information
+    6              0.000046     return s:selections[a:reg].data
+                              end
+                              return clipboard_data
+
+FUNCTION  3()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/autoload/provider/clipboard.vim:286
+Called 3 times
+Total time:   0.285221
+ Self time:   0.000494
+
+count  total (s)   self (s)
+    3              0.000022   if a:reg == '"'
+                                call s:clipboard.set(a:lines,a:regtype,'+')
+                                if s:copy['*'] != s:copy['+']
+                                  call s:clipboard.set(a:lines,a:regtype,'*')
+                                end
+                                return 0
+    3              0.000005   end
+                            
+    3              0.000033   if s:cache_enabled == 0 || type(s:copy[a:reg]) == v:t_func
+    3              0.000035     if type(s:copy[a:reg]) == v:t_func
+                                  call s:copy[a:reg](a:lines, a:regtype)
+    3              0.000007     else
+    3   0.284846   0.000119       call s:try_cmd(s:copy[a:reg], a:lines)
+    3              0.000006     endif
+                                "Cache it anyway we can compare it later to get regtype of the yank
+    3              0.000090     let s:selections[a:reg] = copy(s:selection)
+    3              0.000033     let s:selections[a:reg].data = [a:lines, a:regtype]
+    3              0.000009     return 0
+                              end
+                            
+                              if s:selections[a:reg].owner > 0
+                                let prev_job = s:selections[a:reg].owner
+                              end
+                              let s:selections[a:reg] = copy(s:selection)
+                              let selection = s:selections[a:reg]
+                              let selection.data = [a:lines, a:regtype]
+                              let selection.argv = s:copy[a:reg]
+                              let selection.detach = s:cache_enabled
+                              let selection.cwd = "/"
+                              let jobid = jobstart(selection.argv, selection)
+                              if jobid > 0
+                                call jobsend(jobid, a:lines)
+                                call jobclose(jobid, 'stdin')
+                                " xclip does not close stdout when receiving input via stdin
+                                if selection.argv[0] ==# 'xclip'
+                                  call jobclose(jobid, 'stdout')
+                                endif
+                                let selection.owner = jobid
+                                let ret = 1
+                              else
+                                echohl WarningMsg
+                                echomsg 'clipboard: failed to execute: '.(s:copy[a:reg])
+                                echohl None
+                                let ret = 1
+                              endif
+                            
+                              " The previous provider instance should exit when the new one takes
+                              " ownership, but kill it to be sure we don't fill up the job table.
+                              if exists('prev_job')
+                                call timer_start(1000, {... -> jobwait([prev_job], 0)[0] == -1 && jobstop(prev_job)})
+                              endif
+                            
+                              return ret
+
+FUNCTION  <SNR>49_RDelete_parens()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/indent/r.vim:83
+Called 9 times
+Total time:   0.007243
+ Self time:   0.006697
+
+count  total (s)   self (s)
+    9   0.000807   0.000261   if s:Get_paren_balance(a:line, "(", ")") != 0
+                                return a:line
+    9              0.000015   endif
+    9              0.000028   let i = 0
+    9              0.000022   let j = 0
+    9              0.000029   let line1 = ""
+    9              0.000053   let llen = strlen(a:line)
+   96              0.000275   while i < llen
+   87              0.000652     let line1 = line1 . a:line[i]
+   87              0.000366     if a:line[i] == '('
+    3              0.000011       let nop = 1
+   33              0.000131       while nop > 0 && i < llen
+   30              0.000529         let i += 1
+   30              0.000139         if a:line[i] == ')'
+    3              0.000011           let nop -= 1
+   27              0.000752         elseif a:line[i] == '('
+                                      let nop += 1
+   30              0.000040         endif
+   33              0.000051       endwhile
+    3              0.000022       let line1 = line1 . a:line[i]
+   87              0.000111     endif
+   87              0.000265     let i += 1
+   96              0.000289   endwhile
+    9              0.000038   return line1
+
+FUNCTION  GetRIndent()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/indent/r.vim:207
+Called 3 times
+Total time:   0.033485
+ Self time:   0.008826
+
+count  total (s)   self (s)
+                            
+    3              0.000084   let clnum = line(".")    " current line
+                            
+    3              0.000046   let cline = getline(clnum)
+    3              0.000074   if cline =~ '^\s*#'
+                                if g:r_indent_ess_comments == 1
+                                  if cline =~ '^\s*###'
+                                    return 0
+                                  endif
+                                  if cline !~ '^\s*##'
+                                    return g:r_indent_comment_column
+                                  endif
+                                endif
+    3              0.000004   endif
+                            
+    3   0.001565   0.000072   let cline = SanitizeRLine(cline)
+                            
+    3              0.000042   if cline =~ '^\s*}'
+                                let indline = s:Get_matching_brace(clnum, '{', '}', 1)
+                                if indline > 0 && indline != clnum
+                                  let iline = SanitizeRLine(getline(indline))
+                                  if s:Get_paren_balance(iline, "(", ")") == 0 || iline =~ '(\s*{$'
+                                    return indent(indline)
+                                  else
+                                    let indline = s:Get_matching_brace(indline, '(', ')', 1)
+                                    return indent(indline)
+                                  endif
+                                endif
+    3              0.000005   endif
+                            
+    3              0.000041   if cline =~ '^\s*)$'
+                                let indline = s:Get_matching_brace(clnum, '(', ')', 1)
+                                return indent(indline)
+    3              0.000004   endif
+                            
+                              " Find the first non blank line above the current line
+    3   0.000311   0.000132   let lnum = s:Get_prev_line(clnum)
+                              " Hit the start of the file, use zero indent.
+    3              0.000010   if lnum == 0
+                                return 0
+    3              0.000004   endif
+                            
+    3   0.015112   0.000074   let line = SanitizeRLine(getline(lnum))
+                            
+    3              0.000017   if &filetype == "rhelp"
+                                if cline =~ '^\\dontshow{' || cline =~ '^\\dontrun{' || cline =~ '^\\donttest{' || cline =~ '^\\testonly{'
+                                  return 0
+                                endif
+                                if line =~ '^\\examples{' || line =~ '^\\usage{' || line =~ '^\\dontshow{' || line =~ '^\\dontrun{' || line =~ '^\\donttest{' || line =~ '^\\testonly{'
+                                  return 0
+                                endif
+    3              0.000005   endif
+                            
+    3              0.000016   if &filetype == "rnoweb" && line =~ "^<<.*>>="
+                                return 0
+    3              0.000004   endif
+                            
+    3              0.000084   if cline =~ '^\s*{' && s:Get_paren_balance(cline, '{', '}') > 0
+                                if g:r_indent_ess_compatible && line =~ ')$'
+                                  let nlnum = lnum
+                                  let nline = line
+                                  while s:Get_paren_balance(nline, '(', ')') < 0
+                                    let nlnum = s:Get_prev_line(nlnum)
+                                    let nline = SanitizeRLine(getline(nlnum)) . nline
+                                  endwhile
+                                  if nline =~ '^\s*function\s*(' && indent(nlnum) == shiftwidth()
+                                    return 0
+                                  endif
+                                endif
+                                if s:Get_paren_balance(line, "(", ")") == 0
+                                  return indent(lnum)
+                                endif
+    3              0.000004   endif
+                            
+                              " line is an incomplete command:
+    3              0.000181   if line =~ '\<\(if\|while\|for\|function\)\s*()$' || line =~ '\<else$' || line =~ '<-$' || line =~ '->$'
+                                return indent(lnum) + shiftwidth()
+    3              0.000004   endif
+                            
+                              " Deal with () and []
+                            
+    3   0.003424   0.003191   let pb = s:Get_paren_balance(line, '(', ')')
+                            
+    3              0.000134   if line =~ '^\s*{$' || line =~ '(\s*{' || (pb == 0 && (line =~ '{$' || line =~ '(\s*{$'))
+                                return indent(lnum) + shiftwidth()
+    3              0.000006   endif
+                            
+    3              0.000039   let s:curtabstop = repeat(' ', &tabstop)
+                            
+    3              0.000017   if g:r_indent_align_args == 1
+    3              0.000013     if pb > 0 && line =~ '{$'
+                                  return s:Get_last_paren_idx(line, '(', ')', pb) + shiftwidth()
+    3              0.000005     endif
+                            
+    3   0.000271   0.000100     let bb = s:Get_paren_balance(line, '[', ']')
+                            
+    3              0.000012     if pb > 0
+                                  if &filetype == "rhelp"
+                                    let ind = s:Get_last_paren_idx(line, '(', ')', pb)
+                                  else
+                                    let ind = s:Get_last_paren_idx(getline(lnum), '(', ')', pb)
+                                  endif
+                                  return ind
+    3              0.000005     endif
+                            
+    3              0.000015     if pb < 0 && line =~ '.*[,&|\-\*+<>]$'
+                                  if line =~ '.*[\-\*+>]$'
+                                    let is_op = v:true
+                                  else
+                                    let is_op = v:false
+                                  endif
+                                  let lnum = s:Get_prev_line(lnum)
+                                  while pb < 1 && lnum > 0
+                                    let line = SanitizeRLine(getline(lnum))
+                                    let line = substitute(line, '\t', s:curtabstop, "g")
+                                    let ind = strlen(line)
+                                    while ind > 0
+                                      if line[ind] == ')'
+                                        let pb -= 1
+                                      elseif line[ind] == '('
+                                        let pb += 1
+                                        if is_op && pb == 0
+                                          return indent(lnum)
+                                        endif
+                                      endif
+                                      if pb == 1
+                                        return ind + 1
+                                      endif
+                                      let ind -= 1
+                                    endwhile
+                                    let lnum -= 1
+                                  endwhile
+                                  return 0
+    3              0.000005     endif
+                            
+    3              0.000011     if bb > 0
+                                  let ind = s:Get_last_paren_idx(getline(lnum), '[', ']', bb)
+                                  return ind
+    3              0.000004     endif
+    3              0.000005   endif
+                            
+    3              0.000014   let post_block = 0
+    3              0.000051   if line =~ '}$' && s:Get_paren_balance(line, '{', '}') < 0
+                                let lnum = s:Get_matching_brace(lnum, '{', '}', 0)
+                                let line = SanitizeRLine(getline(lnum))
+                                if lnum > 0 && line =~ '^\s*{'
+                                  let lnum = s:Get_prev_line(lnum)
+                                  let line = SanitizeRLine(getline(lnum))
+                                endif
+                                let pb = s:Get_paren_balance(line, '(', ')')
+                                let post_block = 1
+    3              0.000005   endif
+                            
+                              " Indent after operator pattern
+    3   0.000393   0.000155   let olnum = s:Get_prev_line(lnum)
+    3              0.000029   let oline = getline(olnum)
+    3              0.000013   if olnum > 0
+    3              0.000263     if substitute(line, '#.*', '', '') =~ g:r_indent_op_pattern && s:Get_paren_balance(line, "(", ")") == 0
+                                  if substitute(oline, '#.*', '', '') =~ g:r_indent_op_pattern && s:Get_paren_balance(line, "(", ")") == 0
+                                    return indent(lnum)
+                                  else
+                                    return indent(lnum) + shiftwidth()
+                                  endif
+    3              0.000245     elseif substitute(oline, '#.*', '', '') =~ g:r_indent_op_pattern && s:Get_paren_balance(line, "(", ")") == 0
+                                  return indent(lnum) - shiftwidth()
+    3              0.000005     endif
+                              elseif substitute(line, '#.*', '', '') =~ g:r_indent_op_pattern && s:Get_paren_balance(line, "(", ")") == 0
+                                return indent(lnum) + shiftwidth()
+    3              0.000005   endif
+                            
+    3              0.000017   let post_fun = 0
+    3              0.000016   if pb < 0 && line !~ ')\s*[,&|\-\*+<>]$'
+                                let post_fun = 1
+                                while pb < 0 && lnum > 0
+                                  let lnum -= 1
+                                  let linepiece = SanitizeRLine(getline(lnum))
+                                  let pb += s:Get_paren_balance(linepiece, "(", ")")
+                                  let line = linepiece . line
+                                endwhile
+                                if line =~ '{$' && post_block == 0
+                                  return indent(lnum) + shiftwidth()
+                                endif
+                            
+                                " Now we can do some tests again
+                                if cline =~ '^\s*{'
+                                  return indent(lnum)
+                                endif
+                                if post_block == 0
+                                  let newl = SanitizeRLine(line)
+                                  if newl =~ '\<\(if\|while\|for\|function\)\s*()$' || newl =~ '\<else$' || newl =~ '<-$'
+                                    return indent(lnum) + shiftwidth()
+                                  endif
+                                endif
+    3              0.000005   endif
+                            
+    3              0.000053   if cline =~ '^\s*else'
+                                if line =~ '<-\s*if\s*()'
+                                  return indent(lnum) + shiftwidth()
+                                elseif line =~ '\<if\s*()'
+                                  return indent(lnum)
+                                else
+                                  return indent(lnum) - shiftwidth()
+                                endif
+    3              0.000004   endif
+                            
+    3   0.000422   0.000231   let bb = s:Get_paren_balance(line, '[', ']')
+    3              0.000015   if bb < 0 && line =~ '.*]'
+                                while bb < 0 && lnum > 0
+                                  let lnum -= 1
+                                  let linepiece = SanitizeRLine(getline(lnum))
+                                  let bb += s:Get_paren_balance(linepiece, "[", "]")
+                                  let line = linepiece . line
+                                endwhile
+                                let line = s:RDelete_parens(line)
+    3              0.000005   endif
+                            
+    3   0.000268   0.000073   let plnum = s:Get_prev_line(lnum)
+    3              0.000013   let ppost_else = 0
+    3              0.000010   if plnum > 0
+    3   0.006834   0.000071     let pline = SanitizeRLine(getline(plnum))
+    3              0.000014     let ppost_block = 0
+    3              0.000030     if pline =~ '}$'
+                                  let ppost_block = 1
+                                  let plnum = s:Get_matching_brace(plnum, '{', '}', 0)
+                                  let pline = SanitizeRLine(getline(plnum))
+                                  if pline =~ '^\s*{$' && plnum > 0
+                                    let plnum = s:Get_prev_line(plnum)
+                                    let pline = SanitizeRLine(getline(plnum))
+                                  endif
+    3              0.000005     endif
+                            
+    3              0.000041     if pline =~ 'else$'
+                                  let ppost_else = 1
+                                  let plnum = s:Get_matching_if(plnum, 0)
+                                  let pline = SanitizeRLine(getline(plnum))
+    3              0.000005     endif
+                            
+    3              0.000052     if pline =~ '^\s*else\s*if\s*('
+                                  let pplnum = s:Get_prev_line(plnum)
+                                  let ppline = SanitizeRLine(getline(pplnum))
+                                  while ppline =~ '^\s*else\s*if\s*(' || ppline =~ '^\s*if\s*()\s*\S$'
+                                    let plnum = pplnum
+                                    let pline = ppline
+                                    let pplnum = s:Get_prev_line(plnum)
+                                    let ppline = SanitizeRLine(getline(pplnum))
+                                  endwhile
+                                  while ppline =~ '\<\(if\|while\|for\|function\)\s*()$' || ppline =~ '\<else$' || ppline =~ '<-$'
+                                    let plnum = pplnum
+                                    let pline = ppline
+                                    let pplnum = s:Get_prev_line(plnum)
+                                    let ppline = SanitizeRLine(getline(pplnum))
+                                  endwhile
+    3              0.000004     endif
+                            
+    3   0.000251   0.000094     let ppb = s:Get_paren_balance(pline, '(', ')')
+    3              0.000018     if ppb < 0 && (pline =~ ')\s*{$' || pline =~ ')$')
+                                  while ppb < 0 && plnum > 0
+                                    let plnum -= 1
+                                    let linepiece = SanitizeRLine(getline(plnum))
+                                    let ppb += s:Get_paren_balance(linepiece, "(", ")")
+                                    let pline = linepiece . pline
+                                  endwhile
+                                  let pline = s:RDelete_parens(pline)
+    3              0.000005     endif
+    3              0.000005   endif
+                            
+    3              0.000025   let ind = indent(lnum)
+                            
+    3              0.000019   if g:r_indent_align_args == 0 && pb != 0
+                                let ind += pb * shiftwidth()
+                                return ind
+    3              0.000004   endif
+                            
+    3              0.000014   if g:r_indent_align_args == 0 && bb != 0
+                                let ind += bb * shiftwidth()
+                                return ind
+    3              0.000004   endif
+                            
+    3              0.000010   if plnum > 0
+    3              0.000028     let pind = indent(plnum)
+                              else
+                                let pind = 0
+    3              0.000004   endif
+                            
+    3              0.000029   if ind == pind || (ind == (pind  + shiftwidth()) && pline =~ '{$' && ppost_else == 0)
+    3              0.000009     return ind
+                              endif
+                            
+                              let pline = getline(plnum)
+                              let pbb = s:Get_paren_balance(pline, '[', ']')
+                            
+                              while pind < ind && plnum > 0 && ppb == 0 && pbb == 0
+                                let ind = pind
+                                let plnum = s:Get_prev_line(plnum)
+                                let pline = getline(plnum)
+                                let ppb = s:Get_paren_balance(pline, '(', ')')
+                                let pbb = s:Get_paren_balance(pline, '[', ']')
+                                while pline =~ '^\s*else'
+                                  let plnum = s:Get_matching_if(plnum, 1)
+                                  let pline = getline(plnum)
+                                  let ppb = s:Get_paren_balance(pline, '(', ')')
+                                  let pbb = s:Get_paren_balance(pline, '[', ']')
+                                endwhile
+                                let pind = indent(plnum)
+                                if ind == (pind  + shiftwidth()) && pline =~ '{$'
+                                  return ind
+                                endif
+                              endwhile
+                            
+                              return ind
+
+FUNCTION  <SNR>1_LoadFTPlugin()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/ftplugin.vim:15
+Called 1 time
+Total time:   0.023211
+ Self time:   0.023211
+
+count  total (s)   self (s)
+    1              0.000022     if exists("b:undo_ftplugin")
+                                  exe b:undo_ftplugin
+                                  unlet! b:undo_ftplugin b:did_ftplugin
+    1              0.000003     endif
+                            
+    1              0.000017     let s = expand("<amatch>")
+    1              0.000007     if s != ""
+    1              0.000021       if &cpo =~# "S" && exists("b:did_ftplugin")
+                            	" In compatible mode options are reset to the global values, need to
+                            	" set the local values also when a plugin was already used.
+                            	unlet b:did_ftplugin
+    1              0.000002       endif
+                            
+                                  " When there is a dot it is used to separate filetype names.  Thus for
+                                  " "aaa.bbb" load "aaa" and then "bbb".
+    2              0.000030       for name in split(s, '\.')
+                                    " Load Lua ftplugins after Vim ftplugins _per directory_
+                                    " TODO(clason): use nvim__get_runtime when supports globs and modeline
+                                    " XXX: "[.]" in the first pattern makes it a wildcard on Windows
+    1              0.023029         exe $'runtime! ftplugin/{name}[.]{{vim,lua}} ftplugin/{name}_*.{{vim,lua}} ftplugin/{name}/*.{{vim,lua}}'
+    2              0.000015       endfor
+    1              0.000003     endif
+
+FUNCTION  <SNR>45_SynSet()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/syntax/synload.vim:27
+Called 1 time
+Total time:   0.016030
+ Self time:   0.016030
+
+count  total (s)   self (s)
+                              " clear syntax for :set syntax=OFF  and any syntax name that doesn't exist
+    1              0.000010   syn clear
+    1              0.000012   if exists("b:current_syntax")
+                                unlet b:current_syntax
+    1              0.000003   endif
+                            
+    1              0.000017   0verbose let s = expand("<amatch>")
+    1              0.000007   if s == "ON"
+                                " :set syntax=ON
+                                if &filetype == ""
+                                  echohl ErrorMsg
+                                  echo "filetype unknown"
+                                  echohl None
+                                endif
+                                let s = &filetype
+    1              0.000005   elseif s == "OFF"
+                                let s = ""
+    1              0.000002   endif
+                            
+    1              0.000004   if s != ""
+                                " Load the syntax file(s).  When there are several, separated by dots,
+                                " load each in sequence.  Skip empty entries.
+    2              0.000030     for name in split(s, '\.')
+    1              0.000007       if !empty(name)
+                                    " XXX: "[.]" in the first pattern makes it a wildcard on Windows
+    1              0.015833         exe $'runtime! syntax/{name}[.]{{vim,lua}} syntax/{name}/*.{{vim,lua}}'
+    1              0.000009       endif
+    2              0.000008     endfor
+    1              0.000003   endif
+
+FUNCTION  <SNR>49_Get_paren_balance()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/indent/r.vim:110
+Called 21 times
+Total time:   0.001299
+ Self time:   0.001299
+
+count  total (s)   self (s)
+   21              0.000435   let line2 = substitute(a:line, a:o, "", "g")
+   21              0.000224   let openp = strlen(a:line) - strlen(line2)
+   21              0.000260   let line3 = substitute(line2, a:c, "", "g")
+   21              0.000186   let closep = strlen(line2) - strlen(line3)
+   21              0.000098   return openp - closep
+
+FUNCTION  <SNR>49_RDelete_quotes()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/indent/r.vim:38
+Called 9 times
+Total time:   0.014060
+ Self time:   0.014060
+
+count  total (s)   self (s)
+    9              0.000045   let i = 0
+    9              0.000024   let j = 0
+    9              0.000034   let line1 = ""
+    9              0.000065   let llen = strlen(a:line)
+  120              0.000371   while i < llen
+  114              0.000523     if a:line[i] == '"'
+    6              0.000018       let i += 1
+    6              0.000029       let line1 = line1 . 's'
+   68              0.000799       while !(a:line[i] == '"' && ((i > 1 && a:line[i-1] == '\' && a:line[i-2] == '\') || a:line[i-1] != '\')) && i < llen
+   62              0.000190         let i += 1
+   68              0.000107       endwhile
+    6              0.000028       if a:line[i] == '"'
+    6              0.000019         let i += 1
+    6              0.000009       endif
+  108              0.000500     elseif a:line[i] == "'"
+                                  let i += 1
+                                  let line1 = line1 . 's'
+                                  while !(a:line[i] == "'" && ((i > 1 && a:line[i-1] == '\' && a:line[i-2] == '\') || a:line[i-1] != '\')) && i < llen
+                                    let i += 1
+                                  endwhile
+                                  if a:line[i] == "'"
+                                    let i += 1
+                                  endif
+  108              0.000475     elseif a:line[i] == "`"
+                                  let i += 1
+                                  let line1 = line1 . 's'
+                                  while a:line[i] != "`" && i < llen
+                                    let i += 1
+                                  endwhile
+                                  if a:line[i] == "`"
+                                    let i += 1
+                                  endif
+  114              0.000149     endif
+  114              0.000326     if i == llen
+    3              0.000006       break
+  111              0.000140     endif
+  111              0.000734     let line1 = line1 . a:line[i]
+  111              0.000362     let j += 1
+  111              0.000317     let i += 1
+  120              0.000248   endwhile
+    9              0.000042   return line1
+
+FUNCTION  SanitizeRLine()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/indent/r.vim:196
+Called 9 times
+Total time:   0.023294
+ Self time:   0.001990
+
+count  total (s)   self (s)
+    9   0.014952   0.000891   let newline = s:RDelete_quotes(a:line)
+    9   0.007622   0.000379   let newline = s:RDelete_parens(newline)
+    9              0.000175   let newline = substitute(newline, '#.*', "", "")
+    9              0.000213   let newline = substitute(newline, '\s*$', "", "")
+    9              0.000142   if &filetype == "rhelp" && newline =~ '^\\method{.*}{.*}(.*'
+                                let newline = substitute(newline, '^\\method{\(.*\)}{.*}', '\1', "")
+    9              0.000015   endif
+    9              0.000032   return newline
+
+FUNCTION  <SNR>2_LoadIndent()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/indent.vim:14
+Called 1 time
+Total time:   0.003623
+ Self time:   0.003623
+
+count  total (s)   self (s)
+    1              0.000017     if exists("b:undo_indent")
+                                  exe b:undo_indent
+                                  unlet! b:undo_indent b:did_indent
+    1              0.000002     endif
+    1              0.000016     let s = expand("<amatch>")
+    1              0.000007     if s != ""
+    1              0.000007       if exists("b:did_indent")
+                            	unlet b:did_indent
+    1              0.000002       endif
+                            
+                                  " When there is a dot it is used to separate filetype names.  Thus for
+                                  " "aaa.bbb" load "indent/aaa.vim" and then "indent/bbb.vim".
+    2              0.000028       for name in split(s, '\.')
+                                    " XXX: "[.]" in the pattern makes it a wildcard on Windows
+    1              0.003481         exe $'runtime! indent/{name}[.]{{vim,lua}}'
+    2              0.000014       endfor
+    1              0.000003     endif
+
+FUNCTION  <SNR>50_try_cmd()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/autoload/provider/clipboard.vim:38
+Called 9 times
+Total time:   0.892743
+ Self time:   0.012301
+
+count  total (s)   self (s)
+    9   0.892170   0.011728   let out = systemlist(a:cmd, (a:0 ? a:1 : ['']), 1)
+    9              0.000130   if v:shell_error
+                                if !exists('s:did_error_try_cmd')
+                                  echohl WarningMsg
+                                  echomsg "clipboard: error: ".(len(out) ? out[0] : v:shell_error)
+                                  echohl None
+                                  let s:did_error_try_cmd = 1
+                                endif
+                                return 0
+    9              0.000015   endif
+    9              0.000035   return out
+
+FUNCTION  <SNR>49_Get_prev_line()
+    Defined: /usr/local/Cellar/neovim/0.11.6/share/nvim/runtime/indent/r.vim:184
+Called 9 times
+Total time:   0.000613
+ Self time:   0.000613
+
+count  total (s)   self (s)
+    9              0.000061   let lnum = a:lineno - 1
+    9              0.000076   let data = getline( lnum )
+   11              0.000281   while lnum > 0 && (data =~ '^\s*#' || data =~ '^\s*$')
+    2              0.000009     let lnum = lnum - 1
+    2              0.000011     let data = getline( lnum )
+   11              0.000033   endwhile
+    9              0.000030   return lnum
+
+FUNCTIONS SORTED ON TOTAL TIME
+count  total (s)   self (s)  function
+    9   0.895375   0.001016  provider#clipboard#Call()
+    9   0.892743   0.012301  <SNR>50_try_cmd()
+    6   0.609138   0.001122  2()
+    3   0.285221   0.000494  3()
+    3   0.033485   0.008826  GetRIndent()
+    9   0.023294   0.001990  SanitizeRLine()
+    1   0.023211             <SNR>1_LoadFTPlugin()
+    1   0.016030             <SNR>45_SynSet()
+    9   0.014060             <SNR>49_RDelete_quotes()
+    9   0.007243   0.006697  <SNR>49_RDelete_parens()
+    1   0.003623             <SNR>2_LoadIndent()
+   21   0.001299             <SNR>49_Get_paren_balance()
+    9   0.000613             <SNR>49_Get_prev_line()
+
+FUNCTIONS SORTED ON SELF TIME
+count  total (s)   self (s)  function
+    1              0.023211  <SNR>1_LoadFTPlugin()
+    1              0.016030  <SNR>45_SynSet()
+    9              0.014060  <SNR>49_RDelete_quotes()
+    9   0.892743   0.012301  <SNR>50_try_cmd()
+    3   0.033485   0.008826  GetRIndent()
+    9   0.007243   0.006697  <SNR>49_RDelete_parens()
+    1              0.003623  <SNR>2_LoadIndent()
+    9   0.023294   0.001990  SanitizeRLine()
+   21              0.001299  <SNR>49_Get_paren_balance()
+    6   0.609138   0.001122  2()
+    9   0.895375   0.001016  provider#clipboard#Call()
+    9              0.000613  <SNR>49_Get_prev_line()
+    3   0.285221   0.000494  3()
+

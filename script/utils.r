@@ -1,0 +1,928 @@
+# FUNCTIONS ----
+## Detailed statistics in custom layout ----
+
+make_tbl <- function(label, stat, ci_method = NULL) {
+  df <- mysvyr |>
+    select(n_deciles_total, n_ing_equivaled) |>
+    mutate(n_ing_equivaled = n_ing_equivaled / 1e3)
+
+  tbl <- df |>
+    tbl_svysummary(
+      include = n_ing_equivaled,
+      label = n_ing_equivaled ~ label,
+      statistic = all_continuous() ~ stat,
+      by = n_deciles_total,
+      digits = all_continuous() ~ 1
+    ) |>
+    bold_labels() |>
+    italicize_levels() |>
+    add_overall() |>
+    modify_footnote(all_stat_cols() ~ NA)
+
+  if (!is.null(ci_method)) {
+    tbl <- tbl |>
+      add_ci(
+        conf.level = 0.99,
+        method = list(all_continuous() ~ ci_method),
+        pattern = "{stat} ({ci})",
+        style_fun = all_continuous() ~ purrr::partial(
+          style_number,
+          digits = 1
+        )
+      )
+  }
+
+  tbl
+}
+
+## Gini ----
+
+survey_gini <- function(
+  x,
+  na.rm = FALSE,
+  vartype = c("se", "ci", "var", "cv"),
+  ...
+) {
+  if (missing(vartype)) {
+    vartype <- "se"
+  }
+  vartype <- match.arg(vartype, several.ok = TRUE)
+  .svy <- srvyr::set_survey_vars(srvyr::cur_svy(), x)
+
+  out <- convey::svygini(~`__SRVYR_TEMP_VAR__`, na.rm = na.rm, design = .svy)
+  out <- srvyr::get_var_est(out, vartype)
+  as_srvyr_result_df(out)
+}
+
+## Saving in csv and in res list ----
+
+res <- list()
+
+custom_save <- function(
+  object,
+  object_name = NULL,
+  type = "processed",
+  width = 12,
+  height = 8,
+  dpi = 300
+) {
+  stopifnot(requireNamespace("here", quietly = TRUE))
+  stopifnot(requireNamespace("readr", quietly = TRUE))
+
+  # save in res list
+  filename <- if (is.null(object_name)) {
+    deparse(substitute(object))
+  } else {
+    object_name
+  }
+  deparse(substitute(object))
+  res[[filename]] <<- object
+
+  if (is_tibble(object)) {
+    # create output dir if not already existing
+    output_dir <- here("output", type)
+    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+    # save in csv
+    output_path <- file.path(output_dir, str_c(filename, ".csv"))
+
+    readr::write_csv(object, output_path)
+
+    message("✅ TIBBLE saved in: ", output_path)
+    invisible(output_path)
+  } else if (is_ggplot(object)) {
+    # create output dir if not already existing
+    output_dir <- here("output", "fig")
+    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+    # save csv
+    output_path <- file.path(output_dir, str_c(filename, ".png"))
+
+    ggsave(
+      filename = output_path,
+      plot = object,
+      width = width,
+      height = height,
+      dpi = dpi,
+      units = "in"
+    )
+
+    message("✅ PLOT saved in:", output_path)
+    invisible(output_path)
+  }
+}
+
+## Function to correct negative income ----
+
+set.seed(123)
+replace_negatives <- function(x) {
+  pos <- x[x > 0]
+  if (length(pos) == 0) {
+    return(x)
+  } # pas de positifs
+  q1 <- quantile(pos, 0.25, na.rm = TRUE)
+  candidates <- pos[pos <= q1]
+  # if (length(candidates) == 0) {
+  #   candidates <- min(pos)
+  # }
+  neg_idx <- which(x < 0)
+  x[neg_idx] <- sample(candidates, length(neg_idx), replace = TRUE)
+  x
+}
+
+## Custom survey functions ----
+### PROPORTION des modalités de target_var stratifiés par strat_var, avec filtre optionnel (n_tipo_prod pour niveau de n_size_class) ----
+### proportions et IC exacts beta pour tous les niveaux de target_var
+### ex : n_tipo_prod pour tous les niveaux de n_size_class
+### Utile car svyby/svymean ne gèrent pas facilement toutes les combinaisons ni les filtres dynamiques.
+### Advantages:
+# Produces a full conditional distribution of a categorical variable within each stratum, rather than a single mean or binary summary.
+# Provides greater flexibility in sample restriction and stratification, including dynamic filtering that is not easily handled by svyby().
+# Uses beta-based confidence intervals via svyciprop(), which are more robust than standard asymptotic (Wald) intervals for proportions.
+
+# unit test
+# design <- mysvyr
+# strat_var <- "n_deciles_total"
+# target_var <- "n_acc_alim1"
+# filter_var <- "n_is_agri_broad"
+# filter_value <- "agri_broad"
+# strat_levels <- unique(as.character(design$variables[[strat_var]]))
+# target_levels <- unique(as.character(design$variables[[target_var]]))
+# strat_level <- strat_levels[2]
+# target_level <- target_levels
+# method <- "beta"
+
+get_proportion <- function(
+  design,
+  strat_var,
+  target_var,
+  filter_var = NULL,
+  filter_value = NULL,
+  level = 0.99,
+  method = "beta"
+) {
+  # récupérer tous les niveaux (et éliminer les faux niveua : les niveaux NA)
+  x <- design$variables[[strat_var]]
+  strat_levels <- unique(as.character(x[!is.na(x)]))
+  y <- design$variables[[target_var]]
+  target_levels <- unique(as.character(y[!is.na(y)]))
+
+  params <- tidyr::crossing(
+    strat_level = strat_levels,
+    target_level = target_levels
+  )
+  # fonction interne pour un couple
+  calc_prop <- function(strat_level, target_level) {
+    # sous-design dynamique
+    if (!is.null(filter_var) && !is.null(filter_value)) {
+      design_sub <- subset(
+        design,
+        !is.na(design$variables[[strat_var]]) &
+          as.character(design$variables[[strat_var]]) == strat_level &
+          !is.na(design$variables[[filter_var]]) &
+          as.character(design$variables[[filter_var]]) == filter_value
+      )
+    } else {
+      design_sub <- subset(
+        design,
+        !is.na(design$variables[[strat_var]]) &
+          as.character(design$variables[[strat_var]]) == strat_level
+      )
+    }
+
+    if (nrow(design_sub$variables) == 0) {
+      return(tibble(
+        strat_var = strat_level,
+        target_var = target_level,
+        prop = NA_real_,
+        IC_low = NA_real_,
+        IC_high = NA_real_
+      ))
+    }
+
+    indicator <- as.character(design_sub$variables[[target_var]]) ==
+      target_level
+    indicator[is.na(indicator)] <- FALSE
+
+    design_sub <- update(design_sub, indicator = indicator)
+
+    p <- svyciprop(~indicator, design_sub, method = method, level = level)
+    # extraire valeurs numériques
+    prop_val <- as.numeric(coef(p))
+    IC <- as.numeric(confint(p)) #level = level)
+
+    tibble(
+      strat_var = strat_level,
+      target_var = target_level,
+      prop = prop_val,
+      IC_low = IC[1],
+      IC_high = IC[2]
+    )
+  }
+
+  # appliquer à tous les couples
+  results <- params |>
+    pmap_dfr(~ calc_prop(..1, ..2))
+
+  # renommer les colonnes pour refléter les noms réels des variables
+  results <- results |>
+    rename(
+      !!strat_var := strat_var,
+      !!target_var := target_var
+    )
+
+  results
+}
+
+# svyr near equivalent (but less general and not as precise as beta method near 0 , 1 value)
+# get_proportion_srvyr <- function(data, strat, target, filter = NULL, value = NULL) {
+#
+#   d <- data
+#
+#   if (!is.null(filter)) {
+#     d <- d |> filter(.data[[filter]] == value)
+#   }
+#
+#   d |>
+#     group_by(.data[[strat]]) |>
+#     summarise(
+#       prop = survey_mean(.data[[target]] == 1, vartype = "ci"),
+#       .groups = "drop"
+#     )
+# }
+
+### MACRO SHARES of total by subgroup ----
+
+### svyciprop ne sait pas faire part d’une variable dans un total continu (acc_alim1 is 1/0, while n_fni is continuous) en stratifiant par decile (ou autre sous-groupe)
+### based on delta method at 99%
+### Advantages:
+# It is an extension of svyby(~var, ~quant_var, svytotal)-style decomposition (delta method, just as syvby), but explicitly constructs each group-level contribution to a global total and converts it into shares.
+# It provides a share-of-total decomposition across quantiles, allowing interpretation as each group’s contribution to the overall aggregate rather than within-group averages.
+# It adds delta-method standard errors and confidence intervals for ratios of totals, which are not directly provided in standard svyby or basic svytotal outputs.
+
+# unit test
+# design <- mysvyr
+# target_var <- "n_fni_agro_clean"
+# strat_var <- "n_deciles_total"
+# # filer_var seulement utile si variable non pertinente pour une partie de la pop (ex: rendement/hectare)
+# # filter_var <- "n_is_agri_broad"
+# # filter_value <- "agri_broad"
+# x <- design$variables[[strat_var]]
+# strat_levels <- unique(as.character(x[!is.na(x)]))
+# strat_level <- strat_levels[2]
+# level <- 0.99
+# z <- qnorm((1 + level) / 2)
+
+get_share_macro <- function(
+  design,
+  target_var,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL,
+  level = 0.99
+) {
+  z <- qnorm((1 + level) / 2)
+
+  # Domaine d'analyse éventuel
+  # Si variable qui a du sens sur l'ensemble de la pop, on ne filtre pas (ex: farm net income, les non agri ont 0
+  # Si variable qui n'a de sens que sur sous-ensemble, on filtre (ex: rendement/hectare, qui n'a pas de sens pour ceux qui n'ont pas de fermes)
+  if (!is.null(filter_var) && !is.null(filter_value)) {
+    design <- subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        as.character(design$variables[[filter_var]]) == filter_value
+    )
+  }
+
+  # Niveaux de stratification
+  x <- design$variables[[strat_var]]
+
+  strat_levels <- unique(
+    as.character(x[!is.na(x)])
+  )
+
+  calc_share <- function(strat_level) {
+    f <- stats::as.formula(
+      paste0(
+        "~cbind(",
+        "part = ",
+        target_var,
+        " * (",
+        strat_var,
+        " == '",
+        strat_level,
+        "'), ",
+        "total = ",
+        target_var,
+        ")"
+      )
+    )
+
+    t2 <- survey::svytotal(
+      f,
+      design = design,
+      na.rm = TRUE
+    )
+    names(t2) <- c("part", "total")
+
+    coefs <- coef(t2)
+
+    X <- coefs[1]
+    Y <- coefs[2]
+
+    vc <- vcov(t2)
+
+    VarX <- vc[1, 1]
+    VarY <- vc[2, 2]
+    CovXY <- vc[1, 2]
+
+    ratio <- X / Y
+
+    SE <- sqrt(
+      VarX / Y^2 + (X^2 * VarY) / Y^4 - 2 * X * CovXY / Y^3
+    )
+
+    tibble::tibble(
+      strat_level = strat_level,
+      target_var = target_var,
+      share = ratio,
+      SE = SE,
+      IC_low = ratio - z * SE,
+      IC_high = ratio + z * SE
+    )
+  }
+
+  purrr::map_dfr(
+    strat_levels,
+    calc_share
+  ) |>
+    dplyr::rename(
+      !!strat_var := strat_level
+    )
+}
+
+### MACRO RATIO of a variable by the total of that continous variable in a subgroup (decile) ----
+
+# unit test
+# design <- mysvyr
+# numerator <- "n_autoconsumo1_agro"
+# denominator <- "n_size_val1_agro"
+# strat_var <- "n_deciles_total"
+# filter_var <- "n_is_agri_broad"
+# filter_value <- "agri_broad"
+# level <- 0.99
+# strat_levels <- unique(as.character(design$variables[[strat_var]]))
+# strat_level <- strat_levels[2]
+
+get_ratio_macro <- function(
+  design,
+  numerator,
+  denominator,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL,
+  level = 0.99
+) {
+  z <- qnorm((1 + level) / 2)
+
+  # subset global (domain restriction)
+  if (!is.null(filter_var) && !is.null(filter_value)) {
+    design <- subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        design$variables[[filter_var]] == filter_value
+    )
+  }
+
+  # strat
+  strat_levels <- unique(as.character(design$variables[[strat_var]]))
+  strat_levels <- strat_levels[!is.na(strat_levels)]
+
+  calc_ratio <- function(strat_level) {
+    # sous-design dynamique
+    design_sub <- subset(
+      design,
+      !is.na(design$variables[[strat_var]]) &
+        as.character(design$variables[[strat_var]]) == strat_level
+    )
+
+    f <- stats::as.formula(
+      paste0(
+        "~cbind(",
+        "num = ",
+        numerator,
+        ", ",
+        "den = ",
+        denominator,
+        ")"
+      )
+    )
+
+    t2 <- survey::svytotal(
+      f,
+      design = design_sub,
+      na.rm = TRUE
+    )
+    names(t2) <- c(str_c("num-", numerator), str_c("den-", denominator))
+
+    coefs <- coef(t2)
+    X <- coefs[1]
+    Y <- coefs[2]
+
+    vc <- vcov(t2)
+
+    VarX <- vc[1, 1]
+    VarY <- vc[2, 2]
+    CovXY <- vc[1, 2]
+
+    # protection denominator
+    if (is.na(Y) || Y == 0) {
+      return(tibble::tibble(
+        strat_var = strat_level,
+        ratio = NA_real_,
+        SE = NA_real_,
+        IC_low = NA_real_,
+        IC_high = NA_real_
+      ))
+    }
+
+    ratio <- X / Y
+
+    SE <- sqrt(
+      VarX / Y^2 + (X^2 * VarY) / Y^4 - 2 * X * CovXY / Y^3
+    )
+
+    tibble::tibble(
+      strat_var = strat_level,
+      ratio = ratio,
+      SE = SE,
+      IC_low = ratio - z * SE,
+      IC_high = ratio + z * SE
+    )
+  }
+
+  purrr::map_dfr(strat_levels, calc_ratio) |>
+    dplyr::rename(!!strat_var := strat_var)
+}
+
+### MICRO RATIO : moyenne des ratios individuels par sous-groupe ----
+# Contrairement à get_ratio() qui calcule num_total / den_total (ratio de totaux agrégés),
+# get_ratio_micro() calcule mean(num_i / den_i) — la moyenne des ratios individuels.
+# Utilise srvyr::survey_mean() sur la variable ratio pré-calculée.
+# Avantage : reflète le ménage "typique" plutôt que la structure agrégée de production.
+
+get_ratio_micro <- function(
+  design,
+  numerator,
+  denominator,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL,
+  level = 0.99
+) {
+  z <- qnorm((1 + level) / 2)
+
+  # subset global (domain restriction)
+  if (!is.null(filter_var) && !is.null(filter_value)) {
+    design <- subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        design$variables[[filter_var]] == filter_value
+    )
+  }
+
+  # ratio individuel
+  ratio_var <- paste0(".ratio_micro_", numerator, "_", denominator)
+  design <- update(
+    design,
+    .ratio = design$variables[[numerator]] / design$variables[[denominator]]
+  )
+
+  # protection NA Inf
+  design$variables$.ratio <- ifelse(
+    is.finite(design$variables$.ratio),
+    design$variables$.ratio,
+    NA_real_
+  )
+
+  # niveaux de stratification
+  strat_levels <- unique(as.character(design$variables[[strat_var]]))
+  strat_levels <- strat_levels[!is.na(strat_levels)]
+
+  calc_ratio_micro <- function(strat_level) {
+    design_sub <- subset(
+      design,
+      !is.na(design$variables[[strat_var]]) &
+        as.character(design$variables[[strat_var]]) == strat_level
+    )
+
+    res <- design_sub |>
+      srvyr::as_survey() |>
+      srvyr::summarise(
+        mean_ratio = srvyr::survey_mean(.ratio, na.rm = TRUE, vartype = "se")
+      )
+
+    se <- res$mean_ratio_se
+    est <- res$mean_ratio
+
+    tibble::tibble(
+      strat_var = strat_level,
+      ratio = est,
+      SE = se,
+      IC_low = est - z * se,
+      IC_high = est + z * se
+    )
+  }
+
+  purrr::map_dfr(strat_levels, calc_ratio_micro) |>
+    dplyr::rename(!!strat_var := strat_var)
+}
+
+### MICRO SHARE : moyenne des parts individuelles par sous-groupe ----
+
+get_share_micro <- function(
+  design,
+  target_var,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL,
+  level = 0.99
+) {
+  z <- qnorm((1 + level) / 2)
+
+  if (!is.null(filter_var) && !is.null(filter_value)) {
+    design <- subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        design$variables[[filter_var]] == filter_value
+    )
+  }
+
+  # total de la variable sur l'univers entier (dénominateur commun)
+  total_universe <- survey::svytotal(
+    as.formula(paste0("~", target_var)),
+    design = design,
+    na.rm = TRUE
+  )
+  total_val <- as.numeric(coef(total_universe))
+
+  # share individuel = var_i / total_univers
+  design <- update(
+    design,
+    .share_micro = design$variables[[target_var]] / total_val
+  )
+  design$variables$.share_micro <- ifelse(
+    is.finite(design$variables$.share_micro),
+    design$variables$.share_micro,
+    NA_real_
+  )
+
+  strat_levels <- unique(as.character(design$variables[[strat_var]]))
+  strat_levels <- strat_levels[!is.na(strat_levels)]
+
+  calc <- function(strat_level) {
+    design_sub <- subset(
+      design,
+      !is.na(design$variables[[strat_var]]) &
+        as.character(design$variables[[strat_var]]) == strat_level
+    )
+
+    res <- design_sub |>
+      srvyr::as_survey() |>
+      srvyr::summarise(
+        est = srvyr::survey_mean(.share_micro, na.rm = TRUE, vartype = "se")
+      )
+
+    tibble::tibble(
+      strat_var = strat_level,
+      share = res$est,
+      SE = res$est_se,
+      IC_low = res$est - z * res$est_se,
+      IC_high = res$est + z * res$est_se
+    )
+  }
+
+  purrr::map_dfr(strat_levels, calc) |>
+    dplyr::rename(!!strat_var := strat_var)
+}
+
+## Wrapper functions for polagri.r ----
+### make_plot function ----
+
+make_decile_plot <- function(
+  tbl, # tibble retourné par get_ratio_macro, get_ratio_micro, etc.
+  overall, # tibble retourné par la même fn sur l'ensemble
+  strat_var, # nom de la colonne de stratification
+  value_col, # "ratio" ou "share"
+  col_above,
+  col_below,
+  col_overall,
+  title,
+  subtitle,
+  caption
+) {
+  tbl <- tbl |>
+    mutate(
+      above_mean = ifelse(
+        .data[[value_col]] >= overall[[value_col]],
+        "Above",
+        "Below"
+      )
+    )
+  # ,
+  #     across(c(all_of(value_col), SE, IC_low, IC_high), ~ round(. * 100, 2))
+  #   )
+  # overall <- overall |>
+  #   mutate(across(
+  #     c(all_of(value_col), SE, IC_low, IC_high),
+  #     ~ round(. * 100, 2)
+  #   ))
+  #
+  ggplot(
+    tbl,
+    aes(x = .data[[strat_var]], y = .data[[value_col]], fill = above_mean)
+  ) +
+    annotate(
+      "rect",
+      xmin = 0.5,
+      xmax = 10.5,
+      ymin = overall$IC_low,
+      ymax = overall$IC_high,
+      fill = col_overall,
+      alpha = 0.15
+    ) +
+    geom_col(width = 0.7, alpha = 0.9, color = "white") +
+    geom_errorbar(
+      aes(ymin = IC_low, ymax = IC_high),
+      width = 0.2,
+      color = "grey30"
+    ) +
+    geom_text(
+      aes(label = paste0(round(.data[[value_col]], 1), "%")),
+      vjust = 1.5,
+      color = "white",
+      size = 3.8,
+      fontface = "bold"
+    ) +
+    geom_smooth(
+      aes(group = 1, fill = NULL),
+      method = "loess",
+      se = FALSE,
+      color = "black",
+      linewidth = 0.8,
+      linetype = "dashed"
+    ) +
+    geom_hline(
+      yintercept = overall[[value_col]],
+      color = col_overall,
+      linetype = "dotted",
+      linewidth = 0.8
+    ) +
+    geom_label(
+      data = data.frame(x = "D9", y = overall[[value_col]] + 1.2),
+      aes(
+        x = x,
+        y = y,
+        label = paste0("Overall: ", round(overall[[value_col]], 1), "%")
+      ),
+      inherit.aes = FALSE,
+      fill = "white",
+      color = col_overall,
+      linewidth = 0.2,
+      size = 3.8
+    ) +
+    scale_fill_manual(
+      values = c("Above" = col_above, "Below" = col_below),
+      name = "Comparison to overall ratio"
+    ) +
+    scale_y_continuous(
+      expand = expansion(mult = c(0, 0.05)),
+      labels = percent_format(scale = 1)
+    ) +
+    labs(
+      title = title,
+      subtitle = subtitle,
+      x = "Income decile",
+      y = "%",
+      caption = caption
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      axis.text.x = element_text(size = 11),
+      panel.grid.major.x = element_blank(),
+      plot.title = element_text(face = "bold"),
+      plot.subtitle = element_text(face = "italic"),
+      plot.caption = element_text(size = 10)
+    )
+}
+
+### unit internal functions ----
+
+run_one_analysis <- function(
+  design,
+  d,
+  estimator_fn,
+  value_col,
+  strat,
+  universe,
+  filter,
+  basename,
+  title,
+  caption,
+  col_above,
+  col_below,
+  col_overall,
+  # l'un ou l'autre selon le type
+  num = NULL,
+  den = NULL,
+  target_var = NULL
+) {
+  subtitle <- str_c("Universe: ", filter)
+  name <- str_c(basename, "_", str_remove(filter, ".*_"))
+
+  # appel de la fonction d'estimation selon le type
+  call_estimator <- function(strat_var_arg, filter_var_arg) {
+    if (!is.null(num) && !is.null(den)) {
+      estimator_fn(
+        design = design,
+        numerator = num,
+        denominator = den,
+        strat_var = strat_var_arg,
+        filter_var = filter_var_arg,
+        filter_value = filter
+      )
+    } else {
+      estimator_fn(
+        design = design,
+        target_var = target_var,
+        strat_var = strat_var_arg,
+        filter_var = filter_var_arg,
+        filter_value = filter
+      )
+    }
+  }
+
+  tbl <- call_estimator(strat_var_arg = strat, filter_var_arg = universe)
+
+  # ordre des niveaux
+  strat_lvl <- levels(as.factor(d[[strat]]))
+  tbl <- tbl |>
+    mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+    arrange(.data[[strat]])
+
+  overall <- call_estimator(strat_var_arg = universe, filter_var_arg = universe)
+  colnames(overall)[1] <- colnames(tbl)[1]
+
+  # arrondi
+  tbl <- tbl |>
+    mutate(across(
+      c(all_of(value_col), SE, IC_low, IC_high),
+      ~ round(. * 100, 2)
+    ))
+  overall <- overall |>
+    mutate(across(
+      c(all_of(value_col), SE, IC_low, IC_high),
+      ~ round(. * 100, 2)
+    ))
+
+  custom_save(bind_rows(tbl, overall), name)
+
+  plot <- make_decile_plot(
+    tbl = tbl,
+    overall = overall,
+    strat_var = strat,
+    value_col = value_col,
+    col_above = col_above,
+    col_below = col_below,
+    col_overall = col_overall,
+    title = title,
+    subtitle = subtitle,
+    caption = caption
+  )
+
+  print(plot)
+  custom_save(plot, str_c("plot_", name))
+}
+
+### to run ratio analysis, either macro or micro or both ----
+run_ratio_analysis <- function(
+  design,
+  d,
+  num,
+  den,
+  strat,
+  basename,
+  universes,
+  estimators = c("macro", "micro"),
+  title_macro,
+  title_micro,
+  caption_base,
+  extra_text,
+  col_above,
+  col_below,
+  col_overall
+) {
+  caption_macro <- caption_base
+  caption_micro <- paste(extra_text, caption_base, sep = "\n")
+
+  for (u in universes) {
+    if ("macro" %in% estimators) {
+      run_one_analysis(
+        design = design,
+        d = d,
+        estimator_fn = get_ratio_macro,
+        value_col = "ratio",
+        num = num,
+        den = den,
+        strat = strat,
+        universe = u$universe,
+        filter = u$filter,
+        basename = str_c("macro_", basename),
+        title = title_macro,
+        caption = caption_macro,
+        col_above = col_above,
+        col_below = col_below,
+        col_overall = col_overall
+      )
+    }
+    if ("micro" %in% estimators) {
+      run_one_analysis(
+        design = design,
+        d = d,
+        estimator_fn = get_ratio_micro,
+        value_col = "ratio",
+        num = num,
+        den = den,
+        strat = strat,
+        universe = u$universe,
+        filter = u$filter,
+        basename = str_c("micro_", basename),
+        title = title_micro,
+        caption = caption_micro,
+        col_above = col_above,
+        col_below = col_below,
+        col_overall = col_overall
+      )
+    }
+  }
+}
+
+### to run share analysis, either macro or micro or both ----
+
+run_share_analysis <- function(
+  design,
+  d,
+  target_var,
+  strat,
+  basename,
+  universes,
+  estimators = c("macro", "micro"),
+  title_macro,
+  title_micro,
+  caption_base,
+  extra_text,
+  col_above,
+  col_below,
+  col_overall
+) {
+  caption_macro <- caption_base
+  caption_micro <- paste(extra_text, caption_base, sep = "\n")
+
+  for (u in universes) {
+    if ("macro" %in% estimators) {
+      run_one_analysis(
+        design = design,
+        d = d,
+        estimator_fn = get_share_macro,
+        value_col = "share",
+        target_var = target_var,
+        strat = strat,
+        universe = u$universe,
+        filter = u$filter,
+        basename = str_c("macro_", basename),
+        title = title_macro,
+        caption = caption_macro,
+        col_above = col_above,
+        col_below = col_below,
+        col_overall = col_overall
+      )
+    }
+    if ("micro" %in% estimators) {
+      run_one_analysis(
+        design = design,
+        d = d,
+        estimator_fn = get_share_micro,
+        value_col = "share",
+        target_var = target_var,
+        strat = strat,
+        universe = u$universe,
+        filter = u$filter,
+        basename = str_c("micro_", basename),
+        title = title_micro,
+        caption = caption_micro,
+        col_above = col_above,
+        col_below = col_below,
+        col_overall = col_overall
+      )
+    }
+  }
+}
+# THE END ----

@@ -4,8 +4,7 @@
 # In fact the mean of individual ratio for self-consumption is consierably higher -> many, many small farmers heavily rely on self-consumption
 # We need to decide which we want (and we might want both, why not)
 # For instance
-# Il faut qu'on écrive ca à un momen donné dans le papier: We report both (i) the average household-level self-consumption rate and (ii) the aggregate share of self-consumed production. The gap between the two reflects strong heterogeneity in farm size and production structure.
-#Si gap grand :
+# Il faut qu'on écrive ca à un momen donné dans le papier: We report both (i) the average household-level self-consumption rate and (ii) the aggregate share of self-consumed production. The gap between the two reflects strong heterogeneity in farm size and production structure. Si gap grand :
 # forte hétérogénéité
 # forte corrélation négative entre taille et autoconsommation
 # structure duale agriculture (subsistence vs commercial)
@@ -54,6 +53,7 @@ make_tbl <- function(label, stat, ci_method = NULL) {
 
   tbl
 }
+
 ## Gini ----
 
 survey_gini <- function(
@@ -3073,6 +3073,15 @@ plot_acc_alim1_decile_narrow <- ggplot(
 custom_save(plot_acc_alim1_decile_narrow, type = "fig")
 print(plot_acc_alim1_decile_narrow)
 
+# -----------
+
+# Set graphical parameters ----
+
+col_overall <- "#D55E00"
+cols <- brewer.pal(n = 12, name = "Paired")
+pairs <- rep(seq_along(cols), each = 2)[seq_along(cols)]
+list_cols <- split(cols, pairs)
+
 # Self-consumption ----
 #WARN: we need to understand the discrpenacy between tipoact, which is encoded by INEGHI, and the self-declaration of the actiity which got the support fromsocial programs which may agri in a quite contradictory manner with the first element:
 # two possible explanation
@@ -3159,7 +3168,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -3185,7 +3194,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -3198,7 +3207,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -3212,7 +3221,7 @@ plot <- ggplot(
   ) +
   labs(
     title = "Share of self-consumed agricultural production in total production by income decile",
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "Share of production (%)",
     caption = paste(
@@ -3320,7 +3329,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -3346,7 +3355,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -3359,7 +3368,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -3373,7 +3382,7 @@ plot <- ggplot(
   ) +
   labs(
     title = "Share of self-consumed agricultural production in total production by income decile",
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "Share of production (%)",
     caption = paste(
@@ -3483,7 +3492,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -3509,7 +3518,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -3522,7 +3531,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -3536,7 +3545,7 @@ plot <- ggplot(
   ) +
   labs(
     title = "Average individual share of self-consumed production in total production by income decile",
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "Mean individual share (%)",
     caption = paste(
@@ -3646,7 +3655,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -3672,7 +3681,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -3685,7 +3694,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -3699,7 +3708,7 @@ plot <- ggplot(
   ) +
   labs(
     title = "Average individual share of self-consumed production in total production by income decile",
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "Mean individual share (%)",
     caption = paste(
@@ -3835,7 +3844,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -3861,7 +3870,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -3874,7 +3883,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -3889,7 +3898,7 @@ plot <- ggplot(
   ) +
   labs(
     title = "Share of direct policy payments in total farm resources across income decile",
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "Share of total farm resources (%)",
     caption = paste(
@@ -4014,7 +4023,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -4040,7 +4049,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -4053,7 +4062,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -4067,7 +4076,7 @@ plot <- ggplot(
   ) +
   labs(
     title = "Share of direct policy payments in total farm resources across income decile",
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "Share of total farm resources (%)",
     caption = paste(
@@ -4189,7 +4198,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -4215,7 +4224,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -4228,7 +4237,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -4244,7 +4253,7 @@ plot <- ggplot(
   labs(
     #TODO: change name to reflet micro
     title = "Share of direct policy payments in total farm resources across income decile",
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "Share of total farm resources (%)",
     caption = paste(
@@ -4369,7 +4378,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -4395,7 +4404,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -4408,7 +4417,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -4422,7 +4431,7 @@ plot <- ggplot(
   ) +
   labs(
     title = "Share of direct policy payments in total farm resources across income decile",
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "Share of total farm resources (%)",
     caption = paste(
@@ -4563,7 +4572,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -4589,7 +4598,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -4602,7 +4611,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -4617,7 +4626,7 @@ plot <- ggplot(
   ) +
   labs(
     title = title_macro,
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "%",
     caption = caption_macro
@@ -4721,7 +4730,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -4747,7 +4756,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -4760,7 +4769,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -4774,7 +4783,7 @@ plot <- ggplot(
   ) +
   labs(
     title = title_macro,
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "%",
     caption = caption_macro
@@ -4876,7 +4885,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -4902,7 +4911,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -4915,7 +4924,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -4930,7 +4939,7 @@ plot <- ggplot(
   ) +
   labs(
     title = title_micro,
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "%",
     caption = caption_micro,
@@ -5032,7 +5041,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -5058,7 +5067,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -5071,7 +5080,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -5085,7 +5094,7 @@ plot <- ggplot(
   ) +
   labs(
     title = title_micro,
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "%",
     caption = caption_micro
@@ -5114,12 +5123,9 @@ custom_save(
 #NOTE: The micro and macro estimators of income composition yield very similar results across deciles because the denominator — total household income — is precisely the variable used to construct the deciles, making it relatively homogeneous within each group.
 #This contrasts sharply with the autoconsumption-to-production ratio, where the denominator varies by orders of magnitude within deciles, driving a large wedge between the two estimators. For income composition stratified by income deciles, the choice between micro and macro estimators is therefore largely inconsequential, and both can be reported interchangeably.
 
-# # Vert
-# values = c("Above" = "#33a02c", "Below" = "#b2df8a")
-# # Rouge/orange
-# values = c("Above" = "#e31a1c", "Below" = "#fb9a99")
-col_above <- "#ff7f00"
-col_below <- "#fdbf6f"
+i <- 4
+col_below <- list_cols[[i]][1]
+col_above <- list_cols[[i]][2]
 basename <- "ratio_support_ing_cor_decile"
 
 strat <- "n_deciles_total"
@@ -5139,7 +5145,7 @@ caption_macro <- paste(
 )
 title_micro <- "Average individual share of direct policy payments in total current income across income decile"
 extra_text <- paste(
-  "Bars represent the average of household-level ratios within each decile.",
+  "Bars represent the average of household-level values within each decile.",
   "Each household contributes equally regardless of total current income size",
   sep = "\n"
 )
@@ -5149,7 +5155,7 @@ caption_micro <- paste(extra_text, caption_macro, sep = "\n")
 name <- str_c("macro_", basename)
 universe <- "n_is_agri_broad"
 filter <- "agri_broad"
-
+subtitle <- str_c("Universe: ", filter)
 tbl <- get_ratio_macro(
   design = mysvyr,
   numerator = num,
@@ -5216,7 +5222,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -5242,7 +5248,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -5255,13 +5261,12 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
   scale_fill_manual(
     values = c("Above" = col_above, "Below" = col_below),
-    # values = c("Above" = "#b15928", "Below" = "#ffff99"),
     name = "Comparison to overall ratio"
   ) +
   scale_y_continuous(
@@ -5270,7 +5275,7 @@ plot <- ggplot(
   ) +
   labs(
     title = title_macro,
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "%",
     caption = caption_macro
@@ -5301,6 +5306,7 @@ custom_save(
 name <- str_c("macro_", basename)
 universe <- "n_is_agri"
 filter <- "agri_narrow"
+subtitle <- str_c("Universe: ", filter)
 
 tbl <- get_ratio_macro(
   design = mysvyr,
@@ -5368,7 +5374,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -5394,7 +5400,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -5407,7 +5413,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -5421,7 +5427,7 @@ plot <- ggplot(
   ) +
   labs(
     title = title_macro,
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "%",
     caption = caption_macro
@@ -5452,6 +5458,7 @@ custom_save(
 name <- str_c("micro_", basename)
 universe <- "n_is_agri_broad"
 filter <- "agri_broad"
+subtitle <- str_c("Universe: ", filter)
 
 tbl <- get_ratio_micro(
   design = mysvyr,
@@ -5519,7 +5526,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -5545,7 +5552,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -5558,7 +5565,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -5573,7 +5580,7 @@ plot <- ggplot(
   ) +
   labs(
     title = title_micro,
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "%",
     caption = caption_micro,
@@ -5604,6 +5611,7 @@ custom_save(
 name <- str_c("micro_", basename)
 universe <- "n_is_agri"
 filter <- "agri_narrow"
+subtitle <- str_c("Universe: ", filter)
 
 tbl <- get_ratio_micro(
   design = mysvyr,
@@ -5669,7 +5677,7 @@ plot <- ggplot(
     xmax = 10.5,
     ymin = overall$IC_low,
     ymax = overall$IC_high,
-    fill = "#D55E00",
+    fill = col_overall,
     alpha = 0.15
   ) +
   geom_col(width = 0.7, alpha = 0.9, color = "white") +
@@ -5695,7 +5703,7 @@ plot <- ggplot(
   ) +
   geom_hline(
     yintercept = overall$ratio,
-    color = "#D55E00",
+    color = col_overall,
     linetype = "dotted",
     linewidth = 0.8
   ) +
@@ -5708,7 +5716,7 @@ plot <- ggplot(
     ),
     inherit.aes = FALSE,
     fill = "white",
-    color = "#D55E00",
+    color = col_overall,
     linewidth = 0.2, # <-- ici
     size = 3.8
   ) +
@@ -5722,7 +5730,7 @@ plot <- ggplot(
   ) +
   labs(
     title = title_micro,
-    subtitle = str_c("Universe: ", filter),
+    subtitle = subtitle,
     x = "Income decile",
     y = "%",
     caption = caption_micro
@@ -5749,7 +5757,6 @@ custom_save(
 )
 
 # Composition of income by decile ----
-
 ## MACRO pop ----
 
 name <- "macro_composition_income_decile"
