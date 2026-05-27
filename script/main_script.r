@@ -39,7 +39,7 @@ theme_gtsummary_language(
 )
 # FUNCTIONS ----
 
-source(here("script", "utils.r"))
+source(here("script", "0_utils.r"))
 
 # PART 1 : PREPARING THE DATABASE FOR THE PILOT STUDY ON MEXICO ----
 
@@ -47,8 +47,8 @@ source(here("script", "utils.r"))
 #NOTE: we had issue with the key hogar : now solved, by setting its type explicitely to characer(). all hogares are in concentradohogar.
 #NOTE: tipoact_agro is unused : we use instead our own is_agri income based definition
 
-source(here("script", "data_prep.r"))
-source(here("script", "data_svyr.r"))
+source(here("script", "1A_data_prep.r"))
+source(here("script", "1B_data_svyr.r"))
 
 # PART 2 : STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO ---- 
 
@@ -69,7 +69,7 @@ source(here("script", "data_svyr.r"))
 #TODO : compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
 #TODO:: mettre tous sur un seul graphique: overall pop : agri_broad / non agri / sen_agri / non_sen_agri
 
-source(here("script", "stat_basics.r"))
-source(here("script", "stat_ineq.r"))
-source(here("script", "stat_polagri.r"))
+source(here("script", "2A_stat_basics.r"))
+source(here("script", "2B_stat_ineq.r"))
+source(here("script", "2C_stat_polagri.r"))
 
