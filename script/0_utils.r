@@ -281,25 +281,23 @@ get_share_macro <- function(
 ) {
   z <- qnorm((1 + level) / 2)
 
-  # Domaine d'analyse éventuel
-  # Si variable qui a du sens sur l'ensemble de la pop, on ne filtre pas (ex: farm net income, les non agri ont 0
-  # Si variable qui n'a de sens que sur sous-ensemble, on filtre (ex: rendement/hectare, qui n'a pas de sens pour ceux qui n'ont pas de fermes)
+  # domaine global subset restriction
   if (!is.null(filter_var) && !is.null(filter_value)) {
-    design <- subset(
+    design_filtered <- subset(
       design,
       !is.na(design$variables[[filter_var]]) &
-        as.character(design$variables[[filter_var]]) == filter_value
+        design$variables[[filter_var]] == filter_value
     )
+  } else {
+    design_filtered <- design
   }
 
   # Niveaux de stratification
-  x <- design$variables[[strat_var]]
+  strat_levels <- unique(as.character(design_filtered$variables[[strat_var]]))
+  strat_levels <- strat_levels[!is.na(strat_levels)]
 
-  strat_levels <- unique(
-    as.character(x[!is.na(x)])
-  )
-
-  calc_share <- function(strat_level) {
+  calc_share_macro <- function(strat_level) {
+    # pas de design_sub explicite : on a besoin du design entier pour calculer la variance
     f <- stats::as.formula(
       paste0(
         "~cbind(",
@@ -318,7 +316,7 @@ get_share_macro <- function(
 
     t2 <- survey::svytotal(
       f,
-      design = design,
+      design = design_filtered,
       na.rm = TRUE
     )
     names(t2) <- c("part", "total")
@@ -350,10 +348,7 @@ get_share_macro <- function(
     )
   }
 
-  purrr::map_dfr(
-    strat_levels,
-    calc_share
-  ) |>
+  purrr::map_dfr(strat_levels, calc_share_macro) |>
     dplyr::rename(
       !!strat_var := strat_level
     )
@@ -383,25 +378,27 @@ get_ratio_macro <- function(
 ) {
   z <- qnorm((1 + level) / 2)
 
-  # subset global (domain restriction)
+  # domaine global subset restriction
   if (!is.null(filter_var) && !is.null(filter_value)) {
-    design <- subset(
+    design_filtered <- subset(
       design,
       !is.na(design$variables[[filter_var]]) &
         design$variables[[filter_var]] == filter_value
     )
+  } else {
+    design_filtered <- design
   }
 
   # strat
-  strat_levels <- unique(as.character(design$variables[[strat_var]]))
+  strat_levels <- unique(as.character(design_filtered$variables[[strat_var]]))
   strat_levels <- strat_levels[!is.na(strat_levels)]
 
-  calc_ratio <- function(strat_level) {
+  calc_ratio_macro <- function(strat_level) {
     # sous-design dynamique
     design_sub <- subset(
-      design,
-      !is.na(design$variables[[strat_var]]) &
-        as.character(design$variables[[strat_var]]) == strat_level
+      design_filtered,
+      !is.na(design_filtered$variables[[strat_var]]) &
+        as.character(design_filtered$variables[[strat_var]]) == strat_level
     )
 
     f <- stats::as.formula(
@@ -459,7 +456,7 @@ get_ratio_macro <- function(
     )
   }
 
-  purrr::map_dfr(strat_levels, calc_ratio) |>
+  purrr::map_dfr(strat_levels, calc_ratio_macro) |>
     dplyr::rename(!!strat_var := strat_var)
 }
 
@@ -480,38 +477,41 @@ get_ratio_micro <- function(
 ) {
   z <- qnorm((1 + level) / 2)
 
-  # subset global (domain restriction)
+  # domaine global subset restriction
   if (!is.null(filter_var) && !is.null(filter_value)) {
-    design <- subset(
+    design_filtered <- subset(
       design,
       !is.na(design$variables[[filter_var]]) &
         design$variables[[filter_var]] == filter_value
     )
+  } else {
+    design_filtered <- design
   }
 
   # ratio individuel
   ratio_var <- paste0(".ratio_micro_", numerator, "_", denominator)
-  design <- update(
-    design,
-    .ratio = design$variables[[numerator]] / design$variables[[denominator]]
+  design_filtered <- update(
+    design_filtered,
+    .ratio = design_filtered$variables[[numerator]] /
+      design_filtered$variables[[denominator]]
   )
 
   # protection NA Inf
-  design$variables$.ratio <- ifelse(
-    is.finite(design$variables$.ratio),
-    design$variables$.ratio,
+  design_filtered$variables$.ratio <- ifelse(
+    is.finite(design_filtered$variables$.ratio),
+    design_filtered$variables$.ratio,
     NA_real_
   )
 
   # niveaux de stratification
-  strat_levels <- unique(as.character(design$variables[[strat_var]]))
+  strat_levels <- unique(as.character(design_filtered$variables[[strat_var]]))
   strat_levels <- strat_levels[!is.na(strat_levels)]
 
   calc_ratio_micro <- function(strat_level) {
     design_sub <- subset(
-      design,
-      !is.na(design$variables[[strat_var]]) &
-        as.character(design$variables[[strat_var]]) == strat_level
+      design_filtered,
+      !is.na(design_filtered$variables[[strat_var]]) &
+        as.character(design_filtered$variables[[strat_var]]) == strat_level
     )
 
     res <- design_sub |>
@@ -548,41 +548,46 @@ get_share_micro <- function(
 ) {
   z <- qnorm((1 + level) / 2)
 
+  # domaine global subset restriction
   if (!is.null(filter_var) && !is.null(filter_value)) {
-    design <- subset(
+    design_filtered <- subset(
       design,
       !is.na(design$variables[[filter_var]]) &
         design$variables[[filter_var]] == filter_value
     )
+  } else {
+    design_filtered <- design
   }
 
   # total de la variable sur l'univers entier (dénominateur commun)
   total_universe <- survey::svytotal(
     as.formula(paste0("~", target_var)),
-    design = design,
+    design = design_filtered,
     na.rm = TRUE
   )
   total_val <- as.numeric(coef(total_universe))
 
   # share individuel = var_i / total_univers
-  design <- update(
-    design,
-    .share_micro = design$variables[[target_var]] / total_val
+  design_filtered <- update(
+    design_filtered,
+    .share_micro = design_filtered$variables[[target_var]] / total_val
   )
-  design$variables$.share_micro <- ifelse(
-    is.finite(design$variables$.share_micro),
-    design$variables$.share_micro,
+
+  # protection NA Inf
+  design_filtered$variables$.share_micro <- ifelse(
+    is.finite(design_filtered$variables$.share_micro),
+    design_filtered$variables$.share_micro,
     NA_real_
   )
 
-  strat_levels <- unique(as.character(design$variables[[strat_var]]))
+  strat_levels <- unique(as.character(design_filtered$variables[[strat_var]]))
   strat_levels <- strat_levels[!is.na(strat_levels)]
 
-  calc <- function(strat_level) {
+  calc_share_micro <- function(strat_level) {
     design_sub <- subset(
-      design,
-      !is.na(design$variables[[strat_var]]) &
-        as.character(design$variables[[strat_var]]) == strat_level
+      design_filtered,
+      !is.na(design_filtered$variables[[strat_var]]) &
+        as.character(design_filtered$variables[[strat_var]]) == strat_level
     )
 
     res <- design_sub |>
@@ -600,24 +605,404 @@ get_share_micro <- function(
     )
   }
 
-  purrr::map_dfr(strat_levels, calc) |>
+  purrr::map_dfr(strat_levels, calc_share_micro) |>
     dplyr::rename(!!strat_var := strat_var)
 }
 
 ## Wrapper functions for polagri.r ----
+### make_composition_plot ----
+make_composition_plot <- function(
+  tbl,
+  overall,
+  strat,
+  strat_lvl_with_total,
+  component_labels,
+  title,
+  subtitle,
+  caption,
+  col_pal,
+  direction,
+  cv_threshold = 0.3
+) {
+  overall_plot <- overall |>
+    mutate(!!strat := "Total")
+  colnames(overall_plot)[1] <- strat
+
+  # déciles avec au moins une composante peu fiable
+  unreliable_deciles <- tbl |>
+    mutate(cv = abs(SE / ratio)) |>
+    filter(!is.na(cv) & cv > cv_threshold) |>
+    pull(.data[[strat]]) |>
+    unique()
+
+  plot_data <- tbl |>
+    bind_rows(overall_plot) |>
+    mutate(
+      !!strat := factor(.data[[strat]], levels = strat_lvl_with_total),
+      component = factor(
+        component,
+        levels = names(component_labels),
+        labels = component_labels
+      )
+    )
+
+  label_data <- plot_data |>
+    filter(ratio > 5) |>
+    group_by(.data[[strat]]) |>
+    arrange(.data[[strat]], as.integer(component)) |>
+    mutate(
+      y_mid = 100 - (cumsum(ratio) - ratio / 2) # milieu de chaque segment empilé
+    ) |>
+    ungroup()
+
+  p <- ggplot(
+    plot_data,
+    aes(x = .data[[strat]], y = ratio, fill = component)
+  ) +
+    geom_col(width = 0.7, alpha = 0.8, color = "white") +
+    # geom_label(
+    #   data = data.frame(x = unreliable_deciles, y = Inf),
+    #   aes(x = x, y = y, label = "*"),
+    #   vjust = 1.5,
+    #   color = "grey40",
+    #   fill = "white",
+    #   linewidth = 0.15,
+    #   size = 5,
+    #   inherit.aes = FALSE
+    # ) +
+    geom_label(
+      data = label_data,
+      aes(x = .data[[strat]], y = y_mid, label = paste0(round(ratio, 1), "%")),
+      color = "black",
+      fill = "white",
+      linewidth = 0.15, # épaisseur du bord du rectangle
+      size = 3.8,
+      fontface = "bold"
+    ) +
+    # geom_text(
+    #   aes(label = ifelse(ratio > 5, paste0(round(ratio, 1), "%"), "")),
+    #   position = position_stack(vjust = 0.5),
+    #   color = "white",
+    #   size = 3.5
+    # ) +
+    geom_vline(xintercept = 10.5, linetype = "dashed", color = "grey50") +
+    scale_fill_viridis_d(
+      option = col_pal,
+      direction = direction,
+      name = "Component"
+    ) +
+    scale_y_continuous(
+      expand = expansion(mult = c(0, 0.02)),
+      labels = percent_format(scale = 1)
+    ) +
+    labs(
+      title = title,
+      subtitle = subtitle,
+      x = "Income decile",
+      y = "%",
+      caption = str_c(
+        caption,
+        if (length(unreliable_deciles) > 0) {
+          paste0(
+            "* Decile(s) ",
+            paste(unreliable_deciles, collapse = ", "),
+            " have at least one component with CV > ",
+            cv_threshold * 100,
+            "% — full bar unreliable, interpret with caution."
+          )
+        } else {
+          NULL
+        },
+        sep = "\n"
+      )
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA),
+      legend.position = "right",
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      panel.grid.major.x = element_blank(),
+      plot.title = element_text(face = "bold"),
+      plot.subtitle = element_text(size = 12, face = "italic"),
+      plot.caption = element_text(size = 10)
+    )
+
+  # overlay gris sur les déciles peu fiables et astérisque sur les labels
+  if (length(unreliable_deciles) > 0) {
+    unreliable_positions <- which(
+      levels(plot_data[[strat]]) %in% as.character(unreliable_deciles)
+    )
+    p <- p +
+      annotate(
+        "rect",
+        xmin = unreliable_positions - 0.5,
+        xmax = unreliable_positions + 0.5,
+        ymin = -Inf,
+        ymax = Inf,
+        fill = "grey80",
+        alpha = 0.4
+      ) +
+      geom_label(
+        data = data.frame(x = unreliable_deciles, y = Inf),
+        aes(x = x, y = y, label = "*"),
+        vjust = 1.5,
+        color = "grey40",
+        fill = "white",
+        linewidth = 0.15,
+        size = 5,
+        inherit.aes = FALSE
+      )
+  }
+
+  p
+}
+
+### run_composition_analysis ----
+run_composition_analysis <- function(
+  design,
+  d,
+  estimators = c("macro", "micro"),
+  components,
+  component_labels,
+  den,
+  strat,
+  universes, # list of list(universe, filter)
+  basename,
+  title_macro,
+  title_micro,
+  caption_macro,
+  caption_micro,
+  col_pal = "cividis",
+  direction = 1,
+  cv_threshold = 0.3,
+  debug = FALSE
+) {
+  for (estimator in estimators) {
+    estimator_fn <- if (estimator == "macro") {
+      get_ratio_macro
+    } else {
+      get_ratio_micro
+    }
+    title <- if (estimator == "macro") title_macro else title_micro
+    caption_base <- if (estimator == "macro") caption_macro else caption_micro
+    name <- str_c(estimator, "_", basename)
+
+    for (u in universes) {
+      universe <- u$universe
+      filter <- u$filter
+      suffix <- if (is.null(filter)) "total" else str_remove(filter, ".*_")
+      subtitle <- str_c(
+        "Universe: ",
+        if (is.null(filter)) "total population" else filter
+      )
+
+      # --- calcul déciles ---
+      tbl <- map_dfr(names(components), function(comp_name) {
+        estimator_fn(
+          design = design,
+          numerator = components[[comp_name]],
+          denominator = den,
+          strat_var = strat,
+          filter_var = universe,
+          filter_value = filter
+        ) |>
+          mutate(component = comp_name)
+      }) |>
+        mutate(across(c(ratio, SE, IC_low, IC_high), ~ round(. * 100, 2)))
+
+      strat_lvl <- levels(as.factor(d[[strat]]))
+      strat_lvl_with_total <- c(strat_lvl, "Total")
+
+      tbl <- tbl |>
+        mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
+        arrange(.data[[strat]])
+
+      # --- calcul overall ---
+      overall <- map_dfr(names(components), function(comp_name) {
+        if (is.null(universe)) {
+          design_tmp <- update(design, .total = "Total")
+          estimator_fn(
+            design = design_tmp,
+            numerator = components[[comp_name]],
+            denominator = den,
+            strat_var = ".total"
+          ) |>
+            mutate(component = comp_name)
+        } else {
+          estimator_fn(
+            design = design,
+            numerator = components[[comp_name]],
+            denominator = den,
+            strat_var = universe,
+            filter_var = universe,
+            filter_value = filter
+          ) |>
+            mutate(component = comp_name)
+        }
+      }) |>
+        mutate(across(c(ratio, SE, IC_low, IC_high), ~ round(. * 100, 2)))
+      colnames(overall)[1] <- colnames(tbl)[1]
+
+      custom_save(bind_rows(tbl, overall), str_c(name, "_", suffix))
+
+      # juste avant l'appel à make_composition_plot
+      if (debug) {
+        assign("tbl", tbl, envir = .GlobalEnv)
+        assign("overall", overall, envir = .GlobalEnv)
+        assign("strat", strat, envir = .GlobalEnv)
+        assign(
+          "strat_lvl_with_total",
+          strat_lvl_with_total,
+          envir = .GlobalEnv
+        )
+        assign("title", title, envir = .GlobalEnv)
+        assign("subtitle", subtitle, envir = .GlobalEnv)
+        assign("caption", caption_base, envir = .GlobalEnv)
+        message(
+          "Debug objects assigned to global env: tbl, overall, ..."
+        )
+        return(invisible(NULL)) # stoppe après le premier itéré
+      }
+      # --- plot ---
+      plot <- make_composition_plot(
+        tbl = tbl,
+        overall = overall,
+        strat = strat,
+        strat_lvl_with_total = strat_lvl_with_total,
+        component_labels = component_labels,
+        title = title,
+        subtitle = subtitle,
+        caption = caption_base,
+        col_pal = col_pal,
+        direction = direction,
+        cv_threshold = cv_threshold
+      )
+      print(plot)
+      custom_save(plot, str_c("plot_", name, "_", suffix), type = "fig")
+    }
+  }
+}
 ### make_plot function ----
 
+# make_decile_plot <- function(
+#   tbl, # tibble retourné par get_ratio_macro, get_ratio_micro, etc.
+#   overall, # tibble retourné par la même fn sur l'ensemble
+#   strat_var, # nom de la colonne de stratification
+#   value_col, # "ratio" ou "share"
+#   col_above,
+#   col_below,
+#   col_overall,
+#   title,
+#   subtitle,
+#   caption
+# ) {
+#   tbl <- tbl |>
+#     mutate(
+#       above_mean = ifelse(
+#         .data[[value_col]] >= overall[[value_col]],
+#         "Above",
+#         "Below"
+#       )
+#     )
+#   # ,
+#   #     across(c(all_of(value_col), SE, IC_low, IC_high), ~ round(. * 100, 2))
+#   #   )
+#   # overall <- overall |>
+#   #   mutate(across(
+#   #     c(all_of(value_col), SE, IC_low, IC_high),
+#   #     ~ round(. * 100, 2)
+#   #   ))
+#   #
+#   ggplot(
+#     tbl,
+#     aes(x = .data[[strat_var]], y = .data[[value_col]], fill = above_mean)
+#   ) +
+#     annotate(
+#       "rect",
+#       xmin = 0.5,
+#       xmax = 10.5,
+#       ymin = overall$IC_low,
+#       ymax = overall$IC_high,
+#       fill = col_overall,
+#       alpha = 0.15
+#     ) +
+#     geom_col(width = 0.7, alpha = 0.9, color = "white") +
+#     geom_errorbar(
+#       aes(ymin = IC_low, ymax = IC_high),
+#       width = 0.2,
+#       color = "grey30"
+#     ) +
+#     geom_text(
+#       aes(label = paste0(round(.data[[value_col]], 1), "%")),
+#       vjust = 1.5,
+#       color = "white",
+#       size = 3.8,
+#       fontface = "bold"
+#     ) +
+#     geom_smooth(
+#       aes(group = 1, fill = NULL),
+#       method = "loess",
+#       se = FALSE,
+#       color = "black",
+#       linewidth = 0.8,
+#       linetype = "dashed"
+#     ) +
+#     geom_hline(
+#       yintercept = overall[[value_col]],
+#       color = col_overall,
+#       linetype = "dotted",
+#       linewidth = 0.8
+#     ) +
+#     geom_label(
+#       data = data.frame(x = "D9", y = overall[[value_col]] + 1.2),
+#       aes(
+#         x = x,
+#         y = y,
+#         label = paste0("Overall: ", round(overall[[value_col]], 1), "%")
+#       ),
+#       inherit.aes = FALSE,
+#       fill = "white",
+#       color = col_overall,
+#       linewidth = 0.2,
+#       size = 3.8
+#     ) +
+#     scale_fill_manual(
+#       values = c("Above" = col_above, "Below" = col_below),
+#       name = "Comparison to overall ratio"
+#     ) +
+#     scale_y_continuous(
+#       expand = expansion(mult = c(0, 0.05)),
+#       labels = percent_format(scale = 1)
+#     ) +
+#     labs(
+#       title = title,
+#       subtitle = subtitle,
+#       x = "Income decile",
+#       y = "%",
+#       caption = caption
+#     ) +
+#     theme_minimal(base_size = 14) +
+#     theme(
+#       axis.text.x = element_text(size = 11),
+#       panel.grid.major.x = element_blank(),
+#       plot.title = element_text(face = "bold"),
+#       plot.subtitle = element_text(face = "italic"),
+#       plot.caption = element_text(size = 10)
+#     )
+# }
 make_decile_plot <- function(
-  tbl, # tibble retourné par get_ratio_macro, get_ratio_micro, etc.
-  overall, # tibble retourné par la même fn sur l'ensemble
-  strat_var, # nom de la colonne de stratification
-  value_col, # "ratio" ou "share"
+  tbl,
+  overall,
+  strat_var,
+  value_col,
   col_above,
   col_below,
   col_overall,
   title,
   subtitle,
-  caption
+  caption,
+  cv_threshold = 0.3 # déciles avec SE/ratio > seuil sont grisés et marqués
 ) {
   tbl <- tbl |>
     mutate(
@@ -625,21 +1010,27 @@ make_decile_plot <- function(
         .data[[value_col]] >= overall[[value_col]],
         "Above",
         "Below"
-      )
+      ),
+      cv = abs(SE / .data[[value_col]]),
+      unreliable = !is.na(cv) & cv > cv_threshold,
+      fill_var = ifelse(unreliable, "Unreliable", above_mean)
     )
-  # ,
-  #     across(c(all_of(value_col), SE, IC_low, IC_high), ~ round(. * 100, 2))
-  #   )
-  # overall <- overall |>
-  #   mutate(across(
-  #     c(all_of(value_col), SE, IC_low, IC_high),
-  #     ~ round(. * 100, 2)
-  #   ))
-  #
+
   ggplot(
     tbl,
-    aes(x = .data[[strat_var]], y = .data[[value_col]], fill = above_mean)
+    aes(x = .data[[strat_var]], y = .data[[value_col]], fill = fill_var)
   ) +
+    # background blanc
+    theme_minimal(base_size = 14) +
+    theme(
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA),
+      axis.text.x = element_text(size = 11),
+      panel.grid.major.x = element_blank(),
+      plot.title = element_text(face = "bold"),
+      plot.subtitle = element_text(face = "italic"),
+      plot.caption = element_text(size = 10)
+    ) +
     annotate(
       "rect",
       xmin = 0.5,
@@ -655,12 +1046,30 @@ make_decile_plot <- function(
       width = 0.2,
       color = "grey30"
     ) +
-    geom_text(
+    # label % en noir, fond blanc
+    geom_label(
       aes(label = paste0(round(.data[[value_col]], 1), "%")),
       vjust = 1.5,
-      color = "white",
+      color = "black",
+      fill = "white",
+      linewidth = 0.15, # épaisseur du bord du rectangle
       size = 3.8,
       fontface = "bold"
+    ) +
+    # astérisque pour les déciles peu fiables
+    geom_label(
+      data = filter(tbl, unreliable),
+      aes(
+        x = .data[[strat_var]],
+        y = .data[[value_col]],
+        label = "*"
+      ),
+      vjust = -0.5,
+      color = "grey40",
+      fill = "white",
+      linewidth = 0.15,
+      size = 5,
+      inherit.aes = FALSE
     ) +
     geom_smooth(
       aes(group = 1, fill = NULL),
@@ -690,8 +1099,14 @@ make_decile_plot <- function(
       size = 3.8
     ) +
     scale_fill_manual(
-      values = c("Above" = col_above, "Below" = col_below),
-      name = "Comparison to overall ratio"
+      values = c(
+        "Above" = col_above,
+        "Below" = col_below,
+        "Unreliable" = "grey70"
+      ),
+      name = "Comparison to overall ratio",
+      # on masque "Unreliable" de la légende, l'astérisque suffit
+      breaks = c("Above", "Below")
     ) +
     scale_y_continuous(
       expand = expansion(mult = c(0, 0.05)),
@@ -702,15 +1117,15 @@ make_decile_plot <- function(
       subtitle = subtitle,
       x = "Income decile",
       y = "%",
-      caption = caption
-    ) +
-    theme_minimal(base_size = 14) +
-    theme(
-      axis.text.x = element_text(size = 11),
-      panel.grid.major.x = element_blank(),
-      plot.title = element_text(face = "bold"),
-      plot.subtitle = element_text(face = "italic"),
-      plot.caption = element_text(size = 10)
+      caption = str_c(
+        caption,
+        paste0(
+          "* CV > ",
+          cv_threshold * 100,
+          "%: estimate unreliable, interpret with caution."
+        ),
+        sep = "\n"
+      )
     )
 }
 

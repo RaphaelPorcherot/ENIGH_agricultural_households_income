@@ -86,8 +86,8 @@ n_credito_gan,numeric,AGRO;NOAGRO,,Crédito Ganadero a la Palabra (TOTAL = _agro
 n_credito_gan_agro,numeric,AGRO,,received for agricultural activities
 n_credito_gan_noagro,numeric,NOAGRO,,received for non-agricultural activities
 n_desarollo_rur,numeric,AGRO;NOAGRO,,Desarrollo Rural (TOTAL = _agro + _noagro)
-n_desarollo_rur_agro,numeric,AGRO,,received for agricultural activities
-n_desarollo_rur_noagro,numeric,NOAGRO,,received for non-agricultural activities
+n_desarollo_rur_agro,numeric,AGRO,,Desarrollo Rural received for agricultural activities
+n_desarollo_rur_noagro,numeric,NOAGRO,,Desarrollo Rural received for non-agricultural activities
 n_estim_alqu,numeric,CONCENTRADOHOGAR,,imputed rent from owner-occupied housing
 n_fni_agro,numeric,AGRO,,"household's farm net income (from ing_tri, ero_tri, support, that is with all non-repayable support policies)"
 n_fni_agro_clean,numeric,AGRO,,same as n_fni_agro but no negative income
@@ -111,7 +111,7 @@ n_otros_ing_bundled,numeric,CONCENTRADOHOGAR,,sum of n_rentas + n_estim_alqu + n
 n_otros_prog,numeric,AGRO;NOAGRO,,Otros programas sociales (TOTAL = _agro + _noagro in NEW policies)
 n_otros_prog_agro,numeric,AGRO,,Otros programas sociales (in NEW policies) received for agricultural activities
 n_otros_prog_noagro,numeric,NOAGRO,,Otros programas sociales (in NEW policies) received for non-agricultural activities
-n_otros_trab,numeric,,,Other income from dependant labour 
+n_otros_trab,numeric,,,Other income from dependant labour
 n_precios_gar,numeric,AGRO;NOAGRO,,Precios de Garantía a Productos Alimentarios Básicos (TOTAL = _agro + _noagro)
 n_precios_gar_agro,numeric,AGRO,,Precios de Garantía a Productos Alimentarios Básicos received for agricultural activities
 n_precios_gar_noagro,numeric,NOAGRO,,Precios de Garantía a Productos Alimentarios Básicos received for non-agricultural activities
@@ -130,4 +130,5 @@ n_tand_bien,numeric,AGRO;NOAGRO,,Tandas para el Bienestar (Microcréditos para e
 n_tand_bien_agro,numeric,AGRO,,Tandas para el Bienestar (Microcréditos para el Bienestar) received for agricultural activities
 n_tand_bien_noagro,numeric,NOAGRO,,Tandas para el Bienestar (Microcréditos para el Bienestar) received for non-agricultural activities
 n_trabajo,numeric,CONCENTRADOHOGAR,,household's labour income from wage labour (sum over all members)
+n_trabajo_bundled,numeric,CONCENTRADOHOGAR,,sum of n_trabajo and n_otros_trab : all labour income including both primary and secondary dependent activities
 n_transfer,numeric,CONCENTRADOHOGAR,,household's social and private transfers

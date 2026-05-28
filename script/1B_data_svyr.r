@@ -63,7 +63,9 @@ d <- d |>
 
     n_is_loc_rural = if_else(tam_loc == 4, "rural", "not_rural"),
     # create a new group for other sources of income
-    n_otros_ing_bundled = n_rentas + n_estim_alqu + n_otros_ing
+    n_otros_ing_bundled = n_rentas + n_estim_alqu + n_otros_ing,
+    # same for n_trabajo and otros_trab (secondary labour income) in order to avoid non significant decile
+    n_trabajo_bundled = n_trabajo + n_otros_trab
   ) |>
   # creating sorting variable using clean version of n_fni and n_ingr_noagr
   mutate(
@@ -455,7 +457,7 @@ mysvyr <- mysvyr |>
 ## (we should not be doing any further changes now)
 
 d <- mysvyr$variables
-custom_save(d, "_main_database")
+custom_save(d, "0_main_database_for_analysis", type = "data")
 
 # UPDATE NEW VARIABLE DICTIONARY (append new variables if needed) ----
 
