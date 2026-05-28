@@ -50,7 +50,7 @@ source(here("script", "0_utils.r"))
 source(here("script", "1A_data_prep.r"))
 source(here("script", "1B_data_svyr.r"))
 
-# PART 2 : STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO ---- 
+# PART 2 : STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO ----
 
 #WARN : when we compute the ratio or the share etc it is always a macro value for the aggragated (agri) household in a given decile
 #The aggregate share is substantially lower than the average household ratio, reflecting strong heterogeneity in farm size and a negative correlation between production scale and self-consumption
@@ -62,16 +62,33 @@ source(here("script", "1B_data_svyr.r"))
 # forte corrélation négative entre taille et autoconsommation
 # structure duale agriculture (subsistence vs commercial)
 
-#TODO : regarde la part des vieux programmes agricoles dans le revenu agricole total par décile (sauf que les déciles varient lorsque cette part varie)
-#TODO : decile cut off point rajouter smg as line
-#TODO:: actually lets compute please a real relative poverty line
 #TODO : now that we have corrected the weird D10 deciles starts with farm dual's structure and review the comment and noe.
-#TODO : compute the contrafactural income distribution that would be the case w/o support or w/o new support or w/o new direct support
-#TODO : compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
-#TODO:: LORENZ CURVE mettre tous sur un seul graphique: overall pop : agri_broad / non agri / sen_agri / non_sen_agri
-#TODO: reprendre get_proportion, utilisé pour la description des houeseholds et pour turnover / production type pour les fermes 
+
+#TODO : decile cut off point rajouter smg as line. actually lets compute please a real relative poverty line
+
+#TODO: les intervalles de confiance sont peut etre trop grand pour savoir combien précisément mais on peut savoir si relativement certains déciles ont plus que d'autres : si les intervalles de confiance ne sont pas superposés
+# pour aller dans cette direction :
+# * refaire compo avec un nombre réduit de modalités pour nvo_tot
+# * faire pour la modalité principale d'intérêt get_ratio (on y voit les intervalles)
+
+# TODO:get_share
+# share of new social program, old social program, other social program, total social program by income decile
+
+# TODO: get_ratio
+# ratio de new social program, old social program, other social program, total social program by income decile in n_fni
+# on a DEJA fait support in n_fni
+
+#TODO: get_proportion / get_number
+# reprendre get_proportion, utilisé pour la description des houeseholds et pour turnover / production type pour les fermes
+# nb of farm by turnover across decile
+# household by jefe edad median 
+# household by jefe sexo
+
+#TODO::LORENZ CURVE
+# mettre tous sur un seul graphique: overall pop : agri_broad / non agri / sen_agri / non_sen_agri
+# compute the contrafactural income distribution that would be the case w/o support or w/o new support or w/o new direct support
+# compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
 
 source(here("script", "2A_stat_basic.r"))
 source(here("script", "2B_stat_ineq.r"))
 source(here("script", "2C_stat_polagri.r"))
-

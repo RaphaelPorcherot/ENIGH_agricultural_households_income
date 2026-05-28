@@ -1,4 +1,6 @@
 # ASSESSING THE EFFECTIVENES OF AGRICULTURAL POLICIES
+
+
 # Set basename and graphical parameters ----
 
 basenames <- c(
@@ -570,6 +572,8 @@ run_composition_analysis(
 # )
 
 ## of all support from new policies to agriculture by decile ----
+
+#TODO: try to use the same colors than the one before, witho onyl two more item 
 
 #FORMULA:
 # nvo_tot = sembr_vida +
