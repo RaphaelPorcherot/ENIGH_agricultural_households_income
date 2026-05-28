@@ -610,6 +610,70 @@ get_share_micro <- function(
 }
 
 ## Wrapper functions for polagri.r ----
+### get_col_pal to connect compo and share/ratio analysis ----
+
+get_col_pal <- function(n, col_pal, direction, begin, end) {
+  viridisLite::viridis(
+    n = n,
+    option = col_pal,
+    direction = direction,
+    begin = begin,
+    end = end
+  )
+}
+shift_hue <- function(col, deg = 15) {
+  x <- hex2RGB(col) |>
+    as("polarLUV")
+  x@coords[, "H"] <- (x@coords[, "H"] + deg) %% 360
+  # x@coords[, "H"] <- x@coords[, "H"] + deg
+  hex(x)
+}
+adaptive_transform <- function(col, transform) {
+  hcl <- as(hex2RGB(col), "polarLUV")
+  L <- hcl@coords[, "L"]
+  if (transform == 0) {
+    return(desaturate(col, .35))
+  }
+  if (transform == 2) {
+    # hue shift léger
+    hcl@coords[, "H"] <- hcl@coords[, "H"] + 12
+    # couleurs claires : assombrir un peu
+    if (L > 70) {
+      hcl@coords[, "L"] <- L - 8
+    }
+    # couleurs sombres : éclaircir un peu
+    if (L < 40) {
+      hcl@coords[, "L"] <- L + 6
+    }
+    return(hex(hcl))
+  }
+  if (transform == 3) {
+    # jouer sur chroma plutôt que luminance
+    hcl@coords[, "C"] <- hcl@coords[, "C"] * .8
+    return(hex(hcl))
+  }
+  col
+}
+### set attribute ---- 
+
+set_attribute <- function(basename) {
+  x <- dict |>
+    filter(base == basename)
+
+  type <- x$type[[1]]
+
+  if (type == "ratio") {
+    assign("num", x$target_or_num[[1]], envir = .GlobalEnv)
+    assign("den", x$den[[1]], envir = .GlobalEnv)
+  } else {
+    assign("target", x$target_or_num[[1]], envir = .GlobalEnv)
+  }
+
+  assign("strat", x$strat[[1]], envir = .GlobalEnv)
+  assign("col_below", x$below[[1]], envir = .GlobalEnv)
+  assign("col_above", x$above[[1]], envir = .GlobalEnv)
+}
+
 ### make_composition_plot ----
 make_composition_plot <- function(
   tbl,
@@ -622,7 +686,10 @@ make_composition_plot <- function(
   caption,
   col_pal,
   direction,
-  cv_threshold = 0.3
+  begin,
+  end,
+  cv_threshold = 0.3,
+  debug_inner = FALSE
 ) {
   overall_plot <- overall |>
     mutate(!!strat := "Total")
@@ -655,21 +722,18 @@ make_composition_plot <- function(
     ) |>
     ungroup()
 
+  if (debug_inner) {
+    assign("plot_data", plot_data, envir = .GlobalEnv)
+    assign("label_data", label_data, envir = .GlobalEnv)
+    assign("unreliable_deciles", unreliable_deciles, envir = .GlobalEnv)
+    message("Inner debug objects assigned")
+  }
+
   p <- ggplot(
     plot_data,
     aes(x = .data[[strat]], y = ratio, fill = component)
   ) +
     geom_col(width = 0.7, alpha = 0.8, color = "white") +
-    # geom_label(
-    #   data = data.frame(x = unreliable_deciles, y = Inf),
-    #   aes(x = x, y = y, label = "*"),
-    #   vjust = 1.5,
-    #   color = "grey40",
-    #   fill = "white",
-    #   linewidth = 0.15,
-    #   size = 5,
-    #   inherit.aes = FALSE
-    # ) +
     geom_label(
       data = label_data,
       aes(x = .data[[strat]], y = y_mid, label = paste0(round(ratio, 1), "%")),
@@ -679,16 +743,12 @@ make_composition_plot <- function(
       size = 3.8,
       fontface = "bold"
     ) +
-    # geom_text(
-    #   aes(label = ifelse(ratio > 5, paste0(round(ratio, 1), "%"), "")),
-    #   position = position_stack(vjust = 0.5),
-    #   color = "white",
-    #   size = 3.5
-    # ) +
     geom_vline(xintercept = 10.5, linetype = "dashed", color = "grey50") +
     scale_fill_viridis_d(
       option = col_pal,
       direction = direction,
+      begin = begin,
+      end = end,
       name = "Component"
     ) +
     scale_y_continuous(
@@ -755,6 +815,11 @@ make_composition_plot <- function(
       )
   }
 
+  if (debug_inner) {
+    assign("plot", plot, envir = .GlobalEnv)
+    message("plot objects assigned")
+  }
+
   p
 }
 
@@ -775,8 +840,11 @@ run_composition_analysis <- function(
   caption_micro,
   col_pal = "cividis",
   direction = 1,
+  begin = 0,
+  end = 1,
   cv_threshold = 0.3,
-  debug = FALSE
+  debug_outer = FALSE,
+  debug_inner = FALSE
 ) {
   for (estimator in estimators) {
     estimator_fn <- if (estimator == "macro") {
@@ -847,7 +915,7 @@ run_composition_analysis <- function(
       custom_save(bind_rows(tbl, overall), str_c(name, "_", suffix))
 
       # juste avant l'appel à make_composition_plot
-      if (debug) {
+      if (debug_outer) {
         assign("tbl", tbl, envir = .GlobalEnv)
         assign("overall", overall, envir = .GlobalEnv)
         assign("strat", strat, envir = .GlobalEnv)
@@ -876,121 +944,43 @@ run_composition_analysis <- function(
         caption = caption_base,
         col_pal = col_pal,
         direction = direction,
-        cv_threshold = cv_threshold
+        begin = begin,
+        end = end,
+        cv_threshold = cv_threshold,
+        debug_inner = debug_inner
       )
       print(plot)
       custom_save(plot, str_c("plot_", name, "_", suffix), type = "fig")
     }
   }
+
+  comp_vars <- unlist(components, use.names = FALSE)
+  col_pal <- get_col_pal(
+    n = length(comp_vars),
+    col_pal = col_pal,
+    direction = direction,
+    begin = begin,
+    end = end
+  )
+  cols <- tibble(
+    var = comp_vars,
+    col = col_pal
+  )
+
+  message("\n----------------------------------")
+  message("Composition analysis for: ", den)
+  message("Saved colors:")
+  message("----------------------------------")
+
+  for (i in seq_along(col_pal)) {
+    message(cols[i, 1], " -> ", cols[i, 2])
+  }
+  message("\nAdded to list_cols")
+  cols
 }
+
 ### make_plot function ----
 
-# make_decile_plot <- function(
-#   tbl, # tibble retourné par get_ratio_macro, get_ratio_micro, etc.
-#   overall, # tibble retourné par la même fn sur l'ensemble
-#   strat_var, # nom de la colonne de stratification
-#   value_col, # "ratio" ou "share"
-#   col_above,
-#   col_below,
-#   col_overall,
-#   title,
-#   subtitle,
-#   caption
-# ) {
-#   tbl <- tbl |>
-#     mutate(
-#       above_mean = ifelse(
-#         .data[[value_col]] >= overall[[value_col]],
-#         "Above",
-#         "Below"
-#       )
-#     )
-#   # ,
-#   #     across(c(all_of(value_col), SE, IC_low, IC_high), ~ round(. * 100, 2))
-#   #   )
-#   # overall <- overall |>
-#   #   mutate(across(
-#   #     c(all_of(value_col), SE, IC_low, IC_high),
-#   #     ~ round(. * 100, 2)
-#   #   ))
-#   #
-#   ggplot(
-#     tbl,
-#     aes(x = .data[[strat_var]], y = .data[[value_col]], fill = above_mean)
-#   ) +
-#     annotate(
-#       "rect",
-#       xmin = 0.5,
-#       xmax = 10.5,
-#       ymin = overall$IC_low,
-#       ymax = overall$IC_high,
-#       fill = col_overall,
-#       alpha = 0.15
-#     ) +
-#     geom_col(width = 0.7, alpha = 0.9, color = "white") +
-#     geom_errorbar(
-#       aes(ymin = IC_low, ymax = IC_high),
-#       width = 0.2,
-#       color = "grey30"
-#     ) +
-#     geom_text(
-#       aes(label = paste0(round(.data[[value_col]], 1), "%")),
-#       vjust = 1.5,
-#       color = "white",
-#       size = 3.8,
-#       fontface = "bold"
-#     ) +
-#     geom_smooth(
-#       aes(group = 1, fill = NULL),
-#       method = "loess",
-#       se = FALSE,
-#       color = "black",
-#       linewidth = 0.8,
-#       linetype = "dashed"
-#     ) +
-#     geom_hline(
-#       yintercept = overall[[value_col]],
-#       color = col_overall,
-#       linetype = "dotted",
-#       linewidth = 0.8
-#     ) +
-#     geom_label(
-#       data = data.frame(x = "D9", y = overall[[value_col]] + 1.2),
-#       aes(
-#         x = x,
-#         y = y,
-#         label = paste0("Overall: ", round(overall[[value_col]], 1), "%")
-#       ),
-#       inherit.aes = FALSE,
-#       fill = "white",
-#       color = col_overall,
-#       linewidth = 0.2,
-#       size = 3.8
-#     ) +
-#     scale_fill_manual(
-#       values = c("Above" = col_above, "Below" = col_below),
-#       name = "Comparison to overall ratio"
-#     ) +
-#     scale_y_continuous(
-#       expand = expansion(mult = c(0, 0.05)),
-#       labels = percent_format(scale = 1)
-#     ) +
-#     labs(
-#       title = title,
-#       subtitle = subtitle,
-#       x = "Income decile",
-#       y = "%",
-#       caption = caption
-#     ) +
-#     theme_minimal(base_size = 14) +
-#     theme(
-#       axis.text.x = element_text(size = 11),
-#       panel.grid.major.x = element_blank(),
-#       plot.title = element_text(face = "bold"),
-#       plot.subtitle = element_text(face = "italic"),
-#       plot.caption = element_text(size = 10)
-#     )
-# }
 make_decile_plot <- function(
   tbl,
   overall,

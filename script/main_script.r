@@ -24,6 +24,7 @@ library(ggtext) # Improved text rendering in ggplot2 (markdown, HTML)
 library(ggridges) # for joyplot https://r-charts.com/distribution/ggridges/
 library(scales) # for label_number function
 library(RColorBrewer)
+library(colorspace)
 library(viridis) # Perceptually uniform color palettes for ggplot2
 library(glue) # String interpolation (clean and readable text construction)
 library(ggplot2)
@@ -71,10 +72,10 @@ source(here("script", "1B_data_svyr.r"))
 # * refaire compo avec un nombre réduit de modalités pour nvo_tot
 # * faire pour la modalité principale d'intérêt get_ratio (on y voit les intervalles)
 
-# TODO:get_share
+#TODO:get_share
 # share of new social program, old social program, other social program, total social program by income decile
 
-# TODO: get_ratio
+#TODO: get_ratio
 # ratio de new social program, old social program, other social program, total social program by income decile in n_fni
 # on a DEJA fait support in n_fni
 
