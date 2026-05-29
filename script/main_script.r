@@ -38,6 +38,7 @@ options(scipen = 999)
 theme_gtsummary_language(
   language = "en"
 )
+
 # FUNCTIONS ----
 
 source(here("script", "0_utils.r"))
@@ -64,32 +65,219 @@ source(here("script", "1B_data_svyr.r"))
 # structure duale agriculture (subsistence vs commercial)
 
 #TODO : now that we have corrected the weird D10 deciles starts with farm dual's structure and review the comment and noe.
-
 #TODO : decile cut off point rajouter smg as line. actually lets compute please a real relative poverty line
-
 #TODO: les intervalles de confiance sont peut etre trop grand pour savoir combien précisément mais on peut savoir si relativement certains déciles ont plus que d'autres : si les intervalles de confiance ne sont pas superposés
 # pour aller dans cette direction :
 # * refaire compo avec un nombre réduit de modalités pour nvo_tot
 # * faire pour la modalité principale d'intérêt get_ratio (on y voit les intervalles)
-
-#TODO:get_share
-# share of new social program, old social program, other social program, total social program by income decile
-
-#TODO: get_ratio
-# ratio de new social program, old social program, other social program, total social program by income decile in n_fni
-# on a DEJA fait support in n_fni
+#TODO: améliorer la détection des déciles significativement différents de la référence
+# Actuellement : unreliable = CV > cv_threshold (fiabilité de l'estimation seulement)
+# Ne répond pas à : "est-ce que le décile est significativement différent de la référence ?"
+# Pistes par cas :
+#   - ratio macro/micro   : test de différence décile vs overall via delta method
+#                           (chevauchement des IC est approximatif mais rapide)
+#   - macro_share         : nécessite d'abord d'ajouter des IC à ref_share_k dans
+#                           get_share_macro_overall (ratio de totaux pondérés → delta method dispo)
+#                           puis test de différence share_k vs ref_share_k
+#   - micro_share         : overall a déjà un IC (svymean) → test de différence directement faisable
+# Implémentation suggérée : ajouter un flag `significant` dans tbl en plus de `unreliable`,
+# et adapter fill_var dans make_decile_plot pour distinguer
+# "above/below significant" vs "above/below non-significant"
 
 #TODO: get_proportion / get_number
 # reprendre get_proportion, utilisé pour la description des houeseholds et pour turnover / production type pour les fermes
 # nb of farm by turnover across decile
-# household by jefe edad median 
+# household by jefe edad median
 # household by jefe sexo
 
-#TODO::LORENZ CURVE
+#TODO: LORENZ CURVE
 # mettre tous sur un seul graphique: overall pop : agri_broad / non agri / sen_agri / non_sen_agri
 # compute the contrafactural income distribution that would be the case w/o support or w/o new support or w/o new direct support
 # compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
 
 source(here("script", "2A_stat_basic.r"))
 source(here("script", "2B_stat_ineq.r"))
-source(here("script", "2C_stat_polagri.r"))
+source(here("script", "2C_stat_comp_analysis.r"))
+
+## Visually connect composition and ratio/share by setting graphical parameters ----
+### create dictionnary of plot ----
+
+dict_raw <- tibble(
+  base = c(
+    # of income by decile
+    "share_n_fni_agro_clean_decile",
+    # of support to agriculture in decile
+    "share_support_agro_decile",
+    "share_nvo_npago_agro_decile",
+    "share_n_pro_agrogan_agro_decile",
+    "share_n_apoyo_npago_agro_decile",
+    # of support from new policies to agriculture by decile
+    "share_n_sembr_vida_agro_decile",
+    # of all transfers (bundled as npago et pago) from new policies to agriculture by decile
+    "share_n_nvo_pago_agro_decile",
+    # self consumption agro
+    "ratio_autocons1_size_val1_agro_decile",
+    "ratio_n_fni_agro_size_val1_decile",
+    "ratio_n_fni_agro_n_ftr1_decile",
+    "ratio_n_fni_agro_n_ing_cor_decile",
+
+    "ratio_support_ing_cor_decile",
+    "ratio_support_ftr1_decile",
+    "ratio_support_fni_decile"
+  ),
+  type = NA_character_,
+  target_or_num = c(
+    "n_fni_agro_clean",
+
+    "n_support_agro",
+    "n_nvo_npago_agro",
+    "n_pro_agrogan_agro",
+    "n_apoyo_npago_agro",
+
+    "n_sembr_vida_agro",
+
+    "n_nvo_pago_agro",
+
+    "n_autoconsumo1_agro",
+    "n_fni_agro_clean",
+    "n_fni_agro_clean",
+    "n_fni_agro_clean",
+    "n_support_agro",
+    "n_support_agro",
+    "n_support_agro"
+  ),
+  den = c(
+    "self",
+
+    "self",
+    "self",
+    "self",
+    "self",
+
+    "self",
+
+    "self",
+
+    "n_size_val1_agro",
+    "n_size_val1_agro",
+    "n_ftr1_agro",
+    "n_ing_cor_clean",
+    "n_ing_cor_clean",
+    "n_ftr1_agro",
+    "n_fni_agro_clean"
+  ),
+  den_name = c(
+    "self",
+
+    "self",
+    "self",
+    "self",
+    "self",
+
+    "self",
+
+    "self",
+
+    "farm total production",
+    "farm total production",
+    "farm total resources",
+    "total current income",
+    "total current income",
+    "farm total resources",
+    "farm net income"
+  ),
+  strat = c(
+    "n_deciles_total",
+
+    "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
+
+    "n_deciles_total",
+
+    "n_deciles_total",
+
+    "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total"
+  ),
+  above = NA_character_,
+  below = NA_character_
+) |>
+  mutate(type = str_extract(base, "^[^_]+")) |>
+  group_by(target_or_num) |>
+  mutate(
+    n_den = n_distinct(den[den != "self"])
+  ) |>
+  ungroup()
+if (any(dict_raw$n_den > 4)) {
+  stop("trop de dénominateurs (>4 hors self) pour au moins une variable")
+}
+dict_raw <- dict_raw |>
+  group_by(target_or_num) |>
+  mutate(
+    transform = match(den, c("self", setdiff(unique(den), "self"))) - 1
+  ) |>
+  ungroup()
+
+### assign colors ----
+
+col_overall <- "#D55E00"
+
+list_cols <- readRDS(here("output", "list_cols_from_comp_analysis"))
+
+if (exists("list_cols")) {
+  pal <- bind_rows(list_cols) |>
+    arrange(var) |>
+    group_by(var) |>
+    slice(1) |>
+    ungroup()
+}
+
+# add missing colors with Paired
+
+cols <- brewer.pal(n = 12, name = "Paired")
+pairs <- rep(seq_along(cols), each = 2)[seq_along(cols)]
+list_cols_paired <- split(cols, pairs)
+
+if (exists("pal")) {
+  fallback <- dict_raw |> anti_join(pal, by = c("target_or_num" = "var"))
+}
+fallback <- fallback |>
+  distinct(target_or_num) |>
+  mutate(
+    pair_id = (row_number() - 1) %% length(list_cols_paired) + 1,
+    col_fallback = map_chr(pair_id, ~ list_cols_paired[[.x]][2])
+  )
+
+### merge and transform ----
+
+dict <- dict_raw |>
+  (\(x) {
+    if (exists("pal")) left_join(x, pal, by = c("target_or_num" = "var")) else x
+  })() |>
+  left_join(fallback, by = "target_or_num") |>
+  mutate(
+    base_col = if (exists("pal")) coalesce(col, col_fallback) else col_fallback
+  ) |>
+  mutate(
+    above = if_else(
+      transform %in% c(0, 1),
+      base_col,
+      mapply(adaptive_transform, base_col, transform)
+    )
+  ) |>
+  mutate(below = lighten(above, .50))
+
+# -----------------------------
+
+source(here("script", "2D_stat_share_analysis.r"))
+source(here("script", "2E_stat_ratio_analysis.r"))
+
+# THE END ----
+

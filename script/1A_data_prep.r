@@ -403,14 +403,27 @@ agro_clean <- agro_raw |>
     # Ingreso trimestral por ventas
     # Autoconsumo trimestral
     # Otros montos trimestral
-    # INFO: ventas_tri is ing - ero but negative values are set to zero, hence we reconstruct ventas by taking the difference and later applying replace_negatives() in part2
+    # INFO: ing is ventas - ero but negative values are set to zero, hence we reconstruct ing by taking the difference and later applying replace_negatives() in part2
     # INFO: turnover inclut autoconsommation y Otros montos no monetarios trimestrales (pago de trabajadores, deudas del negocio, deudas del hogar e intercambios)
-    size_val = (ventas_tri + auto_tri + otros_tri) * 4,
 
-    support = apoyo_npago + pro_agrogan + nvo_npago,
-    
-    fni_year = (ventas_tri - ero_tri) * 4 + support
-    # fni_year = (ing_tri - ero_tri) * 4 + support
+    #                                     mean sd p0 p25 p50  p75   p100
+    ing_year = ing_tri * 4, #               35463. 246564.  0 657. 6515. 25087. 22851567
+    ventas_year = ventas_tri * 4, #       57396. 425244.  0   0 4940. 31578. 40304348
+    auto_year = auto_tri * 4,
+    ero_year = ero_tri * 4, # 5350. 25016.  0   0   0 1492. 807398
+    otros_montos_year = otros_tri * 4,
+    support_year = apoyo_npago + pro_agrogan + nvo_npago, #     6438. 17714.  0   0   0 5200 600000
+
+    size_val_year = ventas_year + auto_year + otros_montos_year,
+    #NOTE: Ventas max is 40 M, ing is 20 M, ero is 0.8
+    # hence ing cannot be the difference btw ventas and ero
+    # this is weird, but including ventas in fni yields a fni/ftr of about 300% for some households
+    # the reason why D10 was weird before is likely to be rather the incorrect annualization of support, in particular of apoyo (other programs).
+    # fni_year = ventas_year - ero_year + support
+
+    #WARN: now the question is whether ing includes already support or not
+    # lets try without
+    fni_year = ing_year - ero_year # + support_year
   )
 
 ## Household aggregation ----
@@ -420,11 +433,15 @@ agro <- agro_clean |>
   summarise(
     # TODO: we could compute the number of different activities agro and noagro
     n_act = sum(count_member), # nomber of different activities
-    n_fni = sum(fni_year),
-    n_autoconsumo1 = sum(auto_tri) * 4, # value of self consumed production from AGRO
-    n_size_val1 = sum(size_val),
+    n_ventas = sum(ventas_year),
+    n_autoconsumo1 = sum(auto_year), # value of self consumed production from AGRO
+    n_otros_montos = sum(otros_montos_year),
+    n_size_val1 = sum(size_val_year),
 
-    n_support = sum(support), # new supportprogram sin pago
+    n_ero = sum(ero_year),
+    n_ing = sum(ing_year),
+    n_fni = sum(fni_year),
+    n_support = sum(support_year), # new supportprogram sin pago
     n_apoyo_npago = sum(apoyo_npago), # other kind of social programs
     n_nvo_npago = sum(nvo_npago), # non repayable new support programs
     n_pro_agrogan = sum(pro_agrogan), # old support programs
@@ -782,11 +799,17 @@ noagro_clean <- noagro_raw |>
       otros_prog,
 
     # note: quadrimestrial to yearly data
-    size_val = (ventas_tri + auto_tri + otros_tri) * 4,
+    ing_year = ing_tri * 4,
+    ventas_year = ventas_tri * 4,
+    auto_year = auto_tri * 4,
+    ero_year = ero_tri * 4,
+    otros_montos_year = otros_tri * 4,
+
     support = nvo_npago,
+    size_val_year = ventas_year + auto_year + otros_montos_year,
     # annualized non-agricultural self-employed income
     # n_ingr_noagr = (ing_tri - ero_tri) * 4 + support
-    n_ingr_noagr = (ventas_tri - ero_tri) * 4 + support
+    n_ingr_noagr = ing_year - ero_year #(ventas_tri - ero_tri) * 4 + support
   )
 
 ## Household-level aggregation ----
@@ -795,12 +818,16 @@ noagro <- noagro_clean |>
   group_by(hogar) |>
   summarise(
     n_act = sum(count_member),
-    n_ingr_noagr = sum(n_ingr_noagr, na.rm = TRUE),
-    n_autoconsumo1 = sum(auto_tri) * 4,
-    n_size_val1 = sum(size_val),
+    n_autoconsumo1 = sum(auto_year),
+    n_otros_montos = sum(otros_montos_year),
+    n_size_val1 = sum(size_val_year),
+    n_ero = sum(ero_year),
+    n_ing = sum(ing_year),
 
+    n_ingr_noagr = sum(n_ingr_noagr),
     n_support = sum(support), # c'est la même chose que nvo_npago
     n_nvo_tot = sum(nvo_tot), # c'est nvo_npago + tandas etc
+    # n_nvo_npago = sum(nvo_npago), #
 
     n_sembr_vida = sum(sembr_vida),
     n_tand_bien = sum(tand_bien),
@@ -864,6 +891,7 @@ concentradohogar_clean <- concentradohogar_raw |>
   select(
     folioviv,
     foliohog,
+    ing_cor, # import calculated ENIGH ing_cor variable for comparison
     trabajo,
     otros_trab,
     rentas,
@@ -980,6 +1008,7 @@ concentradohogar_enriched <- concentradohogar_flag |>
 
 concentradohogar_features <- concentradohogar_enriched |>
   mutate(
+    n_ing_cor_enigh = ing_cor * 4, # we need to compare with our n_ing_cor !
     # annual income components
     n_trabajo = trabajo * 4, #annual income from employed labour
     n_otros_trab = otros_trab * 4, #annual income from other labour
@@ -1001,6 +1030,7 @@ concentradohogar_features <- concentradohogar_enriched |>
     n_autoconsumo1 = n_autoconsumo1_agro + n_autoconsumo1_noagro,
 
     n_nvo_tot = n_nvo_tot_agro + n_nvo_tot_noagro,
+    n_nvo_npago = n_nvo_npago_agro + n_support_noagro,
     n_support = n_support_agro + n_support_noagro,
     n_agromercados = n_agromercados_agro + n_agromercados_noagro,
     n_credito_gan = n_credito_gan_agro + n_credito_gan_noagro,
@@ -1023,6 +1053,7 @@ concentradohogar_features <- concentradohogar_enriched |>
   select(
     -folioviv,
     -foliohog,
+    -ing_cor,
     -trabajo,
     -rentas,
     -transfer,

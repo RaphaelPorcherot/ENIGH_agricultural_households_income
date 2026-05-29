@@ -250,7 +250,6 @@ get_proportion <- function(
 # }
 
 ### MACRO SHARES of total by subgroup ----
-
 ### svyciprop ne sait pas faire part d’une variable dans un total continu (acc_alim1 is 1/0, while n_fni is continuous) en stratifiant par decile (ou autre sous-groupe)
 ### based on delta method at 99%
 ### Advantages:
@@ -352,6 +351,42 @@ get_share_macro <- function(
     dplyr::rename(
       !!strat_var := strat_level
     )
+}
+
+get_share_macro_overall <- function(
+  design,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL
+) {
+  if (!is.null(filter_var) && !is.null(filter_value)) {
+    design_filtered <- subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        design$variables[[filter_var]] == filter_value
+    )
+  } else {
+    design_filtered <- design
+  }
+
+  strat_levels <- unique(as.character(design_filtered$variables[[strat_var]]))
+  strat_levels <- strat_levels[!is.na(strat_levels)]
+
+  n_by_strat <- purrr::map_dfr(strat_levels, function(lv) {
+    des_sub <- subset(
+      design_filtered,
+      as.character(design_filtered$variables[[strat_var]]) == lv
+    )
+    des_sub <- update(des_sub, .one = 1)
+    n <- as.numeric(coef(survey::svytotal(~.one, des_sub, na.rm = TRUE)))
+    tibble::tibble(!!strat_var := lv, n = n)
+  })
+
+  n_total <- sum(n_by_strat$n)
+
+  n_by_strat |>
+    mutate(ref_share = n / n_total * 100) |> # *100 car arrondi en % plus loin
+    select(-n)
 }
 
 ### MACRO RATIO of a variable by the total of that continous variable in a subgroup (decile) ----
@@ -610,7 +645,7 @@ get_share_micro <- function(
 }
 
 ## Wrapper functions for polagri.r ----
-### get_col_pal to connect compo and share/ratio analysis ----
+### connecting composition and ratio/share analysis ----
 
 get_col_pal <- function(n, col_pal, direction, begin, end) {
   viridisLite::viridis(
@@ -631,9 +666,6 @@ shift_hue <- function(col, deg = 15) {
 adaptive_transform <- function(col, transform) {
   hcl <- as(hex2RGB(col), "polarLUV")
   L <- hcl@coords[, "L"]
-  if (transform == 0) {
-    return(desaturate(col, .35))
-  }
   if (transform == 2) {
     # hue shift léger
     hcl@coords[, "H"] <- hcl@coords[, "H"] + 12
@@ -648,33 +680,55 @@ adaptive_transform <- function(col, transform) {
     return(hex(hcl))
   }
   if (transform == 3) {
-    # jouer sur chroma plutôt que luminance
-    hcl@coords[, "C"] <- hcl@coords[, "C"] * .8
-    return(hex(hcl))
+    return(desaturate(col, .45))
   }
+  # if (transform == 3) {
+  #   # jouer sur chroma plutôt que luminance
+  #   hcl@coords[, "C"] <- hcl@coords[, "C"] * .8
+  #   return(hex(hcl))
+  # }
   col
 }
-### set attribute ---- 
-
 set_attribute <- function(basename) {
   x <- dict |>
     filter(base == basename)
 
   type <- x$type[[1]]
 
+  message("\nThis is a ", type, " plot")
+  message("\n-----------------------------\n")
+
   if (type == "ratio") {
     assign("num", x$target_or_num[[1]], envir = .GlobalEnv)
+    message("num is ", x$target_or_num[[1]])
     assign("den", x$den[[1]], envir = .GlobalEnv)
+    message("den is ", x$den[[1]])
+    assign("den_name", x$den_name[[1]], envir = .GlobalEnv)
+    message("den_name is ", x$den_name[[1]])
+
+    assign("target", NULL, envir = .GlobalEnv)
+    assign("is_share_plot", FALSE, envir = .GlobalEnv)
   } else {
     assign("target", x$target_or_num[[1]], envir = .GlobalEnv)
+    message("target is ", x$target_or_num[[1]])
+    assign("num", NULL, envir = .GlobalEnv)
+    assign("den", NULL, envir = .GlobalEnv)
+    assign("den_name", NULL, envir = .GlobalEnv)
+    assign("is_share_plot", TRUE, envir = .GlobalEnv)
   }
 
   assign("strat", x$strat[[1]], envir = .GlobalEnv)
+  message("strat is ", x$strat[[1]])
+  message("\n-----------------------------\n")
   assign("col_below", x$below[[1]], envir = .GlobalEnv)
+  message("col_below is ", x$below[[1]])
+
   assign("col_above", x$above[[1]], envir = .GlobalEnv)
+  message("col_above is ", x$above[[1]])
 }
 
-### make_composition_plot ----
+### composition analysis  ----
+
 make_composition_plot <- function(
   tbl,
   overall,
@@ -823,7 +877,6 @@ make_composition_plot <- function(
   p
 }
 
-### run_composition_analysis ----
 run_composition_analysis <- function(
   design,
   d,
@@ -979,7 +1032,7 @@ run_composition_analysis <- function(
   cols
 }
 
-### make_plot function ----
+### ratio/share analysis ----
 
 make_decile_plot <- function(
   tbl,
@@ -992,12 +1045,20 @@ make_decile_plot <- function(
   title,
   subtitle,
   caption,
-  cv_threshold = 0.3 # déciles avec SE/ratio > seuil sont grisés et marqués
+  is_share_plot = FALSE,
+  ref_tbl = NULL, # <-- nouveau : tibble avec ref_share par décile pour macro_share
+  cv_threshold = 0.3
 ) {
+  # si ref_tbl fourni, on merge pour avoir ref_share dans tbl
+  if (!is.null(ref_tbl)) {
+    tbl <- tbl |> left_join(ref_tbl, by = strat_var)
+  }
+
   tbl <- tbl |>
     mutate(
       above_mean = ifelse(
-        .data[[value_col]] >= overall[[value_col]],
+        .data[[value_col]] >=
+          if (!is.null(ref_tbl)) ref_share else overall[[value_col]],
         "Above",
         "Below"
       ),
@@ -1006,11 +1067,25 @@ make_decile_plot <- function(
       fill_var = ifelse(unreliable, "Unreliable", above_mean)
     )
 
-  ggplot(
-    tbl,
-    aes(x = .data[[strat_var]], y = .data[[value_col]], fill = fill_var)
-  ) +
-    # background blanc
+  colour_scale <- list(
+    values = c(
+      "Above" = col_above,
+      "Below" = col_below,
+      "Unreliable" = "grey70"
+    ),
+    breaks = c("Above", "Below"),
+    name = if (!is.null(ref_tbl)) {
+      "Comparison to equal distribution"
+    } else if (is_share_plot && is.null(ref_tbl)) {
+      "Comparison to mean individual share"
+    } else {
+      "Comparison to overall ratio"
+    }
+  )
+
+  use_scientific <- min(tbl[[value_col]], na.rm = TRUE) < 0.1
+
+  p <- ggplot(tbl, aes(x = .data[[strat_var]], y = .data[[value_col]])) +
     theme_minimal(base_size = 14) +
     theme(
       panel.background = element_rect(fill = "white", color = NA),
@@ -1021,39 +1096,53 @@ make_decile_plot <- function(
       plot.subtitle = element_text(face = "italic"),
       plot.caption = element_text(size = 10)
     ) +
-    annotate(
-      "rect",
-      xmin = 0.5,
-      xmax = 10.5,
-      ymin = overall$IC_low,
-      ymax = overall$IC_high,
-      fill = col_overall,
-      alpha = 0.15
-    ) +
-    geom_col(width = 0.7, alpha = 0.9, color = "white") +
+    # bande IC overall — seulement si IC disponible
+    (if (!is.na(overall$IC_low) && !is.na(overall$IC_high)) {
+      annotate(
+        "rect",
+        xmin = 0.5,
+        xmax = 10.5,
+        ymin = overall$IC_low,
+        ymax = overall$IC_high,
+        fill = col_overall,
+        alpha = 0.15
+      )
+    } else {
+      list() # ggplot ignore list() vide
+    }) +
+    (if (is_share_plot) {
+      geom_col(
+        aes(color = fill_var),
+        fill = "transparent",
+        width = 0.7,
+        linewidth = 2.5
+      )
+    } else {
+      geom_col(aes(fill = fill_var), width = 0.7, alpha = 0.9, color = "white")
+    }) +
     geom_errorbar(
       aes(ymin = IC_low, ymax = IC_high),
       width = 0.2,
       color = "grey30"
     ) +
-    # label % en noir, fond blanc
     geom_label(
-      aes(label = paste0(round(.data[[value_col]], 1), "%")),
+      aes(
+        label = if (use_scientific) {
+          formatC(.data[[value_col]], format = "e", digits = 2)
+        } else {
+          paste0(round(.data[[value_col]], 1), "%")
+        }
+      ),
       vjust = 1.5,
       color = "black",
       fill = "white",
-      linewidth = 0.15, # épaisseur du bord du rectangle
+      linewidth = 0.15,
       size = 3.8,
       fontface = "bold"
     ) +
-    # astérisque pour les déciles peu fiables
     geom_label(
       data = filter(tbl, unreliable),
-      aes(
-        x = .data[[strat_var]],
-        y = .data[[value_col]],
-        label = "*"
-      ),
+      aes(x = .data[[strat_var]], y = .data[[value_col]], label = "*"),
       vjust = -0.5,
       color = "grey40",
       fill = "white",
@@ -1069,39 +1158,86 @@ make_decile_plot <- function(
       linewidth = 0.8,
       linetype = "dashed"
     ) +
-    geom_hline(
-      yintercept = overall[[value_col]],
-      color = col_overall,
-      linetype = "dotted",
-      linewidth = 0.8
+    # ligne overall : hline classique pour ratio/micro, ligne par décile pour macro_share
+    (if (!is.null(ref_tbl)) {
+      list(
+        geom_line(
+          aes(y = ref_share, group = 1),
+          color = col_overall,
+          linewidth = 0.8,
+          linetype = "dotted"
+        ),
+        geom_label(
+          data = tbl |>
+            filter(
+              as.character(.data[[strat_var]]) == last(levels(tbl[[strat_var]]))
+            ),
+          aes(
+            x = .data[[strat_var]],
+            y = ref_share,
+            label = paste0("Equal share line")
+          ),
+          inherit.aes = FALSE,
+          fill = "white",
+          color = col_overall,
+          linewidth = 0.2,
+          size = 3.8
+        )
+      )
+    } else {
+      list(
+        geom_hline(
+          yintercept = overall[[value_col]],
+          color = col_overall,
+          linetype = "dotted",
+          linewidth = 0.8
+        ),
+        geom_label(
+          data = data.frame(
+            x = "D9",
+            y = overall[[value_col]] +
+              diff(range(tbl[[value_col]], na.rm = TRUE)) * 0.05
+          ),
+          aes(
+            x = x,
+            y = y,
+            label = paste0(
+              "Overall: ",
+              if (use_scientific) {
+                formatC(overall[[value_col]], format = "e", digits = 2)
+              } else {
+                paste0(round(overall[[value_col]], 1), "%")
+              }
+            )
+            # label = paste0("Overall: ", round(overall[[value_col]], 1), "%")
+          ),
+          inherit.aes = FALSE,
+          fill = "white",
+          color = col_overall,
+          linewidth = 0.2,
+          size = 3.8
+        )
+      )
+    }) +
+    do.call(
+      scale_fill_manual,
+      c(colour_scale, list(guide = if (is_share_plot) "none" else "legend"))
     ) +
-    geom_label(
-      data = data.frame(x = "D9", y = overall[[value_col]] + 1.2),
-      aes(
-        x = x,
-        y = y,
-        label = paste0("Overall: ", round(overall[[value_col]], 1), "%")
-      ),
-      inherit.aes = FALSE,
-      fill = "white",
-      color = col_overall,
-      linewidth = 0.2,
-      size = 3.8
-    ) +
-    scale_fill_manual(
-      values = c(
-        "Above" = col_above,
-        "Below" = col_below,
-        "Unreliable" = "grey70"
-      ),
-      name = "Comparison to overall ratio",
-      # on masque "Unreliable" de la légende, l'astérisque suffit
-      breaks = c("Above", "Below")
+    do.call(
+      scale_color_manual,
+      c(colour_scale, list(guide = if (is_share_plot) "legend" else "none"))
     ) +
     scale_y_continuous(
       expand = expansion(mult = c(0, 0.05)),
-      labels = percent_format(scale = 1)
-    ) +
+      labels = if (use_scientific) {
+        label_scientific()
+      } else {
+        percent_format(scale = 1)
+      }
+    ) + # scale_y_continuous(
+    #   expand = expansion(mult = c(0, 0.05)),
+    #   labels = percent_format(scale = 1)
+    # ) +
     labs(
       title = title,
       subtitle = subtitle,
@@ -1117,9 +1253,9 @@ make_decile_plot <- function(
         sep = "\n"
       )
     )
-}
 
-### unit internal functions ----
+  p
+}
 
 run_one_analysis <- function(
   design,
@@ -1135,15 +1271,16 @@ run_one_analysis <- function(
   col_above,
   col_below,
   col_overall,
-  # l'un ou l'autre selon le type
+  is_share_plot,
   num = NULL,
   den = NULL,
-  target_var = NULL
+  target_var = NULL,
+  debug_outer = FALSE,
+  debug_inner = FALSE
 ) {
   subtitle <- str_c("Universe: ", filter)
   name <- str_c(basename, "_", str_remove(filter, ".*_"))
 
-  # appel de la fonction d'estimation selon le type
   call_estimator <- function(strat_var_arg, filter_var_arg) {
     if (!is.null(num) && !is.null(den)) {
       estimator_fn(
@@ -1166,29 +1303,70 @@ run_one_analysis <- function(
   }
 
   tbl <- call_estimator(strat_var_arg = strat, filter_var_arg = universe)
-
-  # ordre des niveaux
   strat_lvl <- levels(as.factor(d[[strat]]))
   tbl <- tbl |>
     mutate(!!strat := factor(.data[[strat]], levels = strat_lvl)) |>
     arrange(.data[[strat]])
 
-  overall <- call_estimator(strat_var_arg = universe, filter_var_arg = universe)
-  colnames(overall)[1] <- colnames(tbl)[1]
+  is_macro_share <- identical(estimator_fn, get_share_macro)
+
+  # overall + ref_tbl selon le type
+  if (is_macro_share) {
+    ref_tbl <- get_share_macro_overall(
+      design = design,
+      strat_var = strat,
+      filter_var = universe,
+      filter_value = filter
+    ) |>
+      mutate(!!strat := factor(.data[[strat]], levels = strat_lvl))
+
+    # overall pour macro_share = ligne fictive NA (pas utilisée comme hline)
+    overall <- tibble::tibble(
+      !!strat := NA_character_,
+      share = NA_real_,
+      SE = NA_real_,
+      IC_low = NA_real_,
+      IC_high = NA_real_
+    )
+  } else {
+    ref_tbl <- NULL
+    overall <- call_estimator(
+      strat_var_arg = universe,
+      filter_var_arg = universe
+    )
+    colnames(overall)[1] <- colnames(tbl)[1]
+  }
 
   # arrondi
+  round_digits <- if (is_share_plot && is.null(ref_tbl)) {
+    max(0, ceiling(-log10(min(abs(tbl[[value_col]]), na.rm = TRUE))) + 2)
+  } else {
+    2
+  }
+
   tbl <- tbl |>
     mutate(across(
       c(all_of(value_col), SE, IC_low, IC_high),
-      ~ round(. * 100, 2)
+      ~ round(. * 100, round_digits)
     ))
   overall <- overall |>
     mutate(across(
-      c(all_of(value_col), SE, IC_low, IC_high),
-      ~ round(. * 100, 2)
+      any_of(c(value_col, "SE", "IC_low", "IC_high")),
+      ~ round(. * 100, round_digits)
     ))
 
   custom_save(bind_rows(tbl, overall), name)
+
+  if (debug_outer) {
+    assign("tbl", tbl, envir = .GlobalEnv)
+    assign("overall", overall, envir = .GlobalEnv)
+    assign("ref_tbl", ref_tbl, envir = .GlobalEnv)
+    assign("strat", strat, envir = .GlobalEnv)
+    message(
+      "Debug objects assigned to global env: tbl, overall, ref_tbl, strat"
+    )
+    return(invisible(NULL))
+  }
 
   plot <- make_decile_plot(
     tbl = tbl,
@@ -1200,14 +1378,15 @@ run_one_analysis <- function(
     col_overall = col_overall,
     title = title,
     subtitle = subtitle,
-    caption = caption
+    caption = caption,
+    is_share_plot = is_share_plot,
+    ref_tbl = ref_tbl
   )
 
   print(plot)
   custom_save(plot, str_c("plot_", name))
 }
 
-### to run ratio analysis, either macro or micro or both ----
 run_ratio_analysis <- function(
   design,
   d,
@@ -1223,7 +1402,10 @@ run_ratio_analysis <- function(
   extra_text,
   col_above,
   col_below,
-  col_overall
+  col_overall,
+  is_share_plot = FALSE,
+  debug_outer = FALSE,
+  debug_inner = FALSE
 ) {
   caption_macro <- caption_base
   caption_micro <- paste(extra_text, caption_base, sep = "\n")
@@ -1245,7 +1427,8 @@ run_ratio_analysis <- function(
         caption = caption_macro,
         col_above = col_above,
         col_below = col_below,
-        col_overall = col_overall
+        col_overall = col_overall,
+        is_share_plot = is_share_plot
       )
     }
     if ("micro" %in% estimators) {
@@ -1264,13 +1447,12 @@ run_ratio_analysis <- function(
         caption = caption_micro,
         col_above = col_above,
         col_below = col_below,
-        col_overall = col_overall
+        col_overall = col_overall,
+        is_share_plot = is_share_plot
       )
     }
   }
 }
-
-### to run share analysis, either macro or micro or both ----
 
 run_share_analysis <- function(
   design,
@@ -1286,7 +1468,10 @@ run_share_analysis <- function(
   extra_text,
   col_above,
   col_below,
-  col_overall
+  col_overall,
+  is_share_plot = TRUE,
+  debug_outer = FALSE,
+  debug_inner = FALSE
 ) {
   caption_macro <- caption_base
   caption_micro <- paste(extra_text, caption_base, sep = "\n")
@@ -1307,7 +1492,8 @@ run_share_analysis <- function(
         caption = caption_macro,
         col_above = col_above,
         col_below = col_below,
-        col_overall = col_overall
+        col_overall = col_overall,
+        is_share_plot = is_share_plot
       )
     }
     if ("micro" %in% estimators) {
@@ -1325,9 +1511,31 @@ run_share_analysis <- function(
         caption = caption_micro,
         col_above = col_above,
         col_below = col_below,
-        col_overall = col_overall
+        col_overall = col_overall,
+        is_share_plot = is_share_plot
       )
     }
   }
 }
+
+### DEBUG ----
+
+#  micro share
+# test <- get_share_micro(
+#   design = mysvyr,
+#   target_var = target,
+#   strat_var = strat,
+#   filter_var = "n_is_agri_broad",
+#   filter_value = "agri_broad"
+# )
+
+# test <- get_share_micro(
+#   design = mysvyr,
+#   target_var = target,
+#   strat_var = "n_is_agri_broad",
+#   filter_var = "n_is_agri_broad",
+#   filter_value = "agri_broad"
+# )
+# print(test)
+# survey::svytotal(as.formula(paste0("~", target)), design = mysvyr, na.rm = TRUE)
 # THE END ----

@@ -65,7 +65,11 @@ d <- d |>
     # create a new group for other sources of income
     n_otros_ing_bundled = n_rentas + n_estim_alqu + n_otros_ing,
     # same for n_trabajo and otros_trab (secondary labour income) in order to avoid non significant decile
-    n_trabajo_bundled = n_trabajo + n_otros_trab
+    n_trabajo_bundled = n_trabajo + n_otros_trab,
+    n_nvo_pago_agro = n_nvo_tot_agro - n_nvo_npago_agro, # in support there are other stuff than only NEW
+    n_nvo_pago_noagro = n_nvo_tot_noagro - n_support_noagro, # there is only NVO as npago support to non agriculture
+    n_nvo_pago = n_nvo_tot - n_nvo_npago # (n_support_noagro + n_nvo_npago_agro)
+    #NOTE: we could add n_nvo_npago = n_support_noagro + n_nvo_npago_agro
   ) |>
   # creating sorting variable using clean version of n_fni and n_ingr_noagr
   mutate(
@@ -555,3 +559,81 @@ if (any(test_new_var)) {
     "\n\n 📖 No new variable has been created.\n ✅ Dictionary is already up to date."
   )
 }
+
+# ---------------------
+# CHECKING the consistency of our INCOME variable ----
+#NOTE: there are a bit TOO many households with strong divergence btw our reconstruction and enigh's income variable (in particular a 50000 MXN/year that becomes 0)
+# Could that be the case that this is because of normalized trimestrialisation at differing components of ing_cor ? 
+
+message("Checking consistency of income variable reconstruction:")
+
+# nombre de revenus négatifs corrigés
+n_neg <- sum(d$n_ing_cor < 0, na.rm = TRUE)
+message(n_neg, " negative incomes corrected from n_ing_cor to n_ing_cor_clean")
+
+# seuil d'écart acceptable : 5% de la moyenne
+mean_ref <- mean(d$n_ing_cor_enigh, na.rm = TRUE)
+threshold <- 0.05
+
+consistency_check <- d |>
+  mutate(
+    diff_abs = abs(n_ing_cor_clean - n_ing_cor_enigh),
+    diff_rel = diff_abs / n_ing_cor_enigh,
+    flag = !is.na(diff_rel) & diff_rel > threshold & n_ing_cor_enigh > 0
+  )
+
+n_flagged <- sum(consistency_check$flag, na.rm = TRUE)
+pct_flagged <- round(n_flagged / nrow(d) * 100, 2)
+mean_diff <- mean(
+  consistency_check$diff_rel[
+    !consistency_check$flag & is.finite(consistency_check$diff_rel)
+  ],
+  na.rm = TRUE
+)
+n_zero_enigh <- sum(d$n_ing_cor_enigh == 0, na.rm = TRUE)
+message(
+  n_zero_enigh,
+  " households with n_ing_cor_enigh == 0 (excluded from relative diff)"
+)
+
+message(
+  n_flagged,
+  " households (",
+  pct_flagged,
+  "%) exceed the ",
+  threshold * 100,
+  "% relative difference threshold — these differ meaningfully"
+)
+message(
+  "Mean relative difference among consistent households (<= threshold): ",
+  round(mean_diff * 100, 3),
+  "%"
+)
+if (n_flagged == 0) {
+  message(
+    "✅ n_ing_cor_clean and n_ing_cor_enigh are consistent within threshold"
+  )
+} else {
+  message(
+    "⚠️ Some households show non-trivial differences — inspect consistency_check$flag"
+  )
+}
+
+consistency_check |>
+  filter(flag) |>
+  summarise(
+    n = n(),
+    median_diff_rel = median(diff_rel, na.rm = TRUE),
+    median_ing_enigh = median(n_ing_cor_enigh, na.rm = TRUE),
+    n_was_negative = sum(n_ing_cor < 0, na.rm = TRUE)
+  )
+
+#TODO: #Les 2004 - 113 = 1891 flaggés non-négatifs sont plus intéressants — ce sont des ménages où n_ing_cor_clean et n_ing_cor_enigh divergent pour une autre raison.  :
+
+flag_not_negative <- consistency_check |>
+  filter(flag & n_ing_cor >= 0) |>
+  select(factor,n_is_agri, n_ing_cor, n_ing_cor_clean, n_ing_cor_enigh, diff_rel) |>
+  arrange(desc(diff_rel)) |>
+  head(20)
+flag_not_negative
+flag_not_negative |> group_by(n_is_agri) |> summarise(n = n())

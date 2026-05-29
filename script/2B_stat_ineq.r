@@ -665,6 +665,7 @@ custom_save(plot_lorenz_agri_narrow, type = "fig")
 ## general ----
 
 #TODO: there is something missing here check the .qmd. Most likely the tbl of HOUSEHOLD characteristic
+
 tbl_agri <- subset(tbl, n_is_agri_broad == "agricultural households")
 tbl_csv <- tbl_agri |>
   select(-n_is_agri_broad) |>
@@ -1044,42 +1045,42 @@ custom_save(plot_etnia_decile_narrow_pct, type = "fig")
 ## Odd ratio with controls ----
 #TODO: we should do this but on a relative poverty variable not on minimum wage which is an extreme and restrictive measure of poverty
 
-mysvyr <- mysvyr |>
-  mutate(
-    n_below_smg_epc_num = as.numeric(n_below_smg_epc == "below")
-  )
-
-mod_poverty_ethnicity <- svyglm(
-  n_below_smg_epc_num ~
-    n_etnia +
-    edad_jefe +
-    sexo_jefe +
-    educa_jefe +
-    est_socio,
-  design = mysvyr,
-  family = quasibinomial()
-)
-
-or_poverty_ethnicity <- broom::tidy(
-  mod_poverty_ethnicity,
-  exponentiate = TRUE,
-  conf.int = TRUE,
-  conf.level = 0.99
-)
-
-tbl_or_poverty_ethnicity <- mod_poverty_ethnicity |>
-  tbl_regression(
-    exponentiate = TRUE,
-    conf.level = 0.99,
-    label = list(
-      n_etnia ~ "Ethnic self-identification",
-      edad_jefe ~ "Household head age",
-      sexo_jefe ~ "Household head sex",
-      educa_jefe ~ "Household head education",
-      est_socio ~ "Socio-economic status"
-    )
-  ) |>
-  bold_labels()
+# mysvyr <- mysvyr |>
+#   mutate(
+#     n_below_smg_epc_num = as.numeric(n_below_smg_epc == "below")
+#   )
+#
+# mod_poverty_ethnicity <- svyglm(
+#   n_below_smg_epc_num ~
+#     n_etnia +
+#     edad_jefe +
+#     sexo_jefe +
+#     educa_jefe +
+#     est_socio,
+#   design = mysvyr,
+#   family = quasibinomial()
+# )
+#
+# or_poverty_ethnicity <- broom::tidy(
+#   mod_poverty_ethnicity,
+#   exponentiate = TRUE,
+#   conf.int = TRUE,
+#   conf.level = 0.99
+# )
+#
+# tbl_or_poverty_ethnicity <- mod_poverty_ethnicity |>
+#   tbl_regression(
+#     exponentiate = TRUE,
+#     conf.level = 0.99,
+#     label = list(
+#       n_etnia ~ "Ethnic self-identification",
+#       edad_jefe ~ "Household head age",
+#       sexo_jefe ~ "Household head sex",
+#       educa_jefe ~ "Household head education",
+#       est_socio ~ "Socio-economic status"
+#     )
+#   ) |>
+#   bold_labels()
 
 ## Focus on concerns for food ----
 ### total ----

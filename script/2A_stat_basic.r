@@ -186,6 +186,154 @@ summary_is_SEN <- bind_rows(summary_is_SEN, total_line) |>
 
 custom_save(summary_is_SEN)
 
+# FARM characteristics ----
+## Turnover as a function of farm size and production type ----
+df_res <- mysvyr |>
+  group_by(n_is_agri_broad, n_size_class_agro, n_tipo_prod_agro) |>
+  summarise(
+    total = survey_total(vartype = "ci", level = 0.99)
+  ) |>
+  ungroup()
+#For consistency reasons we restrict ourself to farms owned by households who we identied as agricultural based on a strictly positive farm net income.
+### tbl and plot of absolute levels ----
+farm_turnover_size_prod <- df_res |>
+  filter(n_is_agri_broad != "not_agri") |>
+  select(-n_is_agri_broad) |>
+  group_by(n_size_class_agro) |>
+  mutate(
+    pct = total / sum(total) * 100
+  ) |>
+  ungroup()
+
+custom_save(farm_turnover_size_prod)
+
+plot_farm_turnover_size_prod <- ggplot(
+  farm_turnover_size_prod,
+  aes(x = n_size_class_agro, y = total, fill = n_tipo_prod_agro)
+) +
+  geom_col(
+    width = 0.7,
+    alpha = 0.8,
+    position = position_dodge(width = 0.7)
+  ) +
+  geom_errorbar(
+    aes(ymin = total_low, ymax = total_upp, group = n_tipo_prod_agro),
+    width = 0.2,
+    alpha = 0.6,
+    position = position_dodge(width = 0.7)
+  ) +
+  scale_fill_viridis_d(
+    "Production type",
+    option = "rocket",
+    begin = .2,
+    end = .8
+  ) +
+  scale_y_continuous(
+    labels = function(x) x / 1e2,
+    breaks = pretty_breaks(n = 6) # R choisit ~6 breaks "jolis"
+  ) +
+  labs(
+    title = "Mexican farms according to annual turnover and production type",
+    x = "Annual turnover (MXN)",
+    y = "Number of farms (x100)",
+    caption = "Note: Farm types have been defined considering the share of different production in the total revenues of farms.\nA farm is classified as specialised into a given production when its revenues represent at least two thirds of total turnover.\nIn mixed farms the threshold is not reached neither by crops cultivation nor by livestock production."
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+custom_save(plot_farm_turnover_size_prod, type = "fig")
+print(plot_farm_turnover_size_prod)
+
+### tbl and plot of relative proportions ----
+
+# mysvyr |>
+#   filter(n_is_agri_broad == "agri_broad") |>
+#   group_by(n_deciles_total) |>
+#   summarise(
+#     prop = survey_mean(n_tipo_prod_agro == "Livestock", vartype = "ci")
+#   )
+#
+# svymean(
+#   ~ I(n_tipo_prod_agro == "Livestock"),
+#   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
+# )
+#
+# mean(
+#   d$n_tipo_prod_agro == "Livestock" &
+#     d$n_deciles_total == "D10" &
+#     d$n_is_agri_broad == "agri_broad"
+# )
+
+farm_turnover_size_prod_pct <- get_proportion(
+  design = mysvyr,
+  strat_var = "n_size_class_agro",
+  target_var = "n_tipo_prod_agro",
+  # filter_var = "n_is_agri",
+  # filter_value = "agri_narrow"
+  filter_var = "n_is_agri_broad",
+  filter_value = "agri_broad"
+) |>
+  rename(
+    pct = prop,
+    pct_low = IC_low,
+    pct_upp = IC_high
+  ) |>
+  mutate(
+    pct_low = pct_low * 100,
+    pct_upp = pct_upp * 100,
+    pct = pct * 100,
+  )
+custom_save(farm_turnover_size_prod_pct)
+
+# correct levels order
+n_size_class_agro_lvl <- levels(as.factor(d$n_size_class_agro))
+farm_turnover_size_prod_pct <- farm_turnover_size_prod_pct |>
+  mutate(
+    n_size_class_agro = factor(
+      n_size_class_agro,
+      levels = n_size_class_agro_lvl
+    )
+  ) |>
+  arrange(n_size_class_agro, n_size_class_agro)
+
+plot_farm_turnover_size_prod_pct <- ggplot(
+  farm_turnover_size_prod_pct,
+  aes(x = n_size_class_agro, y = pct, fill = n_tipo_prod_agro)
+) +
+  geom_col(
+    width = 0.7,
+    alpha = 0.8,
+    # position = position_dodge(width = 0.7)
+  ) +
+  geom_errorbar(
+    data = farm_turnover_size_prod_pct |>
+      dplyr::filter(n_tipo_prod_agro == "Crops") |>
+      mutate(pct_low = 100 - pct_low, pct_upp = 100 - pct_upp),
+    aes(x = n_size_class_agro, ymin = pct_low, ymax = pct_upp),
+    width = 0.2,
+    inherit.aes = FALSE
+  ) +
+  scale_fill_viridis_d(
+    "Production type",
+    option = "rocket",
+    begin = .2,
+    end = .8
+  ) +
+  labs(
+    title = "Mexican farms according to annual turnover and production type",
+    x = "Annual turnover (MXN)",
+    y = "(%)",
+    caption = "Note: Farm types have been defined considering the share of different production in the total revenues of farms.\nA farm is classified as specialised into a given production when its revenues represent at least two thirds of total turnover.\nConfidence intervals are displayed only for the main production category (Crops) for visual clarity. Other categories exhibit similar or slightly larger uncertainty patterns."
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+custom_save(plot_farm_turnover_size_prod_pct, type = "fig")
+print(plot_farm_turnover_size_prod_pct)
 # HOUSEHOLDS characteristics ----
 ## Prepare tbl ----
 
@@ -404,152 +552,4 @@ tbl_csv <- tbl |>
 household_char_agri_narrow <- as_tibble(tbl_csv, col_labels = TRUE)
 custom_save(household_char_agri_narrow)
 
-# FARM characteristics ----
-## Turnover as a function of farm size and production type ----
-df_res <- mysvyr |>
-  group_by(n_is_agri_broad, n_size_class_agro, n_tipo_prod_agro) |>
-  summarise(
-    total = survey_total(vartype = "ci", level = 0.99)
-  ) |>
-  ungroup()
-#For consistency reasons we restrict ourself to farms owned by households who we identied as agricultural based on a strictly positive farm net income.
-### tbl and plot of absolute levels ----
-farm_turnover_size_prod <- df_res |>
-  filter(n_is_agri_broad != "not_agri") |>
-  select(-n_is_agri_broad) |>
-  group_by(n_size_class_agro) |>
-  mutate(
-    pct = total / sum(total) * 100
-  ) |>
-  ungroup()
-
-custom_save(farm_turnover_size_prod)
-
-plot_farm_turnover_size_prod <- ggplot(
-  farm_turnover_size_prod,
-  aes(x = n_size_class_agro, y = total, fill = n_tipo_prod_agro)
-) +
-  geom_col(
-    width = 0.7,
-    alpha = 0.8,
-    position = position_dodge(width = 0.7)
-  ) +
-  geom_errorbar(
-    aes(ymin = total_low, ymax = total_upp, group = n_tipo_prod_agro),
-    width = 0.2,
-    alpha = 0.6,
-    position = position_dodge(width = 0.7)
-  ) +
-  scale_fill_viridis_d(
-    "Production type",
-    option = "rocket",
-    begin = .2,
-    end = .8
-  ) +
-  scale_y_continuous(
-    labels = function(x) x / 1e2,
-    breaks = pretty_breaks(n = 6) # R choisit ~6 breaks "jolis"
-  ) +
-  labs(
-    title = "Mexican farms according to annual turnover and production type",
-    x = "Annual turnover (MXN)",
-    y = "Number of farms (x100)",
-    caption = "Note: Farm types have been defined considering the share of different production in the total revenues of farms.\nA farm is classified as specialised into a given production when its revenues represent at least two thirds of total turnover.\nIn mixed farms the threshold is not reached neither by crops cultivation nor by livestock production."
-  ) +
-  theme_minimal(base_size = 14) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-
-custom_save(plot_farm_turnover_size_prod, type = "fig")
-print(plot_farm_turnover_size_prod)
-
-### tbl and plot of relative proportions ----
-
-# mysvyr |>
-#   filter(n_is_agri_broad == "agri_broad") |>
-#   group_by(n_deciles_total) |>
-#   summarise(
-#     prop = survey_mean(n_tipo_prod_agro == "Livestock", vartype = "ci")
-#   )
-#
-# svymean(
-#   ~ I(n_tipo_prod_agro == "Livestock"),
-#   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
-# )
-#
-# mean(
-#   d$n_tipo_prod_agro == "Livestock" &
-#     d$n_deciles_total == "D10" &
-#     d$n_is_agri_broad == "agri_broad"
-# )
-
-farm_turnover_size_prod_pct <- get_proportion(
-  design = mysvyr,
-  strat_var = "n_size_class_agro",
-  target_var = "n_tipo_prod_agro",
-  # filter_var = "n_is_agri",
-  # filter_value = "agri_narrow"
-  filter_var = "n_is_agri_broad",
-  filter_value = "agri_broad"
-) |>
-  rename(
-    pct = prop,
-    pct_low = IC_low,
-    pct_upp = IC_high
-  ) |>
-  mutate(
-    pct_low = pct_low * 100,
-    pct_upp = pct_upp * 100,
-    pct = pct * 100,
-  )
-custom_save(farm_turnover_size_prod_pct)
-
-# correct levels order
-n_size_class_agro_lvl <- levels(as.factor(d$n_size_class_agro))
-farm_turnover_size_prod_pct <- farm_turnover_size_prod_pct |>
-  mutate(
-    n_size_class_agro = factor(
-      n_size_class_agro,
-      levels = n_size_class_agro_lvl
-    )
-  ) |>
-  arrange(n_size_class_agro, n_size_class_agro)
-
-plot_farm_turnover_size_prod_pct <- ggplot(
-  farm_turnover_size_prod_pct,
-  aes(x = n_size_class_agro, y = pct, fill = n_tipo_prod_agro)
-) +
-  geom_col(
-    width = 0.7,
-    alpha = 0.8,
-    # position = position_dodge(width = 0.7)
-  ) +
-  geom_errorbar(
-    data = farm_turnover_size_prod_pct |>
-      dplyr::filter(n_tipo_prod_agro == "Crops") |>
-      mutate(pct_low = 100 - pct_low, pct_upp = 100 - pct_upp),
-    aes(x = n_size_class_agro, ymin = pct_low, ymax = pct_upp),
-    width = 0.2,
-    inherit.aes = FALSE
-  ) +
-  scale_fill_viridis_d(
-    "Production type",
-    option = "rocket",
-    begin = .2,
-    end = .8
-  ) +
-  labs(
-    title = "Mexican farms according to annual turnover and production type",
-    x = "Annual turnover (MXN)",
-    y = "(%)",
-    caption = "Note: Farm types have been defined considering the share of different production in the total revenues of farms.\nA farm is classified as specialised into a given production when its revenues represent at least two thirds of total turnover.\nConfidence intervals are displayed only for the main production category (Crops) for visual clarity. Other categories exhibit similar or slightly larger uncertainty patterns."
-  ) +
-  theme_minimal(base_size = 14) +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
-
-custom_save(plot_farm_turnover_size_prod_pct, type = "fig")
-print(plot_farm_turnover_size_prod_pct)
 
