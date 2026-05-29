@@ -156,7 +156,7 @@ title_micro <- str_c(
 )
 caption_base <- paste(
   "Other subsidies may come from federal, state, municipal government levels or else NGOs.",
-  "Old support programs consist of PROCAMPO and AGROGAN.",
+  "Old support programs consist of PROCAMPO, PROGAN and their contemporary continuation, Producción para el Bien Estar",
   "New support programs comprise of Sembrando Vida, Agromercados Sociales y Sustentables, Precios de Garantía, Nacional de Fertilizantes, Desarrollo Rural, and other smaller programs.",
   "All subsidies are non-repayables. In particular, not included are Tandas para el Bienestar and Crédito Ganadero a la Palabra.",
   sep = "\n"
@@ -322,7 +322,7 @@ list_cols[[length(list_cols) + 1]] <- cols
 
 # of all transfers from new policies to agriculture by decile ----
 
-#TODO: regarder les micro : on pourrait bundled les part de NEW qui sont pas très lourdes 
+#TODO: regarder les micro : on pourrait bundled les part de NEW qui sont pas très lourdes
 # il faudra récupérer les couleurs du graph principal (et on peut imaginer qu'il faut mettre all ransfert avant support)
 
 # n_sembr_vida_agro -> #000004FF
@@ -550,5 +550,3 @@ saveRDS(list_cols, file = here("output", "list_cols_from_comp_analysis"))
 message("🤙 lists_cols is saved in output/")
 
 # THE END ----
-
-

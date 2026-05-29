@@ -256,7 +256,7 @@ base_title <- str_c(
 title_macro <- str_c("Share of ", base_title)
 title_micro <- str_c("Average household share of ", base_title)
 caption_base <- paste(
-  "Old support programs consist of PROCAMPO and AGROGAN.",
+  "Old support programs consist of PROCAMPO, PROGAN and their contemporary continuation, Producción para el Bien Estar",
   # "Bar colors indicate whether the decile is above (darker) or below (lighter) the overall mean of individual ratios.",
   "The dashed black line shows the LOESS trend across deciles.",
   "The red dotted line and shaded band represent the overall ratio and its 99% confidence interval.",

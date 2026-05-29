@@ -637,3 +637,13 @@ flag_not_negative <- consistency_check |>
   head(20)
 flag_not_negative
 flag_not_negative |> group_by(n_is_agri) |> summarise(n = n())
+
+consistency_check |>
+  filter(flag) |>
+  count(n_deciles_total) |>
+  arrange(n_deciles_total)
+
+#NOTE: 63% of households with >5% divergence between n_ing_cor_clean and n_ing_cor_enigh
+# are in D1-D3. Micro ratio estimates for these deciles should be interpreted with caution,
+# as individual ratios num_i / n_ing_cor_clean may be affected by income reconstruction
+# differences, particularly for households with originally negative incomes.

@@ -100,94 +100,151 @@ source(here("script", "2B_stat_ineq.r"))
 source(here("script", "2C_stat_comp_analysis.r"))
 
 ## Visually connect composition and ratio/share by setting graphical parameters ----
+
 ### create dictionnary of plot ----
 
 dict_raw <- tibble(
   base = c(
-    # of income by decile
-    "share_n_fni_agro_clean_decile",
-    # of support to agriculture in decile
-    "share_support_agro_decile",
+    "share_n_fni_agro_clean_decile", # of income by decile
+    "share_support_agro_decile", # of support to agriculture in decile
     "share_nvo_npago_agro_decile",
     "share_n_pro_agrogan_agro_decile",
     "share_n_apoyo_npago_agro_decile",
-    # of support from new policies to agriculture by decile
     "share_n_sembr_vida_agro_decile",
-    # of all transfers (bundled as npago et pago) from new policies to agriculture by decile
     "share_n_nvo_pago_agro_decile",
-    # self consumption agro
+
     "ratio_autocons1_size_val1_agro_decile",
     "ratio_n_fni_agro_size_val1_decile",
     "ratio_n_fni_agro_n_ftr1_decile",
     "ratio_n_fni_agro_n_ing_cor_decile",
 
-    "ratio_support_ing_cor_decile",
-    "ratio_support_ftr1_decile",
-    "ratio_support_fni_decile"
+    "ratio_support_agro_ing_cor_decile",
+    "ratio_support_agro_ftr1_decile",
+    "ratio_support_agro_fni_decile",
+    #"ratio_support_agro_support_all_decile",
+
+    "ratio_n_pro_agrogan_agro_n_fni_decile",
+    "ratio_n_pro_agrogan_agro_support_decile",
+
+    "ratio_n_nvo_npago_agro_n_fni_decile",
+    "ratio_n_nvo_npago_agro_support_decile",
+
+    #"ratio_n_nvo_tot_noagro_nvo_tot_decile",
+
+    "ratio_n_nvo_pago_agro_n_nvo_tot_decile",
+
+    "ratio_n_sembr_vida_agro_n_nvo_npago_decile",
+    "ratio_n_nacion_fer_agro_n_nvo_npago_decile",
+    "ratio_n_otros_prog_agro_n_nvo_npago_decile"
   ),
   type = NA_character_,
   target_or_num = c(
     "n_fni_agro_clean",
-
     "n_support_agro",
     "n_nvo_npago_agro",
     "n_pro_agrogan_agro",
     "n_apoyo_npago_agro",
-
     "n_sembr_vida_agro",
-
     "n_nvo_pago_agro",
 
     "n_autoconsumo1_agro",
     "n_fni_agro_clean",
     "n_fni_agro_clean",
     "n_fni_agro_clean",
+
     "n_support_agro",
     "n_support_agro",
-    "n_support_agro"
+    "n_support_agro",
+    #n_support_agro",
+
+    "n_pro_agrogan_agro",
+    "n_pro_agrogan_agro",
+
+    "n_nvo_npago_agro",
+    "n_nvo_npago_agro",
+
+    #"n_nvo_tot_noagro",
+
+    "n_nvo_pago_agro",
+
+    "n_sembr_vida",
+    "n_nacion_fert_agro",
+    "n_otros_prog_agro"
   ),
   den = c(
     "self",
-
     "self",
     "self",
     "self",
     "self",
-
     "self",
-
     "self",
 
     "n_size_val1_agro",
     "n_size_val1_agro",
     "n_ftr1_agro",
     "n_ing_cor_clean",
+
     "n_ing_cor_clean",
     "n_ftr1_agro",
-    "n_fni_agro_clean"
+    "n_fni_agro_clean",
+    #"n_support",
+
+    "n_fni_agro_clean",
+    "n_support_agro",
+
+    "n_fni_agro_clean",
+    "n_support_agro",
+
+    #"n_nvo_tot",
+
+    "n_nvo_tot_agro",
+
+    "n_nvo_npago_agro",
+    "n_nvo_npago_agro",
+    "n_nvo_npago_agro"
   ),
   den_name = c(
     "self",
-
     "self",
     "self",
     "self",
     "self",
-
     "self",
-
     "self",
 
     "farm total production",
     "farm total production",
     "farm total resources",
     "total current income",
+
+    "total current income",
     "total current income",
     "farm total resources",
-    "farm net income"
+    #"support from new policies to all activities",
+
+    "farm net income",
+    "support (all policies)",
+
+    "farm net income",
+    "support (all policies)",
+
+    #"all transfers (repayable and non-repayable) to all activities",
+
+    "all transfers (repayable and non-repayable) to agriculture",
+
+    "support from new policies",
+    "support from new policies",
+    "support from new policies"
   ),
   strat = c(
     "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
 
     "n_deciles_total",
     "n_deciles_total",
@@ -195,13 +252,20 @@ dict_raw <- tibble(
     "n_deciles_total",
 
     "n_deciles_total",
+    "n_deciles_total",
+    "n_deciles_total",
+    #"n_deciles_total",
+
+    "n_deciles_total",
+    "n_deciles_total",
+
+    "n_deciles_total",
+    "n_deciles_total",
+
+    #"n_deciles_total",
 
     "n_deciles_total",
 
-    "n_deciles_total",
-    "n_deciles_total",
-    "n_deciles_total",
-    "n_deciles_total",
     "n_deciles_total",
     "n_deciles_total",
     "n_deciles_total"
@@ -280,4 +344,3 @@ source(here("script", "2D_stat_share_analysis.r"))
 source(here("script", "2E_stat_ratio_analysis.r"))
 
 # THE END ----
-
