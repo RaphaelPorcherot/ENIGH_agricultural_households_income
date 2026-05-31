@@ -343,4 +343,8 @@ dict <- dict_raw |>
 source(here("script", "2D_stat_share_analysis.r"))
 source(here("script", "2E_stat_ratio_analysis.r"))
 
-# THE END ----
+# SAVE RESULTS ----
+
+saveRDS(res, here("output", "part2_results"))
+
+# THE END ---

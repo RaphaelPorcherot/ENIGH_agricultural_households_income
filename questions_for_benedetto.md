@@ -1,4 +1,7 @@
 # CURRENT
+| Column1 | Column2 | Column3 |
+| ------------- | -------------- | -------------- |
+| Item1 | Item1 | Item1 |
 
 ing_cor est la sommme ingtra + ce qu'on a 
 ingtra c'est negocio (agrope et noagrope) + trabajo + otro_trab 
@@ -6,8 +9,7 @@ ingtra c'est negocio (agrope et noagrope) + trabajo + otro_trab
 
 dans transf_hog il y a bene_gob mais est ce que apoyo est dans bene_gob ? 
 
-ingreos.ing_tri : dans cette variabel de la table INGRESO, comment est reporté l'ing_tri de AGRO ? c'est ing_tri - ero_tri normalisé par zéro ? 
-ing_tri et ventas_tri, c'est quoi la différence ? 
+ingreos.ing_tri : dans cette variabel de la table INGRESO, comment est reporté l'ing_tri de AGRO ? c'est ing_tri - ero_tri normalisé par zéro ? ing_tri et ventas_tri, c'est quoi la différence ? 
 
 alcune domande sulla survey :
 

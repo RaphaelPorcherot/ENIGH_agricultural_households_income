@@ -17,6 +17,9 @@
 #TODO: reprendre ratio pour voir ce qu'on peut regarder aussi
 # share of self-consumption in total self-consumption
 
+#TODO: il faut comprendre ce que prend share_macro 
+# est ce que ca filtre sur filter var ou ca prend la totalité de target var existante dans l'univers total ? 
+
 #TODO: reprendre la caption de share_macro mais aussi share_micro pour expliquer ce que ca veut dire d'être au-dessus ou en dessouss
 
 # in COMP: of income by decile ----
