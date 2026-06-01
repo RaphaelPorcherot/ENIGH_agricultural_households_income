@@ -45,6 +45,11 @@ source(here("script", "0_utils.r"))
 
 # PART 1 : PREPARING THE DATABASE FOR THE PILOT STUDY ON MEXICO ----
 
+#TODO:
+# size_val1 par tipo_prod (get_proportion())
+# edad_med dans les deciles (get_proportion())
+# gender dans les deciles (idem)
+
 #INFO: n_tipo_prod based on AGROPRODUCTO. But household in AGRO not in AGROPRODUCTOS will be classified as not agri because n_tipo_act will be NA. The difficulty is overcome in part 2 in which we explicitely assign a production type to household in AGRO but not in AGROPRODUCTO
 #NOTE: we had issue with the key hogar : now solved, by setting its type explicitely to characer(). all hogares are in concentradohogar.
 #NOTE: tipoact_agro is unused : we use instead our own is_agri income based definition
