@@ -552,4 +552,149 @@ tbl_csv <- tbl |>
 household_char_agri_narrow <- as_tibble(tbl_csv, col_labels = TRUE)
 custom_save(household_char_agri_narrow)
 
+## ethny, age, gender ---- 
+
+tbl_agri <- subset(tbl, n_is_agri_broad == "agricultural households")
+tbl_csv <- tbl_agri |>
+  select(-n_is_agri_broad) |>
+  tbl_svysummary(
+    by = n_etnia,
+    type = list(menores ~ "continuous"),
+    statistic = list(
+      all_continuous() ~ "{mean} ({p25}, {p75})",
+      all_categorical() ~ "{p} %"
+    ),
+    label = list(
+      n_is_agri = "Relation to agripastoral activities",
+      n_is_self_employed_narrow = "Occupational status",
+      tot_integ = "Total number of household members",
+      menores = "Number of household members below 12",
+      edad_jefe = "Household's head age",
+      sexo_jefe = "Household's head sex",
+      educa_jefe_group = "Household's head education",
+      est_socio = "Socio-economic status",
+      # n_etnia = "Ethnic self-description",
+      n_acc_alim1 = "Concerned about food availability (last month)",
+      n_n_below_smg_epc = "Income relative to minimum wage"
+    )
+  ) |>
+  add_ci(
+    conf.level = 0.99,
+    method = list(
+      all_continuous() ~ "svymean",
+      all_categorical() ~ "svyprop.logit"
+    ),
+    include = everything(),
+    statistic = list(
+      all_continuous() ~ "{conf.low}, {conf.high}",
+      all_categorical() ~
+        "{conf.low}%, {conf.high}%"
+    ),
+    #  pattern = "{stat} (99% CI {ci})",
+    style_fun = all_continuous() ~ purrr::partial(style_number, digits = 1)
+  ) |>
+  bold_labels() |>
+  italicize_levels() |>
+  add_overall(last = TRUE) |>
+  add_p()
+ethnic <- as_tibble(tbl_csv, col_labels = TRUE)
+
+tbl_csv <- tbl_agri |>
+  select(-edad_jefe, -n_is_agri_broad) |>
+  tbl_svysummary(
+    by = n_edad_jefe_med,
+    type = list(menores ~ "continuous"),
+    statistic = list(
+      all_continuous() ~ "{mean} ({p25}, {p75})",
+      all_categorical() ~ "{p} %"
+    ),
+    label = list(
+      n_is_agri = "Relation to agripastoral activities",
+      n_is_self_employed_narrow = "Occupational status",
+      tot_integ = "Total number of household members",
+      menores = "Number of household members below 12",
+      # edad_jefe="Household's head age",
+      sexo_jefe = "Household's head sex",
+      educa_jefe_group = "Household's head education",
+      est_socio = "Socio-economic status",
+      n_etnia = "Ethnic self-description",
+      n_acc_alim1 = "Concerned about food availability (last month)",
+      n_below_smg_epc = "Income relative to minimum wage"
+    )
+  ) |>
+  add_ci(
+    conf.level = 0.99,
+    method = list(
+      all_continuous() ~ "svymean",
+      all_categorical() ~ "svyprop.logit"
+    ),
+    include = everything(),
+    statistic = list(
+      all_continuous() ~ "{conf.low}, {conf.high}",
+      all_categorical() ~
+        "{conf.low}%, {conf.high}%"
+    ),
+    #  pattern = "{stat} (99% CI {ci})",
+    style_fun = all_continuous() ~ purrr::partial(style_number, digits = 1)
+  ) |>
+  bold_labels() |>
+  italicize_levels() |>
+  add_overall(last = TRUE) |>
+  add_p()
+age <- as_tibble(tbl_csv, col_labels = TRUE)
+
+tbl_csv <- tbl_agri |>
+  select(-n_edad_jefe_med, -n_is_agri_broad) |> # filter(decile_total %in% paste0("D", 1:10)) |>
+  tbl_svysummary(
+    by = sexo_jefe,
+    type = list(menores ~ "continuous"),
+    statistic = list(
+      all_continuous() ~ "{mean} ({p25}, {p75})",
+      all_categorical() ~ "{p} %"
+    ),
+    label = list(
+      n_is_agri = "Relation to agripastoral activities",
+      n_is_self_employed_narrow = "Occupational status",
+      tot_integ = "Total number of household members",
+      menores = "Number of household members below 12",
+      edad_jefe = "Household's head age",
+      # sexo_jefe="Household's head sex",
+      educa_jefe_group = "Household's head education",
+      est_socio = "Socio-economic status",
+      n_etnia = "Ethnic self-description",
+      n_acc_alim1 = "Concerned about food availability (last month)",
+      n_below_smg_epc = "Income relative to minimum wage"
+    )
+  ) |>
+  add_ci(
+    conf.level = 0.99,
+    method = list(
+      all_continuous() ~ "svymean",
+      all_categorical() ~ "svyprop.logit"
+    ),
+    include = everything(),
+    statistic = list(
+      all_continuous() ~ "{conf.low}, {conf.high}",
+      all_categorical() ~
+        "{conf.low}%, {conf.high}%"
+    ),
+    #  pattern = "{stat} (99% CI {ci})",
+    style_fun = all_continuous() ~ purrr::partial(style_number, digits = 1)
+  ) |>
+  bold_labels() |>
+  italicize_levels() |>
+  add_overall(last = TRUE) |>
+  add_p()
+gender <- as_tibble(tbl_csv, col_labels = TRUE)
+# The following warnings were returned during `add_p()`:
+# ! For variable `est_socio` (`sexo_jefe`) and "statistic" and "p.value"
+#   statistics: Chi-squared approximation may be incorrect
+# CAR TROP PEU D'OBS WOMEN  : 793 000
+custom_save(ethnic, "household_char_agri_broad_by_ethnicity")
+custom_save(gender, "household_char_agri_broad_by_gender")
+custom_save(age, "household_char_agri_broad_by_age")
+
+# dr <- list(ethnic, age, gender)
+# names(dr) <- c("ethnic", "age", "gender")
+
 
