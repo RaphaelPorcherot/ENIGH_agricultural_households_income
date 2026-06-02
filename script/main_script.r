@@ -45,6 +45,8 @@ source(here("script", "0_utils.r"))
 
 # PART 1 : PREPARING THE DATABASE FOR THE PILOT STUDY ON MEXICO ----
 
+
+
 #TODO:
 # size_val1 par tipo_prod (get_proportion())
 # edad_med dans les deciles (get_proportion())
@@ -352,4 +354,4 @@ source(here("script", "2E_stat_ratio_analysis.r"))
 
 saveRDS(res, here("output", "part2_results"))
 
-# THE END ---
+# THE END --- 
