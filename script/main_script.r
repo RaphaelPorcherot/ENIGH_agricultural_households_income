@@ -45,8 +45,6 @@ source(here("script", "0_utils.r"))
 
 # PART 1 : PREPARING THE DATABASE FOR THE PILOT STUDY ON MEXICO ----
 
-
-
 #TODO:
 # size_val1 par tipo_prod (get_proportion())
 # edad_med dans les deciles (get_proportion())
@@ -60,6 +58,13 @@ source(here("script", "1A_data_prep.r"))
 source(here("script", "1B_data_svyr.r"))
 
 # PART 2 : STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO ----
+
+# TODO: For pairs of deciles where CIs overlap or differences are substantively
+# interesting, compute formal CIs on the difference (e.g. D1 - D10) using a
+# single svytotal() call on cbind(part_D1, part_D10, total) and delta method
+# on X1/Z - X2/Z with the full 3x3 variance matrix. This is especially
+# relevant given the negative covariance between shares (they sum to 1), which
+# makes the CI on the difference narrower than visual overlap suggests.
 
 #WARN : when we compute the ratio or the share etc it is always a macro value for the aggragated (agri) household in a given decile
 #The aggregate share is substantially lower than the average household ratio, reflecting strong heterogeneity in farm size and a negative correlation between production scale and self-consumption
