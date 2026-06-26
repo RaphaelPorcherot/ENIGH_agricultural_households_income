@@ -51,7 +51,9 @@ source(here("script", "0_utils.r"))
 # gender dans les deciles (idem)
 
 #INFO: n_tipo_prod based on AGROPRODUCTO. But household in AGRO not in AGROPRODUCTOS will be classified as not agri because n_tipo_act will be NA. The difficulty is overcome in part 2 in which we explicitely assign a production type to household in AGRO but not in AGROPRODUCTO
+
 #NOTE: we had issue with the key hogar : now solved, by setting its type explicitely to characer(). all hogares are in concentradohogar.
+
 #NOTE: tipoact_agro is unused : we use instead our own is_agri income based definition
 
 source(here("script", "1A_data_prep.r"))
@@ -77,11 +79,27 @@ source(here("script", "1B_data_svyr.r"))
 # structure duale agriculture (subsistence vs commercial)
 
 #TODO : now that we have corrected the weird D10 deciles starts with farm dual's structure and review the comment and noe.
+# for instance we had previously
+# #(no longer true, legacy) chez les riches mexicains, la possession d’une ferme n’est pas uniquement productive : il y a plus de fermiers dans D10 que dans D9, mais manifestement les D10 ce n'est pas que de l'industrie agricole à grande échelle. Les fermes dans D10 ne sont pas la source principale de la richesse ? Pourtant effectivement qqchose comme 70 % du revenus de D10 vient des fermes
+# Une minorité de très grosses fermes capte l’essentiel du revenu agricole: D10 semble être lui-même dual !
+# D9 = bourgeoisie agricole productive
+# grandes exploitations commerciales
+# relativement homogènes
+# revenus encore diversifiés
+# D10 = élite économique rurale hybride
+# très grandes exploitations ultra-rentables
+# ménages riches avec petites fermes
+# forte dispersion patrimoniale
+
+
+
 #TODO : decile cut off point rajouter smg as line. actually lets compute please a real relative poverty line
+
 #TODO: les intervalles de confiance sont peut etre trop grand pour savoir combien précisément mais on peut savoir si relativement certains déciles ont plus que d'autres : si les intervalles de confiance ne sont pas superposés
 # pour aller dans cette direction :
 # * refaire compo avec un nombre réduit de modalités pour nvo_tot
 # * faire pour la modalité principale d'intérêt get_ratio (on y voit les intervalles)
+
 #TODO: améliorer la détection des déciles significativement différents de la référence
 # Actuellement : unreliable = CV > cv_threshold (fiabilité de l'estimation seulement)
 # Ne répond pas à : "est-ce que le décile est significativement différent de la référence ?"

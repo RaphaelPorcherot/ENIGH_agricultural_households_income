@@ -644,6 +644,148 @@ get_share_micro <- function(
     dplyr::rename(!!strat_var := strat_var)
 }
 
+### MICRO RATIO : médiane des ratios individuels par sous-groupe ----
+#TODO: NEEDS TO WRITE AND COMPUTE IT
+
+## get_ratio_micro_median <- function(
+#   design,
+#   numerator,
+#   denominator,
+#   strat_var,
+#   filter_var = NULL,
+#   filter_value = NULL,
+#   level = 0.99
+# ) {
+#   z <- qnorm((1 + level) / 2)
+#
+#   if (!is.null(filter_var) && !is.null(filter_value)) {
+#     design_filtered <- subset(
+#       design,
+#       !is.na(design$variables[[filter_var]]) &
+#         design$variables[[filter_var]] == filter_value
+#     )
+#   } else {
+#     design_filtered <- design
+#   }
+#
+#   # ratio individuel
+#   design_filtered <- update(
+#     design_filtered,
+#     .ratio = design_filtered$variables[[numerator]] /
+#       design_filtered$variables[[denominator]]
+#   )
+#   design_filtered$variables$.ratio <- ifelse(
+#     is.finite(design_filtered$variables$.ratio),
+#     design_filtered$variables$.ratio,
+#     NA_real_
+#   )
+#
+#   strat_levels <- unique(as.character(design_filtered$variables[[strat_var]]))
+#   strat_levels <- strat_levels[!is.na(strat_levels)]
+#
+#   calc_median <- function(strat_level) {
+#     design_sub <- subset(
+#       design_filtered,
+#       !is.na(design_filtered$variables[[strat_var]]) &
+#         as.character(design_filtered$variables[[strat_var]]) == strat_level
+#     )
+#     res <- design_sub |>
+#       srvyr::as_survey() |>
+#       srvyr::summarise(
+#         median_ratio = srvyr::survey_quantile(
+#           .ratio,
+#           quantiles = 0.5,
+#           na.rm = TRUE,
+#           vartype = "se"
+#         )
+#       )
+#     est <- res$median_ratio_q50
+#     se  <- res$median_ratio_q50_se
+#     tibble::tibble(
+#       strat_var  = strat_level,
+#       median     = est,
+#       SE         = se,
+#       IC_low     = est - z * se,
+#       IC_high    = est + z * se
+#     )
+#   }
+#
+#   purrr::map_dfr(strat_levels, calc_median) |>
+#     dplyr::rename(!!strat_var := strat_var)
+# }
+
+### MICRO SHARE : médiane des parts individuelles par sous-groupe ----
+
+# get_share_micro_median <- function(
+#   design,
+#   target_var,
+#   strat_var,
+#   filter_var = NULL,
+#   filter_value = NULL,
+#   level = 0.99
+# ) {
+#   z <- qnorm((1 + level) / 2)
+#
+#   if (!is.null(filter_var) && !is.null(filter_value)) {
+#     design_filtered <- subset(
+#       design,
+#       !is.na(design$variables[[filter_var]]) &
+#         design$variables[[filter_var]] == filter_value
+#     )
+#   } else {
+#     design_filtered <- design
+#   }
+#
+#   # dénominateur : total univers (inchangé)
+#   total_val <- as.numeric(coef(survey::svytotal(
+#     as.formula(paste0("~", target_var)),
+#     design = design_filtered,
+#     na.rm = TRUE
+#   )))
+#
+#   design_filtered <- update(
+#     design_filtered,
+#     .share_micro = design_filtered$variables[[target_var]] / total_val
+#   )
+#   design_filtered$variables$.share_micro <- ifelse(
+#     is.finite(design_filtered$variables$.share_micro),
+#     design_filtered$variables$.share_micro,
+#     NA_real_
+#   )
+#
+#   strat_levels <- unique(as.character(design_filtered$variables[[strat_var]]))
+#   strat_levels <- strat_levels[!is.na(strat_levels)]
+#
+#   calc_median <- function(strat_level) {
+#     design_sub <- subset(
+#       design_filtered,
+#       !is.na(design_filtered$variables[[strat_var]]) &
+#         as.character(design_filtered$variables[[strat_var]]) == strat_level
+#     )
+#     res <- design_sub |>
+#       srvyr::as_survey() |>
+#       srvyr::summarise(
+#         median_share = srvyr::survey_quantile(
+#           .share_micro,
+#           quantiles = 0.5,
+#           na.rm = TRUE,
+#           vartype = "se"
+#         )
+#       )
+#     est <- res$median_share_q50
+#     se  <- res$median_share_q50_se
+#     tibble::tibble(
+#       strat_var = strat_level,
+#       median    = est,
+#       SE        = se,
+#       IC_low    = est - z * se,
+#       IC_high   = est + z * se
+#     )
+#   }
+#
+#   purrr::map_dfr(strat_levels, calc_median) |>
+#     dplyr::rename(!!strat_var := strat_var)
+# }
 ## Wrapper functions for polagri.r ----
 ### connecting composition and ratio/share analysis ----
 

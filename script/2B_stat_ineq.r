@@ -169,16 +169,6 @@ print(plot_agri_house_fni_decile_pct)
 # d |> filter(n_is_agri == "agri_narrow") |> group_by(n_deciles_total) |> summarise(mean_ing = mean(n_ing_cor_clean))
 
 ### agri_broad ----
-#INFO: chez les riches mexicains, la possession d’une ferme n’est pas uniquement productive : il y a plus de fermiers dans D10 que dans D9, mais manifestement les D10 ce n'est pas que de l'industrie agricole à grande échelle. Les fermes dans D10 ne sont pas la source principale de la richesse ? Pourtant effectivement qqchose comme 70 % du revenus de D10 vient des fermes
-# Une minorité de très grosses fermes capte l’essentiel du revenu agricole: D10 semble être lui-même dual !
-# D9 = bourgeoisie agricole productive
-# grandes exploitations commerciales
-# relativement homogènes
-# revenus encore diversifiés
-# D10 = élite économique rurale hybride
-# très grandes exploitations ultra-rentables
-# ménages riches avec petites fermes
-# forte dispersion patrimoniale
 
 farm_turnover_decile_pct <- get_proportion(
   design = mysvyr,
@@ -307,8 +297,6 @@ plot_farm_turnover_decile_narrow_pct <- ggplot(
 
 custom_save(plot_farm_turnover_decile_narrow_pct, type = "fig")
 print(plot_farm_turnover_decile_narrow_pct)
-
-#NOTE: the previous observation applies, D10 agri households have smaller farm than D9.
 
 # Income inequalities compared ----
 ## on agri_broad ----

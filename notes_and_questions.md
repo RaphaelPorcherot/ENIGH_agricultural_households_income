@@ -1,7 +1,156 @@
-# CURRENT
-| Column1 | Column2 | Column3 |
-| ------------- | -------------- | -------------- |
-| Item1 | Item1 | Item1 |
+## Programme de travail 
+
+### Current 
+
+
+* abbiamo indicatore di media aggregata (mean ratio/share), di media dei indicatori individuali (average mean of individual ratio/share), c'e bisogno di avere la mediana per completare. 
+
+* alcuni altri grafici : # size_val1 par tipo_prod (get_proportion())
+# edad_med dans les deciles (get_proportion())
+# gender dans les deciles (idem)
+
+-> per questo necesito scrivere una funzione custom per generare rapido queste analisis. Lo stesso con la mediana : get_number(), get_proportion(), get_median()
+
+* facciamo statistiche visuale comparando intervalli di fiducia : ma per potere scrivere che tal decile gana piu che altro, necesitamo stimare la diferenza fra i ratio e gli intervalli di fiducia della differneiza
+
+* we could bundle some modalities in composition analysis in order to get more reliable confidence intervals (like we did with sparse income sources)
+
+* usare la variabile "cantitad" in AGROPRODUCTO 
+
+POVERTY INEGALITIES
+
+* #TODO: we should do this but on a relative poverty variable not on minimum wage which is an extreme and restrictive measure of poverty
+
+* Lorenz Curve : potremmo metere tutto su un solo grafico ; potremmo calcolare la distribuzione contrafattuale del reddito totale senza le politiche agricole
+
+* verificare le ragione della differenza persistente fra n_ing_cor (la nostra) ed ing_cor (ENIGH's). 
+
+#NOTE: 63% of households with >5% divergence between n_ing_cor_clean and n_ing_cor_enigh
+# are in D1-D3. Micro ratio estimates for these deciles should be interpreted with caution,
+# as individual ratios num_i / n_ing_cor_clean may be affected by income reconstruction
+# differences, particularly for households with originally negative incomes.
+
+PLURIACTIVITY
+
+* verificare che attivita non agricole ricevano appogio delle politiche agricole 
+
+*  #TODO: we could compute the number of different activities agro and noagro 
+
+* #WARN: we need to understand the discrpenacy between tipoact, which is encoded by INEGHI, and the self-declaration of the actiity which got the support fromsocial programs which may agri in a quite contradictory manner with the first element: two possible explanation
+
+* #TODO: add n_size_class in NOAGRO as in AGRO ?
+
+EXTENSION
+
+* econometria al di la della media per poverty analysis e per caracteristiche produttive
+
+* analisis fattoriale
+
+* lavoro dipendenti nella agricultura : tratare di dettagliare la relazione di attivita agricola (Lamarche Bastien)
+*
+### PAST (but check !)
+
+* [x] POUR FIN AVRIL : passer le qmd en R e exporter la data base
+
+* [x] lire sur chaque programme et faire une fiche 
+
+* [x] demander les autres aides, le troisième groupe pour savoir ce qu'il y a dedans
+
+* [x] créer fondo perduto e credito : dans nvo, il y a microcreditos,mais on laisse les autres de coté. 
+
+* [x] vérifier quel type d'activité : on a coût et bénéfices et crops/livestocks -> on essaie d'avoir avec agroproducto qqchose de plus précis
+
+* agroproducto al di piu di livetscoks/missto 
+
+* non agricole  altre attivité di lavoro autonome
+
+* lavoro dependenti : on peut avoir le détail 
+
+* [ ] famiglie agricole, operae agricoli, rurale ma non agricole : on doit chercher des définitions plus adaptés que simpelment localit < 2500 habitanti 
+
+* [x] passer de excel à R 
+
+INEGHI 
+
+* [ ] classification du rurale 
+
+* [ ] ogni programi di sostegno, anche differenza fra a fondo perduto e credito, e les troisièmes aides c'est quoi ? 
+
+* [ ] livello di poverta assoluta
+
+Donc moi je fais :
+
+* [x] R
+
+* [ ] relative poverty mais aussi
+
+* [x] a much more detailed set of descritpives statistcs : passer les tableaux en graphiques ?
+
+* [x] analis de chaqueprogramme, comparaison ancien/nouveau/troisieme groupe, et comparaison des autres transferst genre retraites 
+
+* [ ] ANALISIS MULTIVARIATA : caractaristiche delle famiglie e delle attivita produttive 
+
+## Miscellaneous suggestions 
+
+
+* [ ] possible d'avoir les salariés agricoles dans la bdd 
+* [ ] comment on sait les activités qui sont prises en compte précisément ? comment on sait que ca inclut pas le tourisme agricole ? Si je peux avoir une description des opérations qui ont permis de constituer les données c'est cool
+* ref de : Les agriculteurs sont de plus en plus nombreux à employer de la main d’œuvre. En équivalent temps plein (ETP), 40% du volume de travail agricole[7] est aujourd’hui réalisé par des salarié·e·s. Si l’on supprime cette conversion en ETP, les salariés agricoles sont deux fois plus nombreux que les exploitant.e.s[8].
+
+* sur le targeting mais pas dans la société au sens large, dans l'agriculture : reprendre le cours de l'X il diot y avoir des refs 
+LIRE
+
+
+### Minor 
+
+
+* [ ] try to explain the discrepancy between number of farms from agricultural census compared to enigh 
+
+* [ ] why are wealthiest agricultural households even concerned about food availability? 
+
+### More elaborations 
+
+
+* [ ] utiliser Zemmour pour calculer l'indice de Gini avant et après (voir Benedetto : la position relative peut s'améliorer mais la situation générale peut se dégrader)
+
+* [ ] il faudrait comparer non seulement les programmes ruraux (anciens et noevau) entre eux mais ausis les programmes ruraux vs les transferts d'autres types 
+
+* [ ] disaggregate sources of income 
+
+* [x] disaggregate social programs 
+
+* [ ] focus on self-employemnt agricultural households to assess the effectiveness of policies 
+
+- **intersectional disparities:** gender, age, and indigenous status effects on benefits.
+
+- **comparative analysis:** mexico vs. other latin american countries implementing targeted agricultural support.
+
+ consider apoyo_pago, that is support policies that do not belong neither to procampo or to nvo, but that are repayable subsidies (such are many of ne socila programs for instance tandas para el bienestar)
+
+### Still more work ahead !
+
+* [ ] poverty measurement : compute relative poverty ; exploit enigh interesting indicators ; assess gap between income and wealth distribution (see below)
+
+* [ ] extend to farm workers, maybe farm manager as in australia 
+
+* [ ] not how agricultural policies are distributed according to the structure of households, but rather how the strucutre of latter are affected by the former
+
+## Steps 
+
+1. It would be extremely nice to have a much more detailed set of descritpives statistcs as the first pres also 
+
+2. estimating farmer's wealth : fiscal rather than fisherian or even historical cost ? 
+
+3. And then : running mfa on various year to assess variabiliy by the shifting weigjt and composition of the main axis of the projection beyond just the cluster : See how the social field of farmers mutates over time. Also would may throw some light on which  factors are more relevant, an idea of possible causalities and impossible one, along with the reverse causation : not how agricultural policies are distributed according to the structure of households, but rather how the strucutre of latter are affected by the former
+
+
+Our main takewways : as farm net income (on farm income, including non agricultural activiies that occured on farm premises such as farm tourism) represent a low % of income 
+
+**shifting the focus from agricultural policies towards rural developement policies** 
+
+# CURRENT questions
+
+# PAST questions
 
 ing_cor est la sommme ingtra + ce qu'on a 
 ingtra c'est negocio (agrope et noagrope) + trabajo + otro_trab 
@@ -93,8 +242,6 @@ Group variables            None
 * [ ] reprendre les TODO et il lui lister 
 * [ ] reprendre les notes sur FLAN + rajouter celles sur AFEP : probablement des TODO, genre MFA()
 * [ ] elf consumption has been corrected (on calculait la part de l'auotconsommation du décile dans la prod total agri lol)
-
-# PAST 
 
 ## FINALLY
 

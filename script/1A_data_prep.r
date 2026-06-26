@@ -840,7 +840,7 @@ noagro <- noagro_clean |>
 
     .groups = "drop"
   )
-#TODO: add n_size_class as in AGRO ?
+#TODO: add n_size_class in NOAGRO as in AGRO ?
 
 # noagro |>
 #   select(

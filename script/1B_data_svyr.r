@@ -69,7 +69,6 @@ d <- d |>
     n_nvo_pago_agro = n_nvo_tot_agro - n_nvo_npago_agro, # in support there are other stuff than only NEW
     n_nvo_pago_noagro = n_nvo_tot_noagro - n_support_noagro, # there is only NVO as npago support to non agriculture
     n_nvo_pago = n_nvo_tot - n_nvo_npago # (n_support_noagro + n_nvo_npago_agro)
-    #NOTE: we could add n_nvo_npago = n_support_noagro + n_nvo_npago_agro
   ) |>
   # creating sorting variable using clean version of n_fni and n_ingr_noagr
   mutate(
@@ -421,8 +420,6 @@ mysvyr <- mysvyr |>
       include.lowest = TRUE
     )
   )
-
-#NOTE: they are more agri households in D10 than in D9.
 
 # mysvyr |>
 #   filter(n_is_agri_broad == "agri_broad") |>
