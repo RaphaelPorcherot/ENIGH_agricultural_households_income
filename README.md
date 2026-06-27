@@ -1,3 +1,9 @@
+# Data source 
+
+Go to [https://www.inegi.org.mx/datosabiertos/](https://www.inegi.org.mx/datosabiertos/), Encuestas/regulares/Encuesta Nacional de Ingresos y Gastos de los Hogares (ENIGH)/2022.
+
+Put the data in a /src/ folder and unzip it. The scripts will go and target the necessary csv.
+
 # Release on Zenodo 
 
 L'obiettivo è pubblicare una versione stabile del codice su Zenodo, che genera un DOI citabile. La versione pubblicata sarà pubblica e priva dei commenti di lavoro interni (#TODO, #WARN, #NOTE, #INFO) — che restano invece visibili su main per il nostro uso quotidiano.
