@@ -1,43 +1,72 @@
 # Workflow GitHub del progetto
 
+## Strumenti: GitHub Desktop vs riga di comando
+
+Esistono due modi per usare Git: tramite interfaccia grafica (versione GUI, **GitHub Desktop**, che usi tu) o tramite **riga di comando nel terminale** (versione CLI, che uso io). Le operazioni sono identiche — è solo la forma che cambia. Ecco una tabla di correspondenzia. Qui sotto scrivo il workflow GUI e sempre anche su equivalente CLI
+
+| Operazione | Riga di comando (Raphael) | GitHub Desktop (Benedetto) |
+|---|---|---|
+| Vedere il branch attivo | `git branch` | Nome visibile in alto al centro della finestra |
+| Creare un branch | `git checkout -b nome` | Current Branch → New Branch |
+| Cambiare branch | `git checkout nome` | Current Branch → seleziona dalla lista |
+| Salvare modifiche | `git add . && git commit -m "..."` | Scrivi messaggio in basso a sinistra → "Commit to [branch]" |
+| Inviare su GitHub | `git push origin nome-branch` | Pulsante "Push origin" in alto a destra |
+| Aggiornare da main | `git checkout main && git pull` poi `git merge main` | Branch → Update from main |
+| Aprire una PR | GitHub.com | Pulsante "Create Pull Request" dopo il push |
+
+---
+
 ## 1. Clonare il progetto in locale
 
-Una volta che sei stato aggiunto come collaboratore su GitHub:
+**GitHub Desktop:** File → Clone repository → scegli il repository → scegli la cartella locale → Clone.
+
+Poi apri il progetto in RStudio facendo **doppio clic sul file `.Rproj`** nella cartella clonata. Questo è essenziale: apre RStudio nel contesto corretto del progetto.
+
+---
+
+**Equivalente CLI:**
 
 ```bash
 git clone https://github.com/RaphaelPorcherot/INEGI_Mexico.git
 cd INEGI_Mexico
 ```
 
-Poi apri il progetto in RStudio (o VSCode).
-
 ---
 
-## 2. Attivare l’ambiente `renv`
+## 2. Attivare l'ambiente `renv`
 
-Il progetto usa `renv` per gestire le dipendenze R.
-
-Solo la prima volta:
+Il progetto usa `renv` per gestire le versioni dei package R. **Solo la prima volta**, nella console di RStudio:
 
 ```r
 install.packages("renv")
 renv::restore()
 ```
 
-Questo installerà automaticamente le versioni corrette dei package.
+Questo installerà automaticamente le versioni corrette dei package. Dopo, `renv` si attiva da solo ogni volta che apri il progetto tramite il `.Rproj`.
 
-Dopo, normalmente basta aprire il progetto: `renv` si attiva automaticamente.
-
-Importante:
-
-* evitare `install.packages()` manuali salvo necessità;
-* se aggiungi un package utile al progetto, avvisami prima di fare `renv::snapshot()`.
+⚠️ **Importante:**
+- Evita `install.packages()` manuali senza avvisarmi
+- Non fare mai `renv::snapshot()` senza prima chiedermelo — sovrascriverebbe la lista dei package del progetto
 
 ---
 
 ## 3. Lavorare su un branch dedicato
 
-Per evitare di lavorare direttamente sul branch principale (`main`), crea un branch personale:
+Non si lavora mai direttamente su `main`. Ogni modifica va fatta su un branch personale.
+
+**Creare il tuo branch (solo la prima volta):**
+
+In GitHub Desktop: Current Branch → New Branch → chiama il branch `benedetto` → Create Branch.
+
+**Controllare sempre il branch attivo prima di lavorare:**
+
+In GitHub Desktop il branch attivo è visibile in alto al centro. **Se vedi `main`, fermati** e seleziona `benedetto` dalla lista Current Branch.
+
+--- 
+
+**Equivalente CLI:**
+
+Creare un branch personale:
 
 ```bash
 git checkout -b nome-feature
@@ -46,10 +75,14 @@ git checkout -b nome-feature
 Esempio:
 
 ```bash
-git checkout -b benedetto-verif-data
+git checkout -b benedetto
 ```
 
-Da quel momento lavori solo su quel branch.
+Assicurarsi di essere sul tuo branch:
+
+```bash
+git checkout benedetto # senza -b : ti pasa a una branch gia esistente ; con -b : crea una nuova branch
+```
 
 Per verificare il branch attivo:
 
@@ -61,50 +94,26 @@ L’asterisco indica il branch corrente.
 
 ---
 
-## 4. Salvare il proprio lavoro
+## 4. Iniziare una sessione di lavoro
 
-Quando vuoi registrare le modifiche:
+Ad ogni nuova sessione, prima di modificare qualsiasi file:
 
-```bash
-git add .
-git commit -m "descrizione chiara delle modifiche"
-```
+1. In GitHub Desktop: clicca **"Fetch origin"** per scaricare gli aggiornamenti
+2. Poi: **Branch → Update from main** — per recuperare le mie eventuali modifiche
 
-Poi invia il branch su GitHub:
+Questo evita conflitti alla fine.
 
-```bash
-git push origin nome-del-branch
-```
+--- 
 
-Esempio:
+**Equivalente CLI:**
+
+Scaricare l'ultima versione da main sulla tua branch:
 
 ```bash
-git push origin benedetto-verif-data
+git pull origin main # assicura che hai gli ultimi cambi dalla branch prinzipale
 ```
 
----
-
-## 5. Proporre una fusione verso `main`
-
-Quando le modifiche sono pronte:
-
-1. Vai su GitHub;
-2. GitHub proporrà automaticamente di aprire una Pull Request;
-3. Crea la Pull Request verso `main`.
-
-Controllerò poi le modifiche prima del merge.
-
-L’idea è:
-
-* `main` resta stabile;
-* ognuno sviluppa sul proprio branch;
-* le modifiche passano tramite Pull Request prima di essere integrate.
-
----
-
-## 6. Aggiornare il proprio branch con le ultime modifiche di `main`
-
-Prima di iniziare una nuova sessione di lavoro:
+O di forma piu dettagliata:
 
 ```bash
 git checkout main
@@ -123,26 +132,88 @@ E recupera gli aggiornamenti di `main`:
 git merge main
 ```
 
-Così si evitano conflitti all’ultimo momento.
+---
+
+## 5. Salvare il proprio lavoro (commit + push)
+
+Quando vuoi registrare le tue modifiche:
+
+1. In GitHub Desktop, i file modificati appaiono automaticamente nella colonna sinistra
+2. Scrivi un **messaggio chiaro** in basso a sinistra (es. *"verifica date nel file import_data.R"*). Prova a fare piccoli commit: uno per cambio unitario che fai. Dopo al etapa 4. invirai tutti i distinti commits da una volta. Fare piccoli commits aiuta a identificare rapido i problemi. 
+3. Clicca **"Commit to benedetto"**
+4. Clicca **"Push origin"** in alto a destra per inviare su GitHub
+
+⚠️ **Regola fondamentale:** invia sempre sul tuo branch personale, mai su `main`.
+
+Per proteggere il branch principale con una obligazione di usare il mecanismo chiamato "Pull request", dovremmo passare il repo in public invece di private o pagare. Non vogliamo fare ne il uno ne l'altro. 
+
+**Quindi dobbiamo avere disciplina:**
+
+- **Non fare mai** `git push origin main` — invia sempre sul tuo branch personale
+- **Non fare mai** `git merge main` o `git checkout main` per modificare direttamente il branch principale
+- Quando hai finito una parte del lavoro, **avvisami su WhatsApp/email e creo io il merge** (o una volta che ti senti piu comodo, vedi sezione 5.)
+
+In caso di dubbio, chiedi prima di fare qualsiasi operazione — è sempre meglio una domanda in più che un errore difficile da correggere.
 
 ---
 
-## 7. Cose da evitare
+**Equivalente CLI:**
 
-* non lavorare mai direttamente su `main`;
-* evitare di modificare `renv.lock` senza motivo;
-* evitare commit troppo grandi e confusi;
-* fare commit piccoli e chiari.
-
-Esempio di buon messaggio di commit:
+Registrare le modifiche:
 
 ```bash
-git commit -m "corregge la pulizia delle date in import_data.R"
+git add .
+git commit -m "descrizione chiara delle modifiche"
+```
+
+Inviare il branch su GitHub:
+
+```bash
+git push origin nome-del-branch
+```
+
+Esempio:
+
+```bash
+git push origin benedetto
+```
+
+Per verificare che non stai lavorando su `main` per sbaglio, controlla sempre prima di fare `git add .` :
+```bash
+git branch
+```
+Se vedi `* main`, fermati e torna sul tuo branch :
+```bash
+git checkout benedetto
 ```
 
 ---
 
-## 8. Aprire una Pull Request (PR)
+## 6. Avvisarmi e proporre le modifiche (Pull Request)
+
+Fusionar il tuo lavoro con la branch principale sono due etapi:
+
+* creare un pull request 
+
+* assicurarsi che tutto va bene e fare il merge
+
+Quando hai finito una parte del lavoro, **avvisami su WhatsApp o email**: faro entrambi operazione.
+
+**Come gestirò io le tue modifiche all'inizio:**
+
+Quando mi avvisi che hai finito una parte del lavoro, ecco cosa farò io :
+
+Vado su GitHub.com nel nostro repository, scheda Pull requests. Se non hai ancora creato una PR, apparirà un banner giallo con il pulsante "Compare & pull request" — lo clicco io. Controllo le tue modifiche, e se tutto è ok clicco "Merge pull request" per integrare il tuo lavoro nel branch principale main.
+
+Da parte tua non devi fare nulla di più che avvisarmi. Gestisco io la fusione.
+
+In caso di conflitto (cioè se abbiamo modificato gli stessi file nello stesso punto), ti contatto prima di procedere.
+
+**Una volta che ti senti più a tuo agio, farai la prima operazione:**
+
+Puoi anche creare tu stesso la Pull Request: dopo il push, in GitHub Desktop apparirà un pulsante blu **"Create Pull Request"** — cliccalo, si aprirà GitHub nel browser. Aggiungi un breve messaggio per descrivere le modifiche e clicca **"Create pull request"**.
+
+Si puo fare anche diretto da la pagina web 
 
 Dopo aver fatto il push del tuo branch su GitHub:
 
@@ -153,15 +224,11 @@ Dopo aver fatto il push del tuo branch su GitHub:
    - base = `main`
    - compare = il tuo branch
 
----
-
-## 9. Descrivere la PR
-
-Nella descrizione spiega brevemente:
+**Nella descrizione spiega brevemente:**
 
 - cosa hai fatto
-- quali file sono stati modificati
-- eventuali punti da verificare
+- quali file hai modificato
+- eventuali dubbi o punti da verificare
 
 Esempio:
 
@@ -169,24 +236,30 @@ Esempio:
 > Correzione del formato delle date  
 > Miglioramento della funzione di filtro
 
----
-
-## 10. Creare la PR
-
-Clicca su **Create pull request**.
-
-Da quel momento io potrò:
-- rivedere le modifiche
-- chiedere eventuali correzioni
-- fare il merge in `main` quando tutto è ok
+Dopodiché gestisco io il merge in `main`. Piu avanti, farai anche la seconda operazione. 
 
 ---
+**Equivalente CLI:**
 
-## 11. Dopo la PR
+C'è, ma da Github, non da Git. Le pull request sono una feature da Github, c'è bisogno installare `gh`.
 
-Se vengono richieste modifiche:
-- continui a lavorare sullo stesso branch
-- fai nuovi commit e push
-- la Pull Request si aggiorna automaticamente
+```bash
+gh pr create --base main --head benedetto-verif-data --title "verifica dati" --body "descrizione"
+```
 
-Non è necessario crearne una nuova.
+---
+
+
+## 7. In caso di conflitto
+
+Se abbiamo modificato gli stessi punti degli stessi file, Git segnalerà un conflitto. **Non fare nulla** — contattami e lo risolviamo insieme.
+
+---
+
+## 8. Cose da evitare
+
+- Non lavorare mai direttamente su `main`
+- Non fare `renv::snapshot()` senza avvisarmi
+- Evitare commit troppo grandi e generici — meglio commit piccoli e descrittivi
+- In caso di dubbio su qualsiasi operazione: **chiedi prima**. È sempre meglio una domanda in più che un errore difficile da correggere.
+
