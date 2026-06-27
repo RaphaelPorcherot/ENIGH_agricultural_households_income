@@ -59,7 +59,7 @@ Poi apri il progetto in RStudio facendo **doppio clic sul file `.Rproj`** nella 
 **Equivalente CLI:**
 
 ```bash
-git clone https://github.com/RaphaelPorcherot/INEGI_Mexico.git
+git clone https://github.com/RaphaelPorcherot/ENIGH_agricultural_households_income.git
 cd INEGI_Mexico
 ```
 
