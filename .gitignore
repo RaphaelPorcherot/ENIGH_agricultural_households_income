@@ -10,3 +10,6 @@ renv/library/
 renv/staging/
 
 output/
+
+clean_comments.py
+clean_comments_log.md

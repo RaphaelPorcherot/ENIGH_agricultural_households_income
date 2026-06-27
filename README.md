@@ -1,3 +1,34 @@
+# Release on Zenodo 
+
+L'obiettivo è pubblicare una versione stabile del codice su Zenodo, che genera un DOI citabile. La versione pubblicata sarà pubblica e priva dei commenti di lavoro interni (#TODO, #WARN, #NOTE, #INFO) — che restano invece visibili su main per il nostro uso quotidiano.
+
+Il processo usa un branch temporaneo `zenodo` che esiste solo il tempo della release, poi viene eliminato. Il branch main non viene mai toccato.
+
+`clean_comments.py` non è nel repository — esiste solo sul computer di Raphael e va lanciato manualmente prima della release.
+
+```bash
+git checkout -b zenodo
+python clean_comments.py
+git add .
+git commit -m "clean : remove todo comments for release"
+git push -u origin zenodo
+
+```
+A questo punto:
+
+* Si va su GitHub.com → Releases → Create a new release
+* Si sceglie il branch zenodo (non main)
+* Si assegna un tag di versione (es. v1.0.0)
+* Si pubblica la release → Zenodo la rileva automaticamente e genera il DOI
+
+Poi si torna su main e si elimina il branch temporaneo:
+
+```bash
+git checkout main 
+git branche -d zenodo
+git push origin --delete zenodo
+```
+
 # Workflow GitHub del progetto
 
 ## Strumenti: GitHub Desktop vs riga di comando
