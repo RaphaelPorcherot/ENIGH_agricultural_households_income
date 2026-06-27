@@ -169,7 +169,8 @@ git commit -m "descrizione chiara delle modifiche"
 Inviare il branch su GitHub:
 
 ```bash
-git push origin nome-del-branch
+git push -u origin nome-del-branch # la prima volta, per publiccare la nuova local branch
+git push origin nome-del-branch # le altre volte
 ```
 
 Esempio:
