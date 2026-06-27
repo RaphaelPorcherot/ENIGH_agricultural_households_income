@@ -8,6 +8,7 @@ Il processo usa un branch temporaneo `zenodo` che esiste solo il tempo della rel
 
 ```bash
 git checkout -b zenodo
+rm README.md && rm notes_and_questions.md # aussi docs/ et les scripts z_ dans scripts/
 python clean_comments.py
 git add .
 git commit -m "clean : remove todo comments for release"
@@ -21,7 +22,7 @@ A questo punto:
 * Si assegna un tag di versione (es. v1.0.0)
 * Si pubblica la release → Zenodo la rileva automaticamente e genera il DOI
 
-Poi si torna su main e si elimina il branch temporaneo:
+(optionale) Poi si torna su main e si elimina il branch temporaneo:
 
 ```bash
 git checkout main 
