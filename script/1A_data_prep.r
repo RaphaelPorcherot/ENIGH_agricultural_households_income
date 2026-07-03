@@ -1023,7 +1023,7 @@ concentradohogar_features <- concentradohogar_enriched |>
       n_trabajo +
       n_otros_trab +
       n_rentas +
-      n_transfer +
+      n_transfer - nvo - agrogan + #to avoid double counting of support
       n_estim_alqu +
       n_otros_ing,
 
