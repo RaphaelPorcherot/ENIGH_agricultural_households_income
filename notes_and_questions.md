@@ -2,9 +2,13 @@
 
 ### Current 
 
+* [ ] Vincent chatelier inrae part aiddabs revenu agricoke france Catherine laurent
+
 * [ ] contact Chapengo, département de sociologie (répartition géographique communautés agraires / ejidos vs territoires peuples originaires regarder si  transferts sorcial fmaily to FNI)
 
 * [ ] PSE - Celine Dutilly Gwenole Le Velly sur les paiements écosystémiquqes au mexique
+
+* [ ] régime foncier : demanander come rojas ses slides :
 
 * sarebbe interesante vedere se le transferenze soziale come NVO vengono o no de la riduzione di altri trasferimenti soziali alle famiglie
 
