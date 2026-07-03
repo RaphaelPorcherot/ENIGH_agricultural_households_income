@@ -2,12 +2,29 @@
 
 ### Current 
 
+* [ ] contact Chapengo, département de sociologie (répartition géographique communautés agraires / ejidos vs territoires peuples originaires regarder si  transferts sorcial fmaily to FNI)
+
+* [ ] PSE - Celine Dutilly Gwenole Le Velly sur les paiements écosystémiquqes au mexique
+
+* sarebbe interesante vedere se le transferenze soziale come NVO vengono o no de la riduzione di altri trasferimenti soziali alle famiglie
+
+* di modo piu generale per avere un assessment complesso necesitiamo una idea di come funziona il social security system in messico. In Francia per esempio e independente dal regimene generale
+
+* c'e la quistione dei servizi ecosistemici e del suo pagamento (ho delel referenz da leggere : Celine Dutilly Gwenole Le Velly)
+
+* sarebbe interessante afinare la analisis per regione : i ecosistemi e per tanto le attivita agricole sono molto diverse dal norte al sud. E probabile anche che non capturano tutto quello che succede nel Chiapas gia che sono autonomi
+
+* sarebbe interesante calcolare la tasa di dipendenza ai input importati e/o comprati fuori per approximarse alla inserzione dei vari tipi di agricultura nelle cadene globale di valore. Con AGROPRODUCTOS e AGROCONSUMO dovremmo avere la info.
+
+* possiamo avere un contatto con il dipartimento di sociologia agraria di Chapengo : studiano comunita agrarie et ejidos.
+
+
 
 * abbiamo indicatore di media aggregata (mean ratio/share), di media dei indicatori individuali (average mean of individual ratio/share), c'e bisogno di avere la mediana per completare. 
 
 * alcuni altri grafici : # size_val1 par tipo_prod (get_proportion())
-# edad_med dans les deciles (get_proportion())
-# gender dans les deciles (idem)
+ edad_med dans les deciles (get_proportion())
+ gender dans les deciles (idem)
 
 -> per questo necesito scrivere una funzione custom per generare rapido queste analisis. Lo stesso con la mediana : get_number(), get_proportion(), get_median()
 
@@ -25,10 +42,9 @@ POVERTY INEGALITIES
 
 * verificare le ragione della differenza persistente fra n_ing_cor (la nostra) ed ing_cor (ENIGH's). 
 
-#NOTE: 63% of households with >5% divergence between n_ing_cor_clean and n_ing_cor_enigh
-# are in D1-D3. Micro ratio estimates for these deciles should be interpreted with caution,
-# as individual ratios num_i / n_ing_cor_clean may be affected by income reconstruction
-# differences, particularly for households with originally negative incomes.
+#NOTE: 63% of households with >5% divergence between n_ing_cor_clean and n_ing_cor_enigh are in D1-D3. Micro ratio estimates for these deciles should be interpreted with caution,
+#as individual ratios num_i / n_ing_cor_clean may be affected by income reconstruction
+#differences, particularly for households with originally negative incomes.
 
 PLURIACTIVITY
 
