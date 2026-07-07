@@ -423,7 +423,7 @@ agro_clean <- agro_raw |>
 
     #WARN: now the question is whether ing includes already support or not
     # lets try without
-    fni_year = ing_year - ero_year # + support_year
+    fni_year = ing_year - ero_year + support_year #direct payments are included in farm income
   )
 
 ## Household aggregation ----
