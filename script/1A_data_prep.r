@@ -809,7 +809,7 @@ noagro_clean <- noagro_raw |>
     size_val_year = ventas_year + auto_year + otros_montos_year,
     # annualized non-agricultural self-employed income
     # n_ingr_noagr = (ing_tri - ero_tri) * 4 + support
-    n_ingr_noagr = ing_year - ero_year #(ventas_tri - ero_tri) * 4 + support
+    n_ingr_noagr = ing_year - ero_year + support #policy support included in income from noagro production activities
   )
 
 ## Household-level aggregation ----
