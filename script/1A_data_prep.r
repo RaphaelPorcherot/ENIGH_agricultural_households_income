@@ -1295,6 +1295,7 @@ vars_n <- sort(names(concentradohogar)[str_starts(
   "n_"
 )])
 
+setwd("C:/Users/BenedettoR/Documents/GitHub/ENIGH_agricultural_households_income") #it is necessary to change the wd
 cur_dic <- read_csv(
   "dict_new_variables.csv",
   col_types = cols(
