@@ -1,4 +1,19 @@
 # FUNCTIONS ----
+## Create output dir ---- 
+
+create_output_dirs <- function() {
+  stopifnot(requireNamespace("here", quietly = TRUE))
+
+  subdirs <- c("data", "diagnostics", "fig", "processed")
+
+  for (sub in subdirs) {
+    path <- here::here("output", sub)
+    dir.create(path, recursive = TRUE, showWarnings = FALSE)
+    message("📁 Output folder ready : ", path)
+  }
+
+  invisible(here::here("output"))
+}
 ## Detailed statistics in custom layout ----
 
 make_tbl <- function(label, stat, ci_method = NULL) {
