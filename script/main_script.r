@@ -39,9 +39,10 @@ theme_gtsummary_language(
   language = "en"
 )
 
-# FUNCTIONS ----
+# FUNCTIONS and create output dir ----
 
 source(here("script", "0_utils.r"))
+create_output_dirs()
 
 # PART 1 : PREPARING THE DATABASE FOR THE PILOT STUDY ON MEXICO ----
 
