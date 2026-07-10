@@ -1,11 +1,8 @@
-# To add 
-
-Create output/data et output/diagnostics ou les faire créer parle code 
-
 # Data source 
 
 Go to [https://www.inegi.org.mx/datosabiertos/](https://www.inegi.org.mx/datosabiertos/), Encuestas/regulares/Encuesta Nacional de Ingresos y Gastos de los Hogares (ENIGH)/2022.
-Put the data in a /src/ folder and unzip it. The scripts will go and target the necessary csv.
+
+Put the data in the /src/ folder and unzip it. The scripts will go and target the necessary csv.
 
 
 # Release on Zenodo 
