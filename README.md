@@ -4,6 +4,53 @@ Go to [https://www.inegi.org.mx/datosabiertos/](https://www.inegi.org.mx/datosab
 
 Put the data in the /src/ folder and unzip it. The scripts will go and target the necessary csv.
 
+# Working with renv
+
+The project uses `renv` to lock the versions of R and its packages, so that the code runs the same way on every computer.
+
+**Versions used in this project:**
+- R: `4.5.3`
+- renv: `1.2.2`
+
+⚠️ Significantly different version of R (e.g. 4.3.x) may cause that some packages not install correctly.
+
+## Installation (first time only)
+
+After cloning the project, (optionnaly) created a `.Rproj` file (if you work with RStudio), run the following in the R console:
+
+```r
+install.packages("renv")
+renv::restore()
+```
+
+`renv::restore()` reads the `renv.lock` file (included in the repository) and installs **exactly** the same package versions that were used in the repo. This may take a few minutes the first time.
+
+## Working with renv (in brief)
+
+**Installing a new package:**
+
+Do not use `install.packages("package_name")`. Use instead:
+
+```r
+renv::install("package_name")
+```
+
+It does the same thing, but registers the package correctly within the project's renv environment (isolated from other R projets).
+
+**`renv::snapshot()` — what it does:**
+
+Updates the `renv.lock` file with the versions of the packages currently installed in the project. It essentially takes a "snapshot" of the current state of the libraries and saves it, so that anyone who runs `renv::restore()` afterwards gets exactly those versions.
+
+**`renv::status()` — useful for checking:**
+
+Tells whether there are packages installed but not yet captured in `renv.lock`, or conversely packages in the lockfile that are not installed. Handy to run occasionally to check whether in sync.
+
+```r
+renv::status()
+```
+
+For everything else (how renv works internally, library management, use with Docker, etc.), the official guide is here: [https://rstudio.github.io/renv/articles/renv.html](https://rstudio.github.io/renv/articles/renv.html)
+
 # Release on Zenodo
 
 L'obiettivo è pubblicare una versione stabile del codice su Zenodo, che genera un DOI citabile. La versione pubblicata sarà pubblica e priva dei commenti di lavoro interni (#TODO, #WARN, #NOTE, #INFO) — che restano invece visibili su main per il nostro uso quotidiano.
@@ -35,56 +82,6 @@ git checkout main 
 git branche -d zenodo
 git push origin --delete zenodo
 ```
-
-# Working with renv
-
-Il progetto usa `renv` per bloccare le versioni di R e dei package, cosi che il codice funzioni allo stesso modo su ogni computer (il mio, il tuo, e quello di chiunque scarichi il repository da Zenodo).
-
-**Versioni usate in questo progetto:**
-
-- R: `4.5.3`
-- renv: `1.2.2`
-
-⚠️ Se hai una versione di R molto diversa (es. 4.3.x), alcuni package potrebbero non installarsi correttamente. In quel caso avvisami prima di forzare qualcosa.
-
-## Installazione (solo la prima volta)
-
-Come già scritto nella sezione 2, dopo aver clonato il progetto e aperto il file `.Rproj`, nella console di RStudio:
-
-```r
-install.packages("renv")
-renv::restore()
-```
-
-`renv::restore()` legge il file `renv.lock` (che è nel repository) e installa **esattamente** le stesse versioni dei package che uso io. Puo volerci qualche minuto la prima volta.
-
-## Come lavorare con renv (in breve)
-
-**Installare un nuovo package:**
-
-Non usare `install.packages("nome_package")`. Usa invece:
-
-```r
-renv::install("nome_package")
-```
-
-Fa la stessa cosa, ma lo registra correttamente nell'ambiente renv del progetto (isolato dagli altri progetti R sul tuo computer).
-
-**`renv::snapshot()` — cosa fa:**
-
-Aggiorna il file `renv.lock` con le versioni dei package attualmente installati nel progetto. In pratica "fotografa" lo stato attuale delle librerie e lo salva, cosi che chiunque faccia `renv::restore()` dopo di te ottenga esattamente quelle versioni.
-
-⚠️ **Non farlo mai senza avvisarmi** — se lo fai tu, io mi ritrovo con `renv::restore()` che cambia le mie versioni dei package, e puo rompere cose che stavo usando.
-
-**`renv::status()` — utile per controllare:**
-
-Ti dice se ci sono package installati ma non ancora "fotografati" nel `renv.lock`, o viceversa package nel lockfile che non hai installato. Comodo da lanciare ogni tanto per capire se sei allineato.
-
-```r
-renv::status()
-```
-
-Per tutto il resto (come funziona renv internamente, gestione delle librerie, uso con Docker, ecc.), la guida ufficiale è qui: [https://rstudio.github.io/renv/articles/renv.html](https://rstudio.github.io/renv/articles/renv.html)
 
 # Workflow GitHub del progetto
 
