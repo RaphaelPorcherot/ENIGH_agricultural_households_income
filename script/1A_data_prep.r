@@ -422,8 +422,12 @@ agro_clean <- agro_raw |>
     # fni_year = ventas_year - ero_year + support
 
     #WARN: now the question is whether ing includes already support or not
-    # lets try without
-    fni_year = ing_year - ero_year # + support_year
+    # lets try with (but we deduct it from n_transfer later on)
+    # direct payments are included in farm income
+    # abbiamo da pensare che significa aggiungere a n_fni monti che non sono stati trasferiti: in realta nacionale de fertilizantes o precios di garantia sono monti che non vanno aggiunto al reddito reale. Il nostro reddito soprastima il reddito reale, è un poco come imputed rent
+    # vedere pagina 387 manual del entrevistador
+    # posiblamente parte de nvo_npago sono incluido in B045 (otros programas para adultos mayores) ma non nacional de fertilizantes e precios di garantias (pagine 241 descripcion de la base de datos)
+    fni_year = ing_year - ero_year + support_year
   )
 
 ## Household aggregation ----
@@ -809,7 +813,7 @@ noagro_clean <- noagro_raw |>
     size_val_year = ventas_year + auto_year + otros_montos_year,
     # annualized non-agricultural self-employed income
     # n_ingr_noagr = (ing_tri - ero_tri) * 4 + support
-    n_ingr_noagr = ing_year - ero_year #(ventas_tri - ero_tri) * 4 + support
+    n_ingr_noagr = ing_year - ero_year + support #policy support included in income from noagro production activities
   )
 
 ## Household-level aggregation ----
@@ -1023,7 +1027,10 @@ concentradohogar_features <- concentradohogar_enriched |>
       n_trabajo +
       n_otros_trab +
       n_rentas +
-      n_transfer +
+      #to avoid double counting: already included in n_fni_year
+      (n_transfer - coalesce(n_pro_agrogan_agro, 0)) +
+      #WARN:
+      # strictly speaking we should remove maybe more (but not nacional de fertilizantes nor precios de garantia)
       n_estim_alqu +
       n_otros_ing,
 
@@ -1293,7 +1300,7 @@ vars_n <- sort(names(concentradohogar)[str_starts(
 )])
 
 cur_dic <- read_csv(
-  "dict_new_variables.csv",
+  here("dict_new_variables.csv"),
   col_types = cols(
     level = col_character()
   )

@@ -12,6 +12,8 @@ d <- readRDS(
 # d |> skim(n_ing_cor)
 
 ## add new variables and correct type ----
+#WARN : Il nostro ing-cor è SICURAMENTE diverso da quello ENIGH perchè noi consideriamo le perdite delle attività produttive non come una uscita famigliare ma come una perdita aziendale.
+#
 d <- d |>
   # remove 0 before the code for educa_jefe, est_dis, and num
   mutate(
@@ -39,6 +41,8 @@ d <- d |>
       n_ingr_noagro +
       n_fni_agro_clean +
       n_ingr_noagro_clean,
+
+
     # human readable production types
     n_tipo_prod_agro = case_when(
       n_tipo_prod_agro == "0" ~ "No harvest yet",
@@ -639,6 +643,7 @@ consistency_check |>
   filter(flag) |>
   count(n_deciles_total) |>
   arrange(n_deciles_total)
+
 
 #NOTE: 63% of households with >5% divergence between n_ing_cor_clean and n_ing_cor_enigh
 # are in D1-D3. Micro ratio estimates for these deciles should be interpreted with caution,

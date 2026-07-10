@@ -92,8 +92,6 @@ source(here("script", "1B_data_svyr.r"))
 # ménages riches avec petites fermes
 # forte dispersion patrimoniale
 
-
-
 #TODO : decile cut off point rajouter smg as line. actually lets compute please a real relative poverty line
 
 #TODO: les intervalles de confiance sont peut etre trop grand pour savoir combien précisément mais on peut savoir si relativement certains déciles ont plus que d'autres : si les intervalles de confiance ne sont pas superposés
