@@ -1,13 +1,6 @@
-#TODO: make sure plot caption are right
 
 # Self-consumption ----
 ## Agricultural: in total turnover/production ----
-#WARN: we need to understand the discrpenacy between tipoact, which is encoded by INEGHI, and the self-declaration of the actiity which got the support fromsocial programs which may agri in a quite contradictory manner with the first element: two possible explanation
-# in NOAGRO are classified activities that are in 1 to 3, so not agricultural. But not agriculturla activities may have agriculturla input (fertilizantes for a small shop growing its own food or whatever)
-# NVO have been extended to non agricultural activities such as Microcredits for instance
-# La présence de bénéficiaires de programmes agricoles dans la table NOAGRO ne constitue pas nécessairement une incohérence statistique. La classification NOAGRO repose sur l’activité du negocio codée par l’enquête, tandis que l’activité associée au programme est auto-déclarée par le répondant. Cette dissociation reflète probablement la forte pluriactivité des ménages ruraux mexicains ainsi que le caractère transversal des nouveaux programmes sociaux, qui peuvent soutenir des activités agricoles secondaires au sein de ménages principalement engagés dans des activités commerciales, industrielles ou de services.
-#TODO: check what kind of combination exists in NOAGRO between tipoact and nvo_act1, nvo_act2
-#TODO: décider si on le fait aussi pour la somme des deux valeurs de l'autoconsommation
 
 basename <- "ratio_autocons1_size_val1_agro_decile"
 set_attribute(basename)
@@ -71,7 +64,6 @@ run_ratio_analysis(
 
 ## Non agricultural: in total turnover/production (NOAGRO) ----
 
-#TODO: still somehting to do; self-consumption from agro in all
 
 # Farm net income ----
 
@@ -264,8 +256,6 @@ run_ratio_analysis(
 
 ## in total current income ----
 
-#NOTE: The micro and macro estimators of income composition yield very similar results across deciles because the denominator — total household income — is precisely the variable used to construct the deciles, making it relatively homogeneous within each group.
-#This contrasts sharply with the autoconsumption-to-production ratio, where the denominator varies by orders of magnitude within deciles, driving a large wedge between the two estimators. For income composition stratified by income deciles, the choice between micro and macro estimators is therefore largely inconsequential, and both can be reported interchangeably.
 
 basename <- "ratio_support_agro_ing_cor_decile"
 set_attribute(basename)
@@ -391,13 +381,6 @@ run_ratio_analysis(
 )
 
 ## in farm net income (gross of fixed capital depreciation) ----
-#WARN:
-# - Negative CI bounds in some deciles (e.g. D5 agri_broad: 59.6% [-16.8, 136.1]) are not a
-#   bug but reflect genuine estimation uncertainty: few households receive support in that decile,
-#   and those who do show highly dispersed support/fni ratios, inflating the within-decile variance.
-# - The micro estimator is unreliable for agri_broad: many households have agricultural activity
-#   as a secondary source of income, resulting in sparse and highly variable support/fni ratios
-#   across deciles; prefer macro for agri_broad or restrict micro results to agri_narrow.
 
 basename <- "ratio_support_agro_fni_decile"
 set_attribute(basename)
@@ -460,8 +443,6 @@ run_ratio_analysis(
 )
 
 ## in all support (to agri or not agri) ----
-#NOTE: this is mainly the case of total transfers, so this is what we do : n_nvo_tot_agri / n_nvo_tot
-# Support from old policies to agriculture ----
 
 ## in farm net income (gross of fixed capital depreciation) ----
 

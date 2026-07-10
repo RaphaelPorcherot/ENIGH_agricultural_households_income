@@ -31,7 +31,6 @@ agroproductos_clean <- agroproductos_raw |>
   ) |>
   mutate(
     hogar = stringr::str_c(folioviv, foliohog, sep = "_"),
-    #NOTE: some codes are missing for instance 473 does not exist in original database
     tipo = case_when(
       codigo < 230 ~ "agr", # 1 = crops
       codigo < 278 ~ "ani", # 2 = livestock
@@ -205,7 +204,6 @@ agroconsumo_clean <- agroconsumo_raw |>
     codigo,
     destino,
     valestim
-    #TODO: we could add cantitad (to get volume of self-consumption in kg or L o piezas and UNIT PRICES (il faudra prendre en % pour éliminer l'unité)
   ) |>
   mutate(
     hogar = str_c(folioviv, foliohog, sep = "_"),
@@ -247,7 +245,6 @@ agroconsumo <- agroconsumo_clean |>
     # number of different types of self-consumed products
     n_tot = n_agr + n_ani + n_prodani + n_for + n_fis + n_hun,
     # estimated value of total self-consumption
-    #NOTE : valestim is annual value
     valestim = val_agr + val_ani + val_prodani + val_for + val_fis + val_hun
   )
 
@@ -309,7 +306,6 @@ agro_clean <- agro_raw |>
     count_member = 1,
 
     # actividad agricola y ganadera
-    # NOTE: tipoact_agro = if_else(tipoact < 6, 1, 0) Il n'y a que de 4 à 9 comme activités dans AGRO (industries et services ne sont pas dedans)
     tipoact_agro = if_else(tipoact %in% c(4, 5), 1, 0),
 
     # cf. spec: some colunms are wrongly interpreted as lgl because only NA
@@ -328,8 +324,6 @@ agro_clean <- agro_raw |>
       ~ replace_na(.x, 0)
     ),
 
-    # NOTE: SUPPORT are ALREADY YEARLY
-    # WARN: this was a MAJOR issue because we treated them as if they were monthly
 
     # Apoyo con pago (con necesidad de devolver la ayuda de vuelta)
     # resp : Apoyo de gobierno federal, estatal, municipal, no gubernamental con pago
@@ -346,7 +340,6 @@ agro_clean <- agro_raw |>
     pro_agrogan = (proagro + progan),
     #Total support from new social programmes
     ## households could answer three diff kind of programs
-    #TODO: by comparing nvo_tot and nvo__npago we could assess the distribution of direct subsidies. Do lower income households receive more credits as a % of total nvo?
     nvo_tot = (nvo_cant1 + nvo_cant2 + nvo_cant3),
     # Sembrando vida : 2001, 2002
     nvo1 = case_when(nvo_prog1 %in% c(2001, 2002) ~ nvo_cant1, TRUE ~ 0),
@@ -397,14 +390,11 @@ agro_clean <- agro_raw |>
       desarollo_rur +
       otros_prog,
 
-    # NOTE: QUADRIMESTRIAL TO YEARLY data
 
     # farm gross output, net income, direct payments
     # Ingreso trimestral por ventas
     # Autoconsumo trimestral
     # Otros montos trimestral
-    # INFO: ing is ventas - ero but negative values are set to zero, hence we reconstruct ing by taking the difference and later applying replace_negatives() in part2
-    # INFO: turnover inclut autoconsommation y Otros montos no monetarios trimestrales (pago de trabajadores, deudas del negocio, deudas del hogar e intercambios)
 
     #                                     mean sd p0 p25 p50  p75   p100
     ing_year = ing_tri * 4, #               35463. 246564.  0 657. 6515. 25087. 22851567
@@ -415,18 +405,7 @@ agro_clean <- agro_raw |>
     support_year = apoyo_npago + pro_agrogan + nvo_npago, #     6438. 17714.  0   0   0 5200 600000
 
     size_val_year = ventas_year + auto_year + otros_montos_year,
-    #NOTE: Ventas max is 40 M, ing is 20 M, ero is 0.8
-    # hence ing cannot be the difference btw ventas and ero
-    # this is weird, but including ventas in fni yields a fni/ftr of about 300% for some households
-    # the reason why D10 was weird before is likely to be rather the incorrect annualization of support, in particular of apoyo (other programs).
-    # fni_year = ventas_year - ero_year + support
 
-    #WARN: now the question is whether ing includes already support or not
-    # lets try with (but we deduct it from n_transfer later on)
-    # direct payments are included in farm income
-    # abbiamo da pensare che significa aggiungere a n_fni monti che non sono stati trasferiti: in realta nacionale de fertilizantes o precios di garantia sono monti che non vanno aggiunto al reddito reale. Il nostro reddito soprastima il reddito reale, è un poco come imputed rent
-    # vedere pagina 387 manual del entrevistador
-    # posiblamente parte de nvo_npago sono incluido in B045 (otros programas para adultos mayores) ma non nacional de fertilizantes e precios di garantias (pagine 241 descripcion de la base de datos)
     fni_year = ing_year - ero_year + support_year
   )
 
@@ -435,7 +414,6 @@ agro_clean <- agro_raw |>
 agro <- agro_clean |>
   group_by(hogar) |>
   summarise(
-    # TODO: we could compute the number of different activities agro and noagro
     n_act = sum(count_member), # nomber of different activities
     n_ventas = sum(ventas_year),
     n_autoconsumo1 = sum(auto_year), # value of self consumed production from AGRO
@@ -745,10 +723,8 @@ noagro_clean <- noagro_raw |>
       ~ replace_na(.x, 0)
     ),
 
-    #NOTE: SUPPORT are ALREADY YEARLY data
 
     # no old social program, only the new one
-    # NOTE: in NOAGRO, some activities received support from new programs. the activity for whcih support is received is specificied by the surveyed person, but the latter appear in NOAGRO because they are registered as either industrial (1) or commercail (2) or else services (3)
 
     #Total support from new social programmes
     ## households could answer three diff kind of programs
@@ -802,7 +778,6 @@ noagro_clean <- noagro_raw |>
       desarollo_rur +
       otros_prog,
 
-    # note: quadrimestrial to yearly data
     ing_year = ing_tri * 4,
     ventas_year = ventas_tri * 4,
     auto_year = auto_tri * 4,
@@ -844,7 +819,6 @@ noagro <- noagro_clean |>
 
     .groups = "drop"
   )
-#TODO: add n_size_class in NOAGRO as in AGRO ?
 
 # noagro |>
 #   select(
@@ -1029,8 +1003,6 @@ concentradohogar_features <- concentradohogar_enriched |>
       n_rentas +
       #to avoid double counting: already included in n_fni_year
       (n_transfer - coalesce(n_pro_agrogan_agro, 0)) +
-      #WARN:
-      # strictly speaking we should remove maybe more (but not nacional de fertilizantes nor precios de garantia)
       n_estim_alqu +
       n_otros_ing,
 

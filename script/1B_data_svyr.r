@@ -12,8 +12,6 @@ d <- readRDS(
 # d |> skim(n_ing_cor)
 
 ## add new variables and correct type ----
-#WARN : Il nostro ing-cor è SICURAMENTE diverso da quello ENIGH perchè noi consideriamo le perdite delle attività produttive non come una uscita famigliare ma come una perdita aziendale.
-#
 d <- d |>
   # remove 0 before the code for educa_jefe, est_dis, and num
   mutate(
@@ -23,11 +21,6 @@ d <- d |>
   ) |>
   # correcting negative income from autonomous (agri and not agri) employment
   mutate(
-    #NOTE: do we have to do that on the part ? Could we in fact no do that on n_ing_cor directly ?
-    # in ENIGH they have balance in CONCENTRADOHOGAR, corresponding to business losses
-    # this means that business loss may be reduced by other income of the household
-    # replace_negative() on n_ing_cor would mean less negative to be replaced
-    # HOWEVER: we could not in that case construct precent_agro to classify households
 
     # make sure there is no NA in n_fn
     n_fni_agro = coalesce(n_fni_agro, 0),
@@ -244,7 +237,6 @@ d <- d |>
       n_tipo_act_agro == 0,
   ) |>
   mutate(
-    #INFO: non agri with farm or farm product must be included in n_is_agri_broad
     n_is_agri = case_when(
       n_is_non_agri_with_farm |
         n_is_non_agri_with_harvested_prod |
@@ -257,11 +249,6 @@ d <- d |>
         n_is_non_is_agri_with_no_harvested_prod ~ "agri_broad",
       TRUE ~ n_is_agri_broad
     ),
-    #INFO: non agri with farm or farm product have no n_fni but they may have a productive specialisation if they produced something
-    # by construction no harvested product means that they are in "no production yet" == n_tipo_prod_agro == n_tipo_act_agro
-    # non agri with farm or harvested product with productive specialisation means that they consumed their production but did not sell it.
-    # They should retain their productive specialisation
-    # And we should only recode those non agri with farm/harvested product who is.na(n_tipo_prod_agro) -> they should be in n_tipo_prod_agro == 0 == no production/harvest yet
     n_tipo_prod_agro = case_when(
       (n_is_non_agri_with_farm |
         n_is_non_agri_with_harvested_prod |
@@ -278,7 +265,6 @@ d <- d |>
     )
   )
 
-#INFO: now dealing with farmers with no prod, either harvested or not (they are no agri with no farm !): should be considered as no harvest yet : n_tipo_prod_agro == n_tipo_act_agro == 0
 d <- d |>
   mutate(
     n_is_agri_with_no_prod = is.na(n_tipo_act_agro) & n_is_agri != "not_agri"
@@ -434,7 +420,6 @@ mysvyr <- mysvyr |>
 #     n_weighted = survey_total()
 #   )
 # d |> select(starts_with("n_")) |> colnames() |> sort()
-#NOTE:: the following code to check the pct of each income source in total income
 
 # check <- mysvyr |>
 #   # filter(n_is_agri == "agri_narrow") |>
@@ -563,8 +548,6 @@ if (any(test_new_var)) {
 
 # ---------------------
 # CHECKING the consistency of our INCOME variable ----
-#NOTE: there are a bit TOO many households with strong divergence btw our reconstruction and enigh's income variable (in particular a 50000 MXN/year that becomes 0)
-# Could that be the case that this is because of normalized trimestrialisation at differing components of ing_cor ? 
 
 message("Checking consistency of income variable reconstruction:")
 
@@ -629,7 +612,6 @@ consistency_check |>
     n_was_negative = sum(n_ing_cor < 0, na.rm = TRUE)
   )
 
-#TODO: #Les 2004 - 113 = 1891 flaggés non-négatifs sont plus intéressants — ce sont des ménages où n_ing_cor_clean et n_ing_cor_enigh divergent pour une autre raison.  :
 
 flag_not_negative <- consistency_check |>
   filter(flag & n_ing_cor >= 0) |>
@@ -645,7 +627,3 @@ consistency_check |>
   arrange(n_deciles_total)
 
 
-#NOTE: 63% of households with >5% divergence between n_ing_cor_clean and n_ing_cor_enigh
-# are in D1-D3. Micro ratio estimates for these deciles should be interpreted with caution,
-# as individual ratios num_i / n_ing_cor_clean may be affected by income reconstruction
-# differences, particularly for households with originally negative incomes.

@@ -660,7 +660,6 @@ get_share_micro <- function(
 }
 
 ### MICRO RATIO : médiane des ratios individuels par sous-groupe ----
-#TODO: NEEDS TO WRITE AND COMPUTE IT
 
 ## get_ratio_micro_median <- function(
 #   design,

@@ -46,83 +46,22 @@ create_output_dirs()
 
 # PART 1 : PREPARING THE DATABASE FOR THE PILOT STUDY ON MEXICO ----
 
-#TODO:
-# size_val1 par tipo_prod (get_proportion())
-# edad_med dans les deciles (get_proportion())
-# gender dans les deciles (idem)
 
-#INFO: n_tipo_prod based on AGROPRODUCTO. But household in AGRO not in AGROPRODUCTOS will be classified as not agri because n_tipo_act will be NA. The difficulty is overcome in part 2 in which we explicitely assign a production type to household in AGRO but not in AGROPRODUCTO
 
-#NOTE: we had issue with the key hogar : now solved, by setting its type explicitely to characer(). all hogares are in concentradohogar.
 
-#NOTE: tipoact_agro is unused : we use instead our own is_agri income based definition
 
 source(here("script", "1A_data_prep.r"))
 source(here("script", "1B_data_svyr.r"))
 
 # PART 2 : STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO ----
 
-# TODO: For pairs of deciles where CIs overlap or differences are substantively
-# interesting, compute formal CIs on the difference (e.g. D1 - D10) using a
-# single svytotal() call on cbind(part_D1, part_D10, total) and delta method
-# on X1/Z - X2/Z with the full 3x3 variance matrix. This is especially
-# relevant given the negative covariance between shares (they sum to 1), which
-# makes the CI on the difference narrower than visual overlap suggests.
 
-#WARN : when we compute the ratio or the share etc it is always a macro value for the aggragated (agri) household in a given decile
-#The aggregate share is substantially lower than the average household ratio, reflecting strong heterogeneity in farm size and a negative correlation between production scale and self-consumption
-# In fact the mean of individual ratio for self-consumption is consierably higher -> many, many small farmers heavily rely on self-consumption
-# We need to decide which we want (and we might want both, why not)
-# For instance
-# Il faut qu'on écrive ca à un momen donné dans le papier: We report both (i) the average household-level self-consumption rate and (ii) the aggregate share of self-consumed production. The gap between the two reflects strong heterogeneity in farm size and production structure. Si gap grand :
-# forte hétérogénéité
-# forte corrélation négative entre taille et autoconsommation
-# structure duale agriculture (subsistence vs commercial)
 
-#TODO : now that we have corrected the weird D10 deciles starts with farm dual's structure and review the comment and noe.
-# for instance we had previously
-# #(no longer true, legacy) chez les riches mexicains, la possession d’une ferme n’est pas uniquement productive : il y a plus de fermiers dans D10 que dans D9, mais manifestement les D10 ce n'est pas que de l'industrie agricole à grande échelle. Les fermes dans D10 ne sont pas la source principale de la richesse ? Pourtant effectivement qqchose comme 70 % du revenus de D10 vient des fermes
-# Une minorité de très grosses fermes capte l’essentiel du revenu agricole: D10 semble être lui-même dual !
-# D9 = bourgeoisie agricole productive
-# grandes exploitations commerciales
-# relativement homogènes
-# revenus encore diversifiés
-# D10 = élite économique rurale hybride
-# très grandes exploitations ultra-rentables
-# ménages riches avec petites fermes
-# forte dispersion patrimoniale
 
-#TODO : decile cut off point rajouter smg as line. actually lets compute please a real relative poverty line
 
-#TODO: les intervalles de confiance sont peut etre trop grand pour savoir combien précisément mais on peut savoir si relativement certains déciles ont plus que d'autres : si les intervalles de confiance ne sont pas superposés
-# pour aller dans cette direction :
-# * refaire compo avec un nombre réduit de modalités pour nvo_tot
-# * faire pour la modalité principale d'intérêt get_ratio (on y voit les intervalles)
 
-#TODO: améliorer la détection des déciles significativement différents de la référence
-# Actuellement : unreliable = CV > cv_threshold (fiabilité de l'estimation seulement)
-# Ne répond pas à : "est-ce que le décile est significativement différent de la référence ?"
-# Pistes par cas :
-#   - ratio macro/micro   : test de différence décile vs overall via delta method
-#                           (chevauchement des IC est approximatif mais rapide)
-#   - macro_share         : nécessite d'abord d'ajouter des IC à ref_share_k dans
-#                           get_share_macro_overall (ratio de totaux pondérés → delta method dispo)
-#                           puis test de différence share_k vs ref_share_k
-#   - micro_share         : overall a déjà un IC (svymean) → test de différence directement faisable
-# Implémentation suggérée : ajouter un flag `significant` dans tbl en plus de `unreliable`,
-# et adapter fill_var dans make_decile_plot pour distinguer
-# "above/below significant" vs "above/below non-significant"
 
-#TODO: get_proportion / get_number
-# reprendre get_proportion, utilisé pour la description des houeseholds et pour turnover / production type pour les fermes
-# nb of farm by turnover across decile
-# household by jefe edad median
-# household by jefe sexo
 
-#TODO: LORENZ CURVE
-# mettre tous sur un seul graphique: overall pop : agri_broad / non agri / sen_agri / non_sen_agri
-# compute the contrafactural income distribution that would be the case w/o support or w/o new support or w/o new direct support
-# compute la distribution qui serait le cas s'il n'y avait que les vieux programmes agricoles
 
 source(here("script", "2A_stat_basic.r"))
 source(here("script", "2B_stat_ineq.r"))

@@ -1,6 +1,5 @@
 # COMPOSITION ANALYSIS
 
-#TODO: what other composition analysis?
 
 list_cols <- list()
 
@@ -322,8 +321,6 @@ list_cols[[length(list_cols) + 1]] <- cols
 
 # of all transfers from new policies to agriculture by decile ----
 
-#TODO: regarder les micro : on pourrait bundled les part de NEW qui sont pas très lourdes
-# il faudra récupérer les couleurs du graph principal (et on peut imaginer qu'il faut mettre all ransfert avant support)
 
 # n_sembr_vida_agro -> #000004FF
 # n_agromercados_agro -> #2C0B57FF
@@ -439,14 +436,6 @@ list_cols[[length(list_cols) + 1]] <- cols
 
 # of all transfers (bundled as npago et pago) from new policies to agriculture by decile ----
 
-#TODO: when a modality is 100%, get_ratio_micro a un soucis
-# Warning messages:
-# 1: In sqrt(VarX/Y^2 + (X^2 * VarY)/Y^4 - 2 * X * CovXY/Y^3) :
-#   NaNs produced
-# 2: In sqrt(VarX/Y^2 + (X^2 * VarY)/Y^4 - 2 * X * CovXY/Y^3) :
-#   NaNs produced
-# 3: In sqrt(VarX/Y^2 + (X^2 * VarY)/Y^4 - 2 * X * CovXY/Y^3) :
-#   NaNs produced
 
 # n_sembr_vida_agro -> #000004FF
 # n_agromercados_agro -> #2C0B57FF

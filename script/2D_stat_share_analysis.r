@@ -1,30 +1,11 @@
 # SHARE ANALYSIS
 
-# NOTE:
-# Two complementary analytical lenses on agricultural income variables:
-# 1. RATIO ANALYSIS (run_ratio_analysis, informed by run_composition_analysis)
-#    Question: "How important is VAR relative to another variable, for households in a given universe?"
-#    e.g. What share of total household income comes from agroforestry subsidies, by decile?
-#    Composition analysis first identifies which components are reliably estimated;
-#    ratio analysis then quantifies their relative weight.
-# 2. SHARE ANALYSIS (run_share_analysis)
-#    Question: "How is the aggregate of VAR distributed across households, by decile?"
-#    Macro: what fraction of the total (e.g. total subsidy pool) accrues to each decile?
-#           Compared against the equal-distribution benchmark (proportional to decile size).
-#    Micro: what is the average individual household's share of the total, by decile?
-#           Compared against the mean individual share across all households in the universe.
 
-#TODO: reprendre ratio pour voir ce qu'on peut regarder aussi
-# share of self-consumption in total self-consumption
 
-#TODO: il faut comprendre ce que prend share_macro 
-# est ce que ca filtre sur filter var ou ca prend la totalité de target var existante dans l'univers total ? 
 
-#TODO: reprendre la caption de share_macro mais aussi share_micro pour expliquer ce que ca veut dire d'être au-dessus ou en dessouss
 
 # in COMP: of income by decile ----
 ## Share of current income by decile ----
-#TODO: maybe but likely to be quite irrelevant
 
 ## Share of farm net income by decile ----
 
@@ -224,19 +205,6 @@ run_share_analysis(
 )
 ## Share of support from old programs to agriculture by decile ----
 
-#WARN: poor agricultural households appear to get their fair share of PROCAMPO !
-# survey::svytotal(
-#   ~n_pro_agrogan_agro,
-#   subset(
-#     mysvyr,
-#     n_is_agri_broad == "agri_broad" & n_deciles_total == "D1"
-#   ),
-#   na.rm = TRUE
-# ) / survey::svytotal(
-#   ~n_pro_agrogan_agro,
-#   subset(mysvyr, n_is_agri_broad == "agri_broad"),
-#   na.rm = TRUE
-# )
 
 basename <- "share_n_pro_agrogan_agro_decile"
 set_attribute(basename)
@@ -367,12 +335,8 @@ run_share_analysis(
 
 # in COMP: of support from new policies to agriculture by decile  ----
 
-#TODO: check micro composition to assess whether focus on some specific variables may be relevant
-# Credito
-# Precios Garantia
 
 ## Share of support from new policies by decile ----
-#TODO: maybe but likely to be quite irrelevant
 
 ## Share of sembrando vido by decile ----
 
@@ -442,10 +406,8 @@ run_share_analysis(
 # in COMP: of all transfers (bundled as npago et pago) from new policies to agriculture by decile ----
 
 ## Share of all transfers from new policies by decile ----
-#TODO: maybe but likely to be quite irrelevant
 
 ## Share of repayable transfers by decile ----
-#NOTE: support from new is already done above
 
 basename <- "share_n_nvo_pago_agro_decile"
 set_attribute(basename)

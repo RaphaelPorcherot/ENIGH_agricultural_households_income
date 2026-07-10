@@ -652,7 +652,6 @@ custom_save(plot_lorenz_agri_narrow, type = "fig")
 # Drivers of inequalities ----
 ## general ----
 
-#TODO: there is something missing here check the .qmd. Most likely the tbl of HOUSEHOLD characteristic
 
 tbl_agri <- subset(tbl, n_is_agri_broad == "agricultural households")
 tbl_csv <- tbl_agri |>
@@ -1031,7 +1030,6 @@ print(plot_etnia_decile_narrow_pct)
 custom_save(plot_etnia_decile_narrow_pct, type = "fig")
 
 ## Odd ratio with controls ----
-#TODO: we should do this but on a relative poverty variable not on minimum wage which is an extreme and restrictive measure of poverty
 
 # mysvyr <- mysvyr |>
 #   mutate(
@@ -1221,25 +1219,6 @@ plot_acc_alim1_decile_broad <- ggplot(
 custom_save(plot_acc_alim1_decile_broad, type = "fig")
 print(plot_acc_alim1_decile_broad)
 
-#NOTE :une dissociation entre revenu monétaire et sécurité alimentaire subjective : tant pour narrow que pour broad, la ruralité/agriculture crée une vulnérabilité spécifique, car dans la pop totalles plus riche ne sont pas très inquiet
-#WARN: The function is meant to be a handy way to compute proportions and confidence intervals of the proportions of a given target var (say acc_alim1) stratified by a given strat var (say the decile) in a subset of the survey based on filter_var == filter_value
-# there is no issue with the function as we find the same awkard 40% of richest agricultural households concerned about food availability through coherence checks -> it seems to be a result
-# mysvyr |>
-#   filter(n_is_agri_broad == "agri_broad") |>
-#   group_by(n_deciles_total) |>
-#   summarise(
-#     prop = survey_mean(n_acc_alim1 == 1, vartype = "ci")
-#   )
-#
-# svymean(
-#   ~ I(n_acc_alim1 == 1),
-#   subset(mysvyr, n_deciles_total == "D10" & n_is_agri_broad == "agri_broad")
-# )
-# mean(
-#   d$n_acc_alim1 == 1 &
-#     d$n_deciles_total == "D10" &
-#     d$n_is_agri_broad == "agri_broad"
-# )
 
 ### agri_narrow ----
 
