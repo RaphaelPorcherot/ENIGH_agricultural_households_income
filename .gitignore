@@ -11,6 +11,3 @@ renv/staging/
 
 output/
 
-clean_comments.py
-clean_comments_log.md
-notes_and_questions.md
