@@ -2,6 +2,10 @@
 
 ### Current 
 
+Vous trouverez l’ensemble des informations pratiques ainsi que le programme détaillé à l’adresse suivante : https://agd.sciencesconf.org/
+
+L'Analyse Géométrique des Données (AGD) regroupe des méthodes largement utilisées dans diverses disciplines scientifiques, dont la sociologie, avec des techniques telles que l'Analyse des Correspondances (AC), l'Analyse en Composantes Principales (ACP) et l'Analyse des Correspondances Multiples (ACM). Introduite dans les sciences sociales par Pierre Bourdieu dans les années 1970, l'AGD offre une approche géométrique puissante pour objectiver des phénomènes sociaux complexes. Cependant, des techniques avancées comme la Class-specific Analysis (CSA) et l'inférence combinatoire restent peu diffusées et maîtrisées par les chercheurs et chercheuses.
+
 * [ ] Vincent chatelier inrae part aiddabs revenu agricoke france Catherine laurent
 
 * [ ] contact Chapengo, département de sociologie (répartition géographique communautés agraires / ejidos vs territoires peuples originaires regarder si  transferts sorcial fmaily to FNI)
