@@ -15,14 +15,15 @@ L'Analyse Géométrique des Données (AGD) regroupe des méthodes largement util
 * [ ] régime foncier : demanander come rojas ses slides :
 
 * sarebbe interesante vedere se le transferenze soziale come NVO vengono o no de la riduzione di altri trasferimenti soziali alle famiglie
+* per fare questo abbiamo due strade: la prima è qualitativa, dobbiamo chiedere a referenti messicani se i nuovi programmi sociali legati al settore agricolo sono stati finanziati spostando risorse da altri programmi sociali; la seconda è quantitativa: usare i dati che abbiamo confrontando la composizione del sostegno sociale ottenuto dalle famiglie agricole e dalle altre famiglie (ancora meglio sarebbe fare un difference in difference usando la survey riferita a due anni, prima e dopo l'introduzione di nuovi programmi sociali --> ma questo richiede tempo)
 
-* di modo piu generale per avere un assessment complesso necesitiamo una idea di come funziona il social security system in messico. In Francia per esempio e independente dal regimene generale
+* di modo piu generale per avere un assessment complesso necesitiamo una idea di come funziona il social security system in messico. In Francia per esempio e independente dal regimene generale. Benedetto sta riprendendo i contatti con i referenti messicani
 
 * c'e la quistione dei servizi ecosistemici e del suo pagamento (ho delel referenz da leggere : Celine Dutilly Gwenole Le Velly)
 
-* sarebbe interessante afinare la analisis per regione : i ecosistemi e per tanto le attivita agricole sono molto diverse dal norte al sud. E probabile anche che non capturano tutto quello che succede nel Chiapas gia che sono autonomi
+* sarebbe interessante afinare la analisis per regione : i ecosistemi e per tanto le attivita agricole sono molto diverse dal norte al sud. E probabile anche che non capturano tutto quello che succede nel Chiapas gia che sono autonomi --> dobbiamo farci suggerire una zonizzazione "rilevante" da colleghi messicani. In ogni caso dai miei appunti risulta che ENIGH è rappresentativa a livello sia federale che di singoli stati
 
-* sarebbe interesante calcolare la tasa di dipendenza ai input importati e/o comprati fuori per approximarse alla inserzione dei vari tipi di agricultura nelle cadene globale di valore. Con AGROPRODUCTOS e AGROCONSUMO dovremmo avere la info.
+* sarebbe interesante calcolare la tasa di dipendenza ai input importati e/o comprati fuori per approximarse alla inserzione dei vari tipi di agricultura nelle cadene globale di valore. Con AGROPRODUCTOS e AGROCONSUMO dovremmo avere la info. --> Benedetto si studia il database per vedere come si potrebbe fare usando la tabella AGROGASTO anche se la disaggregazione dei costi non è molto spinta
 
 * possiamo avere un contatto con il dipartimento di sociologia agraria di Chapengo : studiano comunita agrarie et ejidos.
 
@@ -40,11 +41,11 @@ L'Analyse Géométrique des Données (AGD) regroupe des méthodes largement util
 
 * we could bundle some modalities in composition analysis in order to get more reliable confidence intervals (like we did with sparse income sources)
 
-* usare la variabile "cantitad" in AGROPRODUCTO 
+* usare la variabile "cantitad" in AGROPRODUCTO --> le variabili Cantidad e Precio permettono di quantificare: importanza dell'autoconsumo nella produzione aziendale, il livello di qualificazione delle produzioni, altro?
 
 POVERTY INEGALITIES
 
-* #TODO: we should do this but on a relative poverty variable not on minimum wage which is an extreme and restrictive measure of poverty
+* #TODO: we should do this but on a relative poverty variable not on minimum wage which is an extreme and restrictive measure of poverty --> relative poverty va bene ed è semplice da fare ma sarebbe importante anche trovare un misura della povertà assoluta (in genre gli sitituti di statistica la producono
 
 * Lorenz Curve : potremmo metere tutto su un solo grafico ; potremmo calcolare la distribuzione contrafattuale del reddito totale senza le politiche agricole
 
@@ -56,13 +57,13 @@ POVERTY INEGALITIES
 
 PLURIACTIVITY
 
-* verificare che attivita non agricole ricevano appogio delle politiche agricole 
+* verificare che attivita non agricole ricevano appogio delle politiche agricole __> in che senso? La famiglia agrcola riceve gli aiuti per le attività agricole, ci può essere un effetto di cross-subsidiation tra agricoltura e altre attività
 
 *  #TODO: we could compute the number of different activities agro and noagro 
 
 * #WARN: we need to understand the discrpenacy between tipoact, which is encoded by INEGHI, and the self-declaration of the actiity which got the support fromsocial programs which may agri in a quite contradictory manner with the first element: two possible explanation
 
-* #TODO: add n_size_class in NOAGRO as in AGRO ?
+* #TODO: add n_size_class in NOAGRO as in AGRO ? si può fare ma nel caso di NOAGRO non siamo interessati a classificare il tipo di unità di produzione, dal momento che la tabella considera diversi settori produttivi (commercio, manifattura, traspostrti) mentre la tabella AGRO considera un solo settore produttivo (l'agricoltura)
 
 EXTENSION
 
