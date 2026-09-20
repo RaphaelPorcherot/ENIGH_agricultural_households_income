@@ -147,4 +147,5 @@ n_tand_bien_noagro,numeric,NOAGRO,,Tandas para el Bienestar (Microcréditos para
 n_trabajo,numeric,CONCENTRADOHOGAR,,household's labour income from wage labour (sum over all members)
 n_trabajo_bundled,numeric,CONCENTRADOHOGAR,,sum of n_trabajo and n_otros_trab : all labour income including both primary and secondary dependent activities
 n_transfer,numeric,CONCENTRADOHOGAR,,household's social and private transfers
+n_transfer_net,numeric,,,
 n_ventas_agro,numeric,AGRO,,income from sales from agriculture activites

@@ -1104,6 +1104,26 @@ get_share_micro <- function(
 #     `p_zero` gives the weighted share of households at 0 so you can see it
 #     coming, and `n_obs` / `n_pop` give the size of the domain actually used.
 #
+#TODO: NEUTRALISE THE SIGNIFICANCE TEST WHEN THE MEDIAN SITS ON A MASS POINT.
+#   The point estimate above is fine in that case. The TEST is not, and it is
+#   currently worse than uninformative because it decorates the figure with ***.
+#   Mood's median test assumes a continuous distribution near the median; when
+#   the reference median is 0 because most households receive nothing, "below the
+#   overall median" collapses to "equal to zero", and the test silently becomes
+#   "is the share of households receiving nothing equal to 50 %?". Observed on
+#   median_share_nvo_npago_agro_decile_narrow: every decile median is 0, p_zero
+#   runs from 0.49 to 0.92, share_below_ref from 49 % to 92 %, so every decile is
+#   rejected and ALWAYS IN THE SAME DIRECTION, with p-values down to 1.5e-50. The
+#   reported linear trend (+4.0 points per decile) is then the gradient of the
+#   NON-TAKE-UP RATE, not of the median shares.
+#   Fix: when p_zero > 0.5 (equivalently when q_ref sits on an atom), return NA
+#   for p_value / p_value_adj / signif / signif_adj and set `test` to
+#   "not applicable: median at a mass point"; make_significance_plot() should
+#   print that reason instead of stars. See Part VI item 2 of report.md - the
+#   deeper answer is that these variables want the take-up + recipients-only
+#   treatment of III.6, which was applied to the 2E ratios but not to the 2D
+#   share analyses.
+#
 # WHAT A MEDIAN CANNOT DO
 #   Medians are NOT additive: the medians of the components of a total do not
 #   sum to the median of the total, and in general do not sum to 100 %. The
