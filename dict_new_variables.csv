@@ -125,6 +125,12 @@ n_precios_gar,numeric,AGRO;NOAGRO,,Precios de Garantía a Productos Alimentarios
 n_precios_gar_agro,numeric,AGRO,,Precios de Garantía a Productos Alimentarios Básicos received for agricultural activities
 n_precios_gar_noagro,numeric,NOAGRO,,Precios de Garantía a Productos Alimentarios Básicos received for non-agricultural activities
 n_pro_agrogan_agro,numeric,AGRO,,"OLD policies - PROCAMPO, PROGAN, Produccion para el Bien Estar support policies"
+n_recip_nvo_npago_broad,numeric,,,
+n_recip_nvo_npago_narrow,numeric,,,
+n_recip_nvo_tot_broad,numeric,,,
+n_recip_nvo_tot_narrow,numeric,,,
+n_recip_support_broad,numeric,,,
+n_recip_support_narrow,numeric,,,
 n_rentas,numeric,CONCENTRADOHOGAR,,capital income (financial and non financial assets)
 n_sembr_vida,numeric,AGRO;NOAGR,,Sembrando Vida (TOTAL = _agro + _noagro)
 n_sembr_vida_agro,numeric,AGRO,,Sembrando Vida received for agricultural activities

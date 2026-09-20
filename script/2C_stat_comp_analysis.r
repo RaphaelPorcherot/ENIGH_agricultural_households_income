@@ -12,7 +12,7 @@ list_cols <- list()
 #   n_trabajo +
 #   n_otros_trab +
 #   n_rentas +
-#   n_transfer +
+#   (n_transfer - n_pro_agrogan_agro) + # PROGAN is already inside n_fni_agro
 #   n_estim_alqu +
 #   n_otros_ing
 
@@ -25,14 +25,14 @@ components <- list(
   agri = "n_fni_agro_clean",
   no_agri = "n_ingr_noagro_clean",
   wage = "n_trabajo_bundled",
-  transfer = "n_transfer",
+  transfer = "n_transfer_net",
   other = "n_otros_ing_bundled"
 )
 component_labels <- c(
   agri = "Farm net income",
   no_agri = "Non-agricultural self-employment income",
   wage = "Wage income",
-  transfer = "Social and family transfers",
+  transfer = "Social and family transfers (net of PROGAN)",
   other = "Other income sources"
 )
 universes <- list(

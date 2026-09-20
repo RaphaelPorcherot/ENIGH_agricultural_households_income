@@ -69,6 +69,16 @@ d <- d |>
     n_otros_ing_bundled = n_rentas + n_estim_alqu + n_otros_ing,
     # same for n_trabajo and otros_trab (secondary labour income) in order to avoid non significant decile
     n_trabajo_bundled = n_trabajo + n_otros_trab,
+
+    # PROGAN is farm support, and 1A has already folded it into n_fni_agro.
+    # ENIGH also records it inside `transfer`, so n_ing_cor deducts it from the
+    # transfer term to avoid counting it twice:
+    #   n_ing_cor = n_fni_agro + ... + (n_transfer - n_pro_agrogan_agro) + ...
+    # Any decomposition of n_ing_cor_clean must therefore use the SAME net
+    # figure. Using the gross n_transfer makes the components overshoot the
+    # total by exactly PROGAN - measured at +2.05 points in D1, +1.13 in D2,
+    # down to +0.09 in D10 (2 270 households receive it).
+    n_transfer_net = n_transfer - coalesce(n_pro_agrogan_agro, 0),
     n_nvo_pago_agro = n_nvo_tot_agro - n_nvo_npago_agro, # in support there are other stuff than only NEW
     n_nvo_pago_noagro = n_nvo_tot_noagro - n_support_noagro, # there is only NVO as npago support to non agriculture
     n_nvo_pago = n_nvo_tot - n_nvo_npago # (n_support_noagro + n_nvo_npago_agro)
