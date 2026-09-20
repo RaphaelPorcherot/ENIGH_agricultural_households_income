@@ -59,7 +59,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -127,7 +127,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -188,7 +188,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -250,7 +250,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -318,7 +318,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -380,7 +380,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -449,7 +449,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -518,7 +518,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -583,7 +583,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -648,7 +648,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -711,7 +711,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -783,7 +783,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -848,7 +848,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -882,8 +882,12 @@ base_title <- str_c(
 title_macro <- str_c("Ratio of ", base_title)
 title_micro <- str_c("Average individual ratio of ", base_title)
 caption_base <- paste(
-  "Sembrando Vida is a non-repayable monthly cash transfer of MXN 6,450 (~USD 320) paid directly to smallholder farmers owning or holding 2.5 hectares available for agroforestry, targeting municipalities with high social deprivation.",
-  "Launched in 2019 under the Secretaría de Bienestar, it is Mexico's largest agricultural support programme, covering ~430,000 beneficiaries across 24 states in 2024.", # "Bar colors indicate whether the decile is above (darker) or below (lighter) the overall mean of individual ratios.","Support to agriculture comes from old, new or other programs (state and NGOs).",
+  #TODO: CHECK THIS CAPTION. The two lines below used to describe SEMBRANDO
+  # VIDA (amount, targeting, number of beneficiaries): the text had been
+  # copy-pasted from the Sembrando Vida block and was factually wrong for this
+  # figure. Replace the placeholder with a real description of Nacional de Fertilizantes
+  # (n_nacion_fert_agro) at the same level of detail, then delete this TODO.
+  "PLACEHOLDER - TO BE COMPLETED: description of Nacional de Fertilizantes (n_nacion_fert_agro): what the programme pays, to whom, since when, how many beneficiaries.",
   "Support to agriculture comes from old, new or other programs (state and NGOs).",
   "Bar colors indicate whether the decile is above (darker) or below (lighter) the overall mean of individual ratios.",
   "The dashed black line shows the LOESS trend across deciles.",
@@ -913,7 +917,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -947,8 +951,12 @@ base_title <- str_c(
 title_macro <- str_c("Ratio of ", base_title)
 title_micro <- str_c("Average individual ratio of ", base_title)
 caption_base <- paste(
-  "Sembrando Vida is a non-repayable monthly cash transfer of MXN 6,450 (~USD 320) paid directly to smallholder farmers owning or holding 2.5 hectares available for agroforestry, targeting municipalities with high social deprivation.",
-  "Launched in 2019 under the Secretaría de Bienestar, it is Mexico's largest agricultural support programme, covering ~430,000 beneficiaries across 24 states in 2024.", # "Bar colors indicate whether the decile is above (darker) or below (lighter) the overall mean of individual ratios.","Support to agriculture comes from old, new or other programs (state and NGOs).",
+  #TODO: CHECK THIS CAPTION. The two lines below used to describe SEMBRANDO
+  # VIDA (amount, targeting, number of beneficiaries): the text had been
+  # copy-pasted from the Sembrando Vida block and was factually wrong for this
+  # figure. Replace the placeholder with a real description of the other new support programmes
+  # (n_otros_prog_agro) at the same level of detail, then delete this TODO.
+  "PLACEHOLDER - TO BE COMPLETED: description of the other new support programmes (n_otros_prog_agro): what the programme pays, to whom, since when, how many beneficiaries.",
   "Support to agriculture comes from old, new or other programs (state and NGOs).",
   "Bar colors indicate whether the decile is above (darker) or below (lighter) the overall mean of individual ratios.",
   "The dashed black line shows the LOESS trend across deciles.",
@@ -978,7 +986,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -992,8 +1000,14 @@ run_ratio_analysis(
 # n_precios_gar_agro
 ## in support from new policies ----
 
-basename <- "ratio_n_sembr_vida_agro_n_nvo_npago_decile"
-num_name <- "support from Sembrando Vida"
+#FIXED: this block used to carry the basename of the Sembrando Vida block above
+# ("ratio_n_sembr_vida_agro_n_nvo_npago_decile"). set_attribute() therefore
+# reloaded Sembrando Vida's numerator and denominator, so Precios de Garantia
+# was never estimated and its 12 output files silently overwrote Sembrando
+# Vida's. The basename below is the correct one and the matching entry has been
+# added to dict_raw in main_script.r.
+basename <- "ratio_n_precios_gar_agro_n_nvo_npago_decile"
+num_name <- "support from Precios de Garantia"
 set_attribute(basename)
 if (num %in% pal$var) {
   inherited_col <- pal$col[pal$var == num]
@@ -1011,9 +1025,15 @@ base_title <- str_c(
 )
 title_macro <- str_c("Ratio of ", base_title)
 title_micro <- str_c("Average individual ratio of ", base_title)
+  #TODO: CHECK THIS CAPTION. The caption shown here used to describe SEMBRANDO
+  # VIDA, copy-pasted along with the wrong basename. The first line below only
+  # restates the official programme name from dict_new_variables.csv; complete
+  # it at the same level of detail as the Sembrando Vida block (amount,
+  # targeting, number of beneficiaries), then delete the PLACEHOLDER line and
+  # this TODO.
 caption_base <- paste(
-  "Sembrando Vida is a non-repayable monthly cash transfer of MXN 6,450 (~USD 320) paid directly to smallholder farmers owning or holding 2.5 hectares available for agroforestry, targeting municipalities with high social deprivation.",
-  "Launched in 2019 under the Secretaría de Bienestar, it is Mexico's largest agricultural support programme, covering ~430,000 beneficiaries across 24 states in 2024.", # "Bar colors indicate whether the decile is above (darker) or below (lighter) the overall mean of individual ratios.","Support to agriculture comes from old, new or other programs (state and NGOs).",
+  "Precios de Garantia a Productos Alimentarios Basicos is a non-repayable support scheme guaranteeing a minimum purchase price for basic food products.",
+  "PLACEHOLDER - TO BE COMPLETED: amount paid, targeting criteria, launch year and number of beneficiaries of Precios de Garantia (n_precios_gar_agro).",
   "Support to agriculture comes from old, new or other programs (state and NGOs).",
   "Bar colors indicate whether the decile is above (darker) or below (lighter) the overall mean of individual ratios.",
   "The dashed black line shows the LOESS trend across deciles.",
@@ -1043,7 +1063,7 @@ run_ratio_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,

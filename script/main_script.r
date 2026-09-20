@@ -6,32 +6,40 @@ library(purrr)
 library(dplyr)
 library(tidyr)
 library(stringr)
-library(forcats)
 library(tibble)
 
 library(broom.helpers)
-library(skimr) # Quick and clean data summaries
 library(survey) # Analyse d’enquêtes complexes (pondérations, stratification, etc.)
 library(srvyr) # Tidyverse wrapper for survey
 library(convey) # Poverty and inequality measures for complex survey data
 
 library(gtsummary) # Tableaux de synthèse et résumés statistiques pour les data frames and models
-library(doBy) # Fonctions pour résumés, agrégations, transformations groupées
-library(reldist) # Calculs de distributions relatives et indices de répartition
-library(ggstats) # Extensions for ggplot2 with statistical layers and summaries
 library(ggtext) # Improved text rendering in ggplot2 (markdown, HTML)
 
-library(ggridges) # for joyplot https://r-charts.com/distribution/ggridges/
 library(scales) # for label_number function
 library(RColorBrewer)
 library(colorspace)
 library(viridis) # Perceptually uniform color palettes for ggplot2
 library(glue) # String interpolation (clean and readable text construction)
 library(ggplot2)
-library(laeken) # Indicators for social exclusion, poverty, inequality (EU-SILC type data)
 
-library(kableExtra) # Enhanced tables for knitr (HTML/PDF styling)
-library(knitr) # Engine for dynamic report generation (R Markdown / Quarto)
+# Libraries removed because no function of theirs is called anywhere in script/:
+#   forcats, doBy, reldist, ggstats, ggridges, laeken
+# and three more that appear only in COMMENTED-OUT exploratory code:
+#   skimr     -> `skim()` in 1A_data_prep.r (lines ~298-300)
+#   knitr     -> `kable()` in 2B_stat_ineq.r (lines ~341, ~519)
+#   kableExtra-> `kable_styling()` in 2B_stat_ineq.r (lines ~344, ~522)
+# Uncomment the matching library() below if you re-enable those lines.
+#
+# This is not cosmetic. `reldist` imports densEstBayes, which imports rstan and
+# its whole Stan toolchain; loading it pulled 49 packages (~400 MB) into
+# renv.lock that the analysis never touches. Dropping these nine library() calls
+# takes the dependency closure from 152 to 103 packages, which is what a
+# collaborator's renv::restore() has to install.
+#
+# library(skimr)      # Quick and clean data summaries
+# library(knitr)      # Engine for dynamic report generation (R Markdown / Quarto)
+# library(kableExtra) # Enhanced tables for knitr (HTML/PDF styling)
 
 options(survey.lonely.psu = "adjust")
 options(scipen = 999)
@@ -163,6 +171,7 @@ dict_raw <- tibble(
     "ratio_n_nvo_pago_agro_n_nvo_tot_decile",
 
     "ratio_n_sembr_vida_agro_n_nvo_npago_decile",
+    "ratio_n_precios_gar_agro_n_nvo_npago_decile",
     "ratio_n_nacion_fer_agro_n_nvo_npago_decile",
     "ratio_n_otros_prog_agro_n_nvo_npago_decile"
   ),
@@ -197,6 +206,7 @@ dict_raw <- tibble(
     "n_nvo_pago_agro",
 
     "n_sembr_vida",
+    "n_precios_gar_agro",
     "n_nacion_fert_agro",
     "n_otros_prog_agro"
   ),
@@ -229,6 +239,7 @@ dict_raw <- tibble(
 
     "n_nvo_tot_agro",
 
+    "n_nvo_npago_agro",
     "n_nvo_npago_agro",
     "n_nvo_npago_agro",
     "n_nvo_npago_agro"
@@ -264,6 +275,7 @@ dict_raw <- tibble(
 
     "support from new policies",
     "support from new policies",
+    "support from new policies",
     "support from new policies"
   ),
   strat = c(
@@ -297,6 +309,7 @@ dict_raw <- tibble(
 
     "n_deciles_total",
     "n_deciles_total",
+    "n_deciles_total",
     "n_deciles_total"
   ),
   above = NA_character_,
@@ -322,7 +335,15 @@ dict_raw <- dict_raw |>
 
 col_overall <- "#D55E00"
 
-list_cols <- readRDS(here("output", "list_cols_from_comp_analysis"))
+# 2C leaves `list_cols` in the global environment, so in a full run the object is
+# already there and reading the file back would be a no-op. The file is only
+# needed when 2D/2E are re-run WITHOUT re-running 2C (a fresh session, or the
+# composition step commented out): keep it as that fallback, but never let a
+# stale file silently override the palette just computed by 2C.
+if (!exists("list_cols")) {
+  list_cols <- readRDS(here("output", "list_cols_from_comp_analysis"))
+  message("\n\u2139\ufe0f  list_cols read back from output/ (2C was not run in this session)")
+}
 
 if (exists("list_cols")) {
   pal <- bind_rows(list_cols) |>
@@ -371,9 +392,5 @@ dict <- dict_raw |>
 
 source(here("script", "2D_stat_share_analysis.r"))
 source(here("script", "2E_stat_ratio_analysis.r"))
-
-# SAVE RESULTS ----
-
-saveRDS(res, here("output", "part2_results"))
 
 # THE END --- 

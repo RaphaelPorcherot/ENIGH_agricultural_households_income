@@ -68,14 +68,22 @@ pop_sub <- mysvyr |>
 
 pop <- bind_rows(pop_tot, pop_sub)
 
+# NOTE: pop has columns decile / pct / pct_low / pct_upp / type / cols.
+# Align share on them EXPLICITLY - the previous set_names(colnames(pop)) renamed
+# by position and silently broke as soon as an estimator returned one more
+# column (get_share_macro() now also returns n_obs).
 share <- share_fni_decile_pct |>
   mutate(type = "Farm net income") |>
-  rename(decile = n_deciles_total) |>
-  select(-SE) |>
+  rename(
+    decile = n_deciles_total,
+    pct = share,
+    pct_low = IC_low,
+    pct_upp = IC_high
+  ) |>
   mutate(
     cols = viridis(10, option = "plasma", direction = -1)[9]
   ) |>
-  set_names(colnames(pop))
+  select(all_of(colnames(pop)))
 df_plot <- bind_rows(pop, share) |>
   mutate(
     decile = factor(decile, levels = paste0("D", 1:10))
@@ -301,7 +309,7 @@ print(plot_farm_turnover_decile_narrow_pct)
 # Income inequalities compared ----
 ## on agri_broad ----
 ### Gini ----
-myconv <- mysvyr |> convey_prep()
+if (!exists("myconv")) myconv <- mysvyr |> convey_prep()
 gini_result <- myconv |>
   group_by(n_is_agri_broad) |>
   summarise(
@@ -372,10 +380,13 @@ gini_lbl <- data.frame(
 
 ### Lorenz plot and tbl ----
 
-ggplot(df_plot, aes(quantile)) +
-  geom_ribbon(aes(ymin = IC_lower, ymax = IC_upper, group = group), alpha = 0.3)
+#NOTE: removed a leftover ggplot(df_plot, aes(quantile)) + geom_ribbon(...) that
+# referred to columns df_plot does not have at this point in the script (it is
+# still the decile composition table). It never errored only because source()
+# does not print top-level values.
 
-myconv <- convey_prep(mysvyr)
+# convey_prep() rebuilds the whole design and is expensive; do it once.
+if (!exists("myconv")) myconv <- convey_prep(mysvyr)
 # svylorenz(~ n_ing_equivaled,
 #   myconv,
 #   quantiles= seq(0,1,.05),
@@ -475,7 +486,7 @@ custom_save(plot_lorenz_agri_broad, type = "fig")
 ## on agri_narrow ----
 ### Gini ----
 
-myconv <- mysvyr |> convey_prep()
+if (!exists("myconv")) myconv <- mysvyr |> convey_prep()
 gini_result <- myconv |>
   group_by(n_is_self_employed_narrow) |>
   summarise(
@@ -546,7 +557,7 @@ gini_lbl <- data.frame(
 
 ### Lorenz plot and tbl ----
 
-myconv <- convey_prep(mysvyr)
+if (!exists("myconv")) myconv <- convey_prep(mysvyr)
 # svylorenz(~ n_ing_equivaled,
 #   myconv,
 #   quantiles= seq(0,1,.05),

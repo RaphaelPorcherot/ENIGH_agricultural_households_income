@@ -80,7 +80,7 @@ run_share_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -88,7 +88,6 @@ run_share_analysis(
   col_above = col_above,
   col_below = col_below,
   col_overall = col_overall,
-  debug_outer = TRUE,
   debug_inner = FALSE
 )
 
@@ -145,7 +144,7 @@ run_share_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -153,7 +152,6 @@ run_share_analysis(
   col_above = col_above,
   col_below = col_below,
   col_overall = col_overall,
-  debug_outer = TRUE,
   debug_inner = FALSE
 )
 ## Share of support from new programs to agriculture by decile ----
@@ -211,7 +209,7 @@ run_share_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -219,7 +217,6 @@ run_share_analysis(
   col_above = col_above,
   col_below = col_below,
   col_overall = col_overall,
-  debug_outer = TRUE,
   debug_inner = FALSE
 )
 ## Share of support from old programs to agriculture by decile ----
@@ -289,7 +286,7 @@ run_share_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -297,7 +294,6 @@ run_share_analysis(
   col_above = col_above,
   col_below = col_below,
   col_overall = col_overall,
-  debug_outer = TRUE,
   debug_inner = FALSE
 )
 ## Share of support from other policies by decile ----
@@ -353,7 +349,7 @@ run_share_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -361,7 +357,6 @@ run_share_analysis(
   col_above = col_above,
   col_below = col_below,
   col_overall = col_overall,
-  debug_outer = TRUE,
   debug_inner = FALSE
 )
 
@@ -427,7 +422,7 @@ run_share_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -435,7 +430,6 @@ run_share_analysis(
   col_above = col_above,
   col_below = col_below,
   col_overall = col_overall,
-  debug_outer = TRUE,
   debug_inner = FALSE
 )
 
@@ -499,7 +493,7 @@ run_share_analysis(
   strat = strat,
   basename = basename,
   universes = universes,
-  estimators = c("macro", "micro"), # ou juste c("macro")
+  estimators = c("macro", "micro", "median"), # ou juste c("macro")
   title_macro = title_macro,
   title_micro = title_micro,
   caption_base = caption_base,
@@ -507,7 +501,6 @@ run_share_analysis(
   col_above = col_above,
   col_below = col_below,
   col_overall = col_overall,
-  debug_outer = TRUE,
   debug_inner = FALSE
 )
 

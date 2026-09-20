@@ -9,14 +9,14 @@ Put the data in the /src/ folder and unzip it. The scripts will go and target th
 The project uses `renv` to lock the versions of R and its packages, so that the code runs the same way on every computer.
 
 **Versions used in this project:**
-- R: `4.5.3`
+- R: `4.6.1`
 - renv: `1.2.2`
 
-⚠️ Significantly different version of R (e.g. 4.3.x) may cause that some packages not install correctly.
+⚠️ A significantly different version of R (e.g. 4.3.x) may cause some packages not to install correctly.
 
 ## Installation (first time only)
 
-After cloning the project, (optionnaly) created a `.Rproj` file (if you work with RStudio), run the following in the R console:
+After cloning the project, (optionally) create a `.Rproj` file (if you work with RStudio), then run the following in the R console:
 
 ```r
 install.packages("renv")
@@ -24,6 +24,64 @@ renv::restore()
 ```
 
 `renv::restore()` reads the `renv.lock` file (included in the repository) and installs **exactly** the same package versions that were used in the repo. This may take a few minutes the first time.
+
+## Upgrading from R 4.5.x (if you cloned this repo before September 2026)
+
+The project moved from **R 4.5.3 to R 4.6.1**. This matters because `renv` keeps a
+**separate library per R minor version**: the packages you installed under 4.5 live in
+`renv/library/macos/R-4.5/…` and are simply invisible to R 4.6. Nothing is broken —
+the new library just has to be built once.
+
+1. **Install R 4.6.1** from [cran.r-project.org](https://cran.r-project.org/) and make
+   sure your editor is using it. Check with:
+
+   ```r
+   R.version.string   # should print "R version 4.6.1 ..."
+   ```
+
+2. **Pull the latest `renv.lock`**, which now records R 4.6.1 and the matching package
+   versions:
+
+   ```bash
+   git pull
+   ```
+
+3. **Rebuild the library** from the R console, at the project root:
+
+   ```r
+   renv::restore()
+   ```
+
+   This installs all 152 packages into `renv/library/macos/R-4.6/…`. Expect 10–30
+   minutes depending on your connection. Binary packages install in seconds; any
+   package with no binary for your platform is compiled, which is what takes the time.
+
+4. **Check** that everything is in order:
+
+   ```r
+   renv::status()   # should print "No issues found -- the project is in a consistent state."
+   ```
+
+5. (Optional) The old `renv/library/macos/R-4.5/` folder is no longer used and can be
+   deleted to reclaim disk space. It is git-ignored, so removing it changes nothing in
+   the repository.
+
+**If `renv::restore()` stalls on a package.** One package in the lockfile, `V8`,
+downloads an external library during its installation and can hang on a slow or
+filtered connection. Nothing in the pipeline uses it, so it is safe to skip:
+interrupt with <kbd>Esc</kbd>, then
+
+```r
+renv::restore(exclude = "V8")
+```
+
+**If `renv::snapshot()` refuses to run** with a message about a package required by
+another one but not installed, install the missing package and snapshot again:
+
+```r
+renv::install("<the missing package>")
+renv::snapshot()
+```
 
 ## Working with renv (in brief)
 
@@ -51,17 +109,240 @@ renv::status()
 
 For everything else (how renv works internally, library management, use with Docker, etc.), the official guide is here: [https://rstudio.github.io/renv/articles/renv.html](https://rstudio.github.io/renv/articles/renv.html)
 
+# Description
+
+## What this code does
+
+The pipeline takes the raw **ENIGH 2022** micro-data published by INEGI and produces,
+for Mexican **agricultural households**, a description of where their income comes
+from, how agricultural support policies are distributed across the income
+distribution, and how unequal that distribution is.
+
+Everything is estimated on the **complex survey design** (stratified, one-stage
+cluster sampling with unequal weights) using the `survey` / `srvyr` packages, so every
+estimate comes with a design-based confidence interval — never a naive one.
+
+The unit of analysis is the **household**, ranked into **deciles of equivalised
+current income** for the whole population (square-root equivalence scale). All
+agricultural results are then read against those population-wide deciles, which is
+what makes statements such as "the poorest decile of the overall population" possible.
+
+## How to run it
+
+From the project root, with the `renv` environment active:
+
+```r
+source("script/main_script.r")
+```
+
+or from a terminal:
+
+```bash
+Rscript script/main_script.r
+```
+
+A full run takes about **35 minutes** and writes ~320 figures and ~200 tables. The raw
+INEGI data must be in `src/` first (see *Data source* above).
+
+Useful options:
+
+```r
+options(enigh.show_plots = TRUE)   # also render every figure on screen (slower)
+options(enigh.fig_device = "png")  # write PNG instead of vector PDF
+```
+
+## Pipeline structure
+
+The scripts are numbered in execution order and sourced by `main_script.r`.
+
+| script | what it does |
+|---|---|
+| `0_utils.r` | All the functions: survey estimators, significance tests, plotting, saving. Nothing runs here. |
+| `1A_data_prep.r` | Reads the raw INEGI tables (`AGRO`, `AGROPRODUCTOS`, `AGROCONSUMO`, `NOAGRO`, `CONCENTRADOHOGAR`, `POBLACION`…), aggregates them to household level and builds the project's own variables, all prefixed `n_`. |
+| `1B_data_svyr.r` | Builds the survey design, handles negative incomes, classifies households as agricultural or not, resolves edge cases, computes the income deciles, and updates `dict_new_variables.csv`. |
+| `2A_stat_basic.r` | Decile cut-off points and basic descriptive tables. |
+| `2B_stat_ineq.r` | Inequality: Gini coefficients, Lorenz curves, farm size and ethnicity distributions, food-access indicators. |
+| `2C_stat_comp_analysis.r` | **Composition analysis** — what a total is made of, decile by decile (100 % stacked bars). |
+| `2D_stat_share_analysis.r` | **Share analysis** — how an aggregate is distributed across deciles. |
+| `2E_stat_ratio_analysis.r` | **Ratio analysis** — how large one variable is relative to another. |
+| `main_script.r` | Loads packages, sources everything in order, and builds the colour dictionary that keeps a variable the same colour across all figures. |
+| `test_estimators.r` | Regression test for the estimators. Not part of the pipeline; run it separately. |
+
+## The three estimators, and how to choose between them
+
+The same question — *"how big is X relative to Y in this decile?"* — has three
+different answers, and the project computes all three because they say different
+things. This is the single most important thing to understand when reading the
+figures.
+
+**Macro** — *ratio of the aggregates*
+
+> `T(X | decile) / T(Y | decile)`
+
+"Out of every peso of Y received by the decile **as a whole**, how much comes from X?"
+Households contribute in proportion to their size, so one very large farm can drive
+the whole decile. This is the only estimator that is **exactly additive**: the
+components of a total sum to 100 %, which is why the composition figures use it.
+
+**Micro** — *mean of the individual ratios*
+
+> `mean over households of (X_i / Y_i)`
+
+"What does the **average household** look like?" Every household counts for one,
+whatever its size. Beware: households with `Y_i = 0` drop out of this computation
+entirely, so the estimate is conditional on `Y_i ≠ 0`; the `n_obs` column tells you
+how many households actually contributed.
+
+**Median** — *median of the individual ratios*
+
+> `weighted median over households of (X_i / Y_i)`
+
+"What does the **median household** look like?" Far more readable than the micro mean,
+because `X_i / Y_i` is unbounded and heavy-tailed and its mean is driven by a handful
+of households. Households with a null or negative denominator are excluded by default.
+Its confidence interval is a **Woodruff interval** — asymmetric by construction, and
+obtained by inverting an interval for the share of households below the median.
+
+Medians are **not additive**: the medians of the components of a total do not sum to
+the median of the total, and generally not to 100 %. The median composition figures
+therefore draw the components side by side, never stacked, and print the real sum in
+the caption.
+
+A large gap between the macro and the micro/median values is itself a result: it
+signals strong heterogeneity in farm size and a correlation between scale and the
+ratio being measured.
+
+## Significance testing
+
+Each ratio/share analysis produces **two** figures:
+
+- `plot_<name>.pdf` — the estimates by decile, with their confidence intervals and the
+  overall reference line;
+- `plot_signif_<name>.pdf` — a dot-and-whisker plot of the **difference to that
+  reference**, with a zero line.
+
+The second one exists because **comparing confidence intervals by eye is not a test**.
+It is conservative when the two estimates are independent, and it can be badly wrong
+when they are correlated — which is the case here, since shares sum to 1 and are
+therefore strongly negatively correlated. The difference is estimated directly, with
+its own variance:
+
+> `Var(θ_g − θ_ref) = Var(θ_g) + Var(θ_ref) − 2·Cov(θ_g, θ_ref)`
+
+using the full joint covariance matrix of the decile estimates. Reading rule:
+**significant when the interval does not cross zero**. The caption also reports how
+many deciles survive a Holm correction for the ten comparisons.
+
+The subtitle of that figure gives a **design-based linear trend** across the deciles —
+the slope of the gap against decile rank, with its p-value. That is the progressivity
+question in one number: a positive slope means the gap widens with income (regressive),
+a negative one that it narrows (progressive).
+
+## Output
+
+Everything lands in `output/`, which is git-ignored.
+
+| folder | content |
+|---|---|
+| `output/data/` | The prepared household-level database (`.rds` and `.csv`). |
+| `output/diagnostics/` | Edge-case counts and consistency checks from `1B`. |
+| `output/processed/` | One `.csv` per analysis: estimates, standard errors, confidence intervals, `n_obs`, and the test columns. |
+| `output/fig/` | One vector `.pdf` per figure. |
+
+Every result table carries, besides the estimate and its interval:
+
+- `n_obs` — unweighted number of households that actually contributed to the decile
+  (compare it with the decile size before interpreting);
+- `n_pop`, `p_zero` — for medians: weighted population count, and weighted share of
+  households whose numerator is exactly zero (if `p_zero > 0.5`, the median *is* zero,
+  and that is the correct answer);
+- `ref`, `diff`, `diff_SE`, `diff_IC_low`, `diff_IC_high`, `p_value`, `p_value_adj`,
+  `signif`, `signif_adj` — the test against the reference;
+- `trend_slope`, `trend_SE`, `trend_p` — the linear trend across deciles.
+
+## Testing the estimators
+
+```bash
+Rscript script/test_estimators.r
+```
+
+Runs 38 checks on a synthetic design with the same structure as ENIGH 2022 and the same
+awkward cases (exact zeros, zero denominators, missing values, households outside any
+decile). It verifies the estimators against a reference implementation and the
+inferential code against `survey::svycontrast()` and `survey::svyquantile()`. Exit
+status 0 when everything passes. Run it after touching anything in `0_utils.r`.
+
+## Methodological choices worth knowing
+
+Documented in full in `report.md`. Three points that affect interpretation.
+
+**Negative self-employment income is bottom-coded at 0** before the deciles are
+computed, which is the standard treatment (LIS, OECD, Eurostat). Negative values
+otherwise break the Gini, the Lorenz curve and any log transform. The floor is applied
+to the *component* (farm and non-farm self-employment income), not to total income, so
+a household with 10 000 of wages and a 2 000 farm loss is credited with 10 000 — this
+is required for `percent_farm`, which classifies households as agricultural.
+
+Two alternative treatments are available for sensitivity analysis:
+
+```r
+options(enigh.negative_income = "draw")  # random draw from the bottom quartile of positives
+options(enigh.negative_income = "keep")  # no treatment (will break the Gini)
+```
+
+The `"draw"` option was the project's original treatment. It is kept only for
+comparison: it ignores the household's own scale and produced 498 households (4.3 %)
+whose farm net income exceeded the farm's total resources. Running the pipeline under
+both settings and reporting how far the headline numbers move is a recommended check.
+
+**Support amounts are on two different time bases.** The `nvo_cant*` variables
+(nuevos programas sociales) are already 12-month totals — the questionnaire asks about
+the period "between [month] of last year and [month] of this year" — and are used as
+they are. The `apoyo_*` variables come from a different question and are reported
+monthly, so they are multiplied by 12 (`apoyo_to_year` in `1A_data_prep.r`). Getting
+this wrong in either direction moves support by a factor of twelve; `report.md` II.16
+gives the evidence for each.
+
+**Micro estimators exclude households whose denominator is zero.** They are therefore
+conditional on a positive denominator. This is mild for production ratios (5–9 % of the
+universe) but decisive for the support ratios, where 86 % of agricultural households
+receive nothing from new-policy programmes: there, the micro mean and the median
+describe *recipients*. Always read `n_obs` alongside the estimate.
+
+**Composition of the median household — two different objects.** The median of each
+component's share (`get_share_median_overall`) is taken component by component, on
+different orderings of the households, so the shares do not sum to 100 % — it is
+nobody's actual budget. The composition of the households *around* the median
+(`get_share_median_band`, P45–P55 by default) describes real households and does sum to
+100 %. Both are produced; pick according to the sentence you want to write.
+
 # Release on Zenodo
 
 L'obiettivo è pubblicare una versione stabile del codice su Zenodo, che genera un DOI citabile. La versione pubblicata sarà pubblica e priva dei commenti di lavoro interni (#TODO, #WARN, #NOTE, #INFO) — che restano invece visibili su main per il nostro uso quotidiano.
 
 Il processo usa un branch temporaneo `zenodo` che esiste solo il tempo della release, poi viene eliminato. Il branch main non viene mai toccato.
 
-`clean_comments.py` non è nel repository — esiste solo sul computer di Raphael e va lanciato manualmente prima della release.
+`clean_comments.py` fa due cose:
+
+1. rimuove dai file `.R` i blocchi `#TODO` / `#NOTE` / `#INFO` / `#WARN`;
+2. **tronca `README.md`** appena prima di questa sezione (`# Release on Zenodo`,
+   inclusa). Tutto quello che segue è interno al progetto — questa procedura di
+   release e il workflow GitHub in italiano — e non va pubblicato. Le sezioni
+   precedenti (*Data source*, *Working with renv*, *Description*) restano, e sono
+   quelle che descrivono il codice a chi lo scarica da Zenodo.
+
+Il README quindi **non va più cancellato a mano**: ci pensa lo script.
+
+Prima di lanciarlo, conviene verificare cosa verrebbe rimosso:
+
+```bash
+python clean_comments.py --dry-run          # non modifica niente
+python clean_comments.py --dry-run --log    # scrive anche clean_comments_log.md
+```
 
 ```bash
 git checkout -b zenodo
-rm README.md && rm notes_and_questions.md # aussi docs/ et les scripts z_ dans scripts/
+rm notes_and_questions.md report.md   # e anche docs/ e gli script z_ in script/
 python clean_comments.py
 git add .
 git commit -m "clean : remove todo comments for release"

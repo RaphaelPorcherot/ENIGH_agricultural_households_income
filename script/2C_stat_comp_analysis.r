@@ -81,6 +81,44 @@ cols <- run_composition_analysis(
 )
 list_cols[[length(list_cols) + 1]] <- cols
 
+## composition of the MEDIAN household ----
+# For each component: the median, across the households of the decile, of that
+# component's share of the household's OWN total. Answers "what does the budget
+# of the median household look like?", which the macro composition cannot say.
+# WARNING: medians are not additive, so the components do not sum to 100 % - the
+# function reports the actual sum and the figure is drawn side by side, never
+# stacked. Comment this call out to skip it.
+run_median_composition_analysis(
+  design = mysvyr,
+  d = d,
+  components = components,
+  component_labels = component_labels,
+  den = den,
+  strat = strat,
+  universes = universes,
+  basename = basename,
+  col_pal = col_pal
+)
+
+## composition of the households AROUND THE MEDIAN ----
+# Answers a different question from the one above: not "what is the median share
+# of each component" (medians taken component by component, on different
+# orderings, hence not summing to 100 %), but "what does the budget of the
+# households sitting at the median actually look like". Households between P45
+# and P55 of the denominator, within each decile; the composition is a real macro
+# composition inside that band, so it sums to 100 % and can be stacked.
+run_median_band_composition_analysis(
+  design = mysvyr,
+  d = d,
+  components = components,
+  component_labels = component_labels,
+  den = den,
+  strat = strat,
+  universes = universes,
+  basename = basename,
+  col_pal = col_pal
+)
+
 ### DEBUG ----
 # make_composition_plot(
 #   tbl = tbl,
@@ -203,6 +241,44 @@ cols <- run_composition_analysis(
 
 list_cols[[length(list_cols) + 1]] <- cols
 
+## composition of the MEDIAN household ----
+# For each component: the median, across the households of the decile, of that
+# component's share of the household's OWN total. Answers "what does the budget
+# of the median household look like?", which the macro composition cannot say.
+# WARNING: medians are not additive, so the components do not sum to 100 % - the
+# function reports the actual sum and the figure is drawn side by side, never
+# stacked. Comment this call out to skip it.
+run_median_composition_analysis(
+  design = mysvyr,
+  d = d,
+  components = components,
+  component_labels = component_labels,
+  den = den,
+  strat = strat,
+  universes = universes,
+  basename = basename,
+  col_pal = col_pal
+)
+
+## composition of the households AROUND THE MEDIAN ----
+# Answers a different question from the one above: not "what is the median share
+# of each component" (medians taken component by component, on different
+# orderings, hence not summing to 100 %), but "what does the budget of the
+# households sitting at the median actually look like". Households between P45
+# and P55 of the denominator, within each decile; the composition is a real macro
+# composition inside that band, so it sums to 100 % and can be stacked.
+run_median_band_composition_analysis(
+  design = mysvyr,
+  d = d,
+  components = components,
+  component_labels = component_labels,
+  den = den,
+  strat = strat,
+  universes = universes,
+  basename = basename,
+  col_pal = col_pal
+)
+
 ### DEBUG ----
 
 # make_composition_plot(
@@ -306,6 +382,44 @@ cols <- run_composition_analysis(
 )
 
 list_cols[[length(list_cols) + 1]] <- cols
+
+## composition of the MEDIAN household ----
+# For each component: the median, across the households of the decile, of that
+# component's share of the household's OWN total. Answers "what does the budget
+# of the median household look like?", which the macro composition cannot say.
+# WARNING: medians are not additive, so the components do not sum to 100 % - the
+# function reports the actual sum and the figure is drawn side by side, never
+# stacked. Comment this call out to skip it.
+run_median_composition_analysis(
+  design = mysvyr,
+  d = d,
+  components = components,
+  component_labels = component_labels,
+  den = den,
+  strat = strat,
+  universes = universes,
+  basename = basename,
+  col_pal = col_pal
+)
+
+## composition of the households AROUND THE MEDIAN ----
+# Answers a different question from the one above: not "what is the median share
+# of each component" (medians taken component by component, on different
+# orderings, hence not summing to 100 %), but "what does the budget of the
+# households sitting at the median actually look like". Households between P45
+# and P55 of the denominator, within each decile; the composition is a real macro
+# composition inside that band, so it sums to 100 % and can be stacked.
+run_median_band_composition_analysis(
+  design = mysvyr,
+  d = d,
+  components = components,
+  component_labels = component_labels,
+  den = den,
+  strat = strat,
+  universes = universes,
+  basename = basename,
+  col_pal = col_pal
+)
 
 ### DEBUG ----
 # make_composition_plot(
@@ -424,6 +538,44 @@ cols <- run_composition_analysis(
 )
 list_cols[[length(list_cols) + 1]] <- cols
 
+## composition of the MEDIAN household ----
+# For each component: the median, across the households of the decile, of that
+# component's share of the household's OWN total. Answers "what does the budget
+# of the median household look like?", which the macro composition cannot say.
+# WARNING: medians are not additive, so the components do not sum to 100 % - the
+# function reports the actual sum and the figure is drawn side by side, never
+# stacked. Comment this call out to skip it.
+run_median_composition_analysis(
+  design = mysvyr,
+  d = d,
+  components = components,
+  component_labels = component_labels,
+  den = den,
+  strat = strat,
+  universes = universes,
+  basename = basename,
+  col_pal = col_pal
+)
+
+## composition of the households AROUND THE MEDIAN ----
+# Answers a different question from the one above: not "what is the median share
+# of each component" (medians taken component by component, on different
+# orderings, hence not summing to 100 %), but "what does the budget of the
+# households sitting at the median actually look like". Households between P45
+# and P55 of the denominator, within each decile; the composition is a real macro
+# composition inside that band, so it sums to 100 % and can be stacked.
+run_median_band_composition_analysis(
+  design = mysvyr,
+  d = d,
+  components = components,
+  component_labels = component_labels,
+  den = den,
+  strat = strat,
+  universes = universes,
+  basename = basename,
+  col_pal = col_pal
+)
+
 ### DEBUG ----
 # make_composition_plot(
 #   tbl = tbl,
@@ -531,6 +683,44 @@ cols <- run_composition_analysis(
 )
 
 list_cols[[length(list_cols) + 1]] <- cols
+
+## composition of the MEDIAN household ----
+# For each component: the median, across the households of the decile, of that
+# component's share of the household's OWN total. Answers "what does the budget
+# of the median household look like?", which the macro composition cannot say.
+# WARNING: medians are not additive, so the components do not sum to 100 % - the
+# function reports the actual sum and the figure is drawn side by side, never
+# stacked. Comment this call out to skip it.
+run_median_composition_analysis(
+  design = mysvyr,
+  d = d,
+  components = components,
+  component_labels = component_labels,
+  den = den,
+  strat = strat,
+  universes = universes,
+  basename = basename,
+  col_pal = col_pal
+)
+
+## composition of the households AROUND THE MEDIAN ----
+# Answers a different question from the one above: not "what is the median share
+# of each component" (medians taken component by component, on different
+# orderings, hence not summing to 100 %), but "what does the budget of the
+# households sitting at the median actually look like". Households between P45
+# and P55 of the denominator, within each decile; the composition is a real macro
+# composition inside that band, so it sums to 100 % and can be stacked.
+run_median_band_composition_analysis(
+  design = mysvyr,
+  d = d,
+  components = components,
+  component_labels = component_labels,
+  den = den,
+  strat = strat,
+  universes = universes,
+  basename = basename,
+  col_pal = col_pal
+)
 
 ### DEBUG ----
 # make_composition_plot(

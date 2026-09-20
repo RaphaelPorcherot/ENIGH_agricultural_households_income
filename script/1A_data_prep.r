@@ -328,15 +328,41 @@ agro_clean <- agro_raw |>
       ~ replace_na(.x, 0)
     ),
 
-    # NOTE: SUPPORT are ALREADY YEARLY
-    # WARN: this was a MAJOR issue because we treated them as if they were monthly
+    # PERIODICITY OF THE SUPPORT VARIABLES - the two families differ.
+    #
+    # An earlier version of this script annualised EVERYTHING as if it were
+    # monthly, then corrected to "everything is already yearly". Neither is
+    # right: the correct position is one family each way, and it is documented
+    # in report.md (section II.16) with the evidence.
+    #
+    #   nvo_cant1..3  -> ALREADY A 12-MONTH TOTAL, do not rescale.
+    #     The questionnaire asks "Entre [MES] del año pasado y [MES] de este año
+    #     ¿recibió apoyo... registre el monto", i.e. a 12-month reference window.
+    #     Confirmed against the data: Sembrando Vida paid ~5 000 MXN/month in
+    #     2022, and the modal declared values are 60 000 (= 5 000 x 12, 385
+    #     households), 54 000 (= 4 500 x 12) and 30 000 (= 2 500 x 12); 80 % of
+    #     declarations exceed 24 000. Multiplying by 12 would put the median at
+    #     648 000 MXN/year, ten times the programme's actual payment.
+    #
+    #   apoyo_1..8    -> MONTHLY, must be multiplied by 12.
+    #     INEGI: "In the case of income reported in variables apoyo_* these are
+    #     reported monthly." This is a different question from the nuevos
+    #     programas one above, which is why the two statements do not conflict.
+    #     These variables weigh 2.4 % of total agricultural support, so the
+    #     correction matters at household level more than in the aggregate.
+    #
+    # Note on the raw types: the quarterly variables carry the _tri suffix and
+    # are typed N(12,2) "Variable construida" - INEGI applied a quarterly
+    # adjustment factor to them. apoyo_* and nvo_cant* are N(9) integers, i.e.
+    # raw declared amounts that were never normalised.
+    apoyo_to_year = 12,
 
     # Apoyo con pago (con necesidad de devolver la ayuda de vuelta)
     # resp : Apoyo de gobierno federal, estatal, municipal, no gubernamental con pago
-    apoyo_pago = (apoyo_1 + apoyo_2 + apoyo_3 + apoyo_7),
+    apoyo_pago = (apoyo_1 + apoyo_2 + apoyo_3 + apoyo_7) * apoyo_to_year,
     # Apoyo sin pago (sin terner que devolverlo)
     # resp : Apoyo de gobierno federal, estatal, municipal, no gubernamental sin pago
-    apoyo_npago = (apoyo_4 + apoyo_5 + apoyo_6 + apoyo_8),
+    apoyo_npago = (apoyo_4 + apoyo_5 + apoyo_6 + apoyo_8) * apoyo_to_year,
 
     #Apoyo Procampu y Progan
     ## proagro: PROCAMPO / ProAgro / Bienestar
