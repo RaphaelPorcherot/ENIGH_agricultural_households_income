@@ -571,9 +571,15 @@ extra_text <- paste(
   ),
   sep = "\n"
 )
+# UNIVERSE RESTRICTED TO RECIPIENTS.
+# The denominator of this ratio is a support aggregate, which is zero for most
+# agricultural households, so the household-level ratio is undefined for them and
+# the micro/median estimators dropped them silently. Restricting the universe
+# makes that part of the definition instead of an implicit footnote. The take-up
+# analyses at the end of this script report how large this universe actually is.
 universes <- list(
-  list(universe = "n_is_agri_broad", filter = "agri_broad"),
-  list(universe = "n_is_agri", filter = "agri_narrow")
+  list(universe = "n_recip_support_broad", filter = "recipients_broad"),
+  list(universe = "n_recip_support_narrow", filter = "recipients_narrow")
 )
 run_ratio_analysis(
   design = mysvyr,
@@ -699,9 +705,15 @@ extra_text <- paste(
   ),
   sep = "\n"
 )
+# UNIVERSE RESTRICTED TO RECIPIENTS.
+# The denominator of this ratio is a support aggregate, which is zero for most
+# agricultural households, so the household-level ratio is undefined for them and
+# the micro/median estimators dropped them silently. Restricting the universe
+# makes that part of the definition instead of an implicit footnote. The take-up
+# analyses at the end of this script report how large this universe actually is.
 universes <- list(
-  list(universe = "n_is_agri_broad", filter = "agri_broad"),
-  list(universe = "n_is_agri", filter = "agri_narrow")
+  list(universe = "n_recip_support_broad", filter = "recipients_broad"),
+  list(universe = "n_recip_support_narrow", filter = "recipients_narrow")
 )
 run_ratio_analysis(
   design = mysvyr,
@@ -771,9 +783,15 @@ extra_text <- paste(
   ),
   sep = "\n"
 )
+# UNIVERSE RESTRICTED TO RECIPIENTS.
+# The denominator of this ratio is a support aggregate, which is zero for most
+# agricultural households, so the household-level ratio is undefined for them and
+# the micro/median estimators dropped them silently. Restricting the universe
+# makes that part of the definition instead of an implicit footnote. The take-up
+# analyses at the end of this script report how large this universe actually is.
 universes <- list(
-  list(universe = "n_is_agri_broad", filter = "agri_broad"),
-  list(universe = "n_is_agri", filter = "agri_narrow")
+  list(universe = "n_recip_nvo_tot_broad", filter = "recipients_broad"),
+  list(universe = "n_recip_nvo_tot_narrow", filter = "recipients_narrow")
 )
 run_ratio_analysis(
   design = mysvyr,
@@ -836,9 +854,15 @@ extra_text <- paste(
   ),
   sep = "\n"
 )
+# UNIVERSE RESTRICTED TO RECIPIENTS.
+# The denominator of this ratio is a support aggregate, which is zero for most
+# agricultural households, so the household-level ratio is undefined for them and
+# the micro/median estimators dropped them silently. Restricting the universe
+# makes that part of the definition instead of an implicit footnote. The take-up
+# analyses at the end of this script report how large this universe actually is.
 universes <- list(
-  list(universe = "n_is_agri_broad", filter = "agri_broad"),
-  list(universe = "n_is_agri", filter = "agri_narrow")
+  list(universe = "n_recip_nvo_npago_broad", filter = "recipients_broad"),
+  list(universe = "n_recip_nvo_npago_narrow", filter = "recipients_narrow")
 )
 run_ratio_analysis(
   design = mysvyr,
@@ -905,9 +929,15 @@ extra_text <- paste(
   ),
   sep = "\n"
 )
+# UNIVERSE RESTRICTED TO RECIPIENTS.
+# The denominator of this ratio is a support aggregate, which is zero for most
+# agricultural households, so the household-level ratio is undefined for them and
+# the micro/median estimators dropped them silently. Restricting the universe
+# makes that part of the definition instead of an implicit footnote. The take-up
+# analyses at the end of this script report how large this universe actually is.
 universes <- list(
-  list(universe = "n_is_agri_broad", filter = "agri_broad"),
-  list(universe = "n_is_agri", filter = "agri_narrow")
+  list(universe = "n_recip_nvo_npago_broad", filter = "recipients_broad"),
+  list(universe = "n_recip_nvo_npago_narrow", filter = "recipients_narrow")
 )
 run_ratio_analysis(
   design = mysvyr,
@@ -974,9 +1004,15 @@ extra_text <- paste(
   ),
   sep = "\n"
 )
+# UNIVERSE RESTRICTED TO RECIPIENTS.
+# The denominator of this ratio is a support aggregate, which is zero for most
+# agricultural households, so the household-level ratio is undefined for them and
+# the micro/median estimators dropped them silently. Restricting the universe
+# makes that part of the definition instead of an implicit footnote. The take-up
+# analyses at the end of this script report how large this universe actually is.
 universes <- list(
-  list(universe = "n_is_agri_broad", filter = "agri_broad"),
-  list(universe = "n_is_agri", filter = "agri_narrow")
+  list(universe = "n_recip_nvo_npago_broad", filter = "recipients_broad"),
+  list(universe = "n_recip_nvo_npago_narrow", filter = "recipients_narrow")
 )
 run_ratio_analysis(
   design = mysvyr,
@@ -1051,9 +1087,15 @@ extra_text <- paste(
   ),
   sep = "\n"
 )
+# UNIVERSE RESTRICTED TO RECIPIENTS.
+# The denominator of this ratio is a support aggregate, which is zero for most
+# agricultural households, so the household-level ratio is undefined for them and
+# the micro/median estimators dropped them silently. Restricting the universe
+# makes that part of the definition instead of an implicit footnote. The take-up
+# analyses at the end of this script report how large this universe actually is.
 universes <- list(
-  list(universe = "n_is_agri_broad", filter = "agri_broad"),
-  list(universe = "n_is_agri", filter = "agri_narrow")
+  list(universe = "n_recip_nvo_npago_broad", filter = "recipients_broad"),
+  list(universe = "n_recip_nvo_npago_narrow", filter = "recipients_narrow")
 )
 run_ratio_analysis(
   design = mysvyr,
@@ -1087,3 +1129,65 @@ run_ratio_analysis(
 # 15 n_tand_bien_agro     #FAC127FF
 # 16 n_trabajo_bundled    #7C7B78FF
 # 17 n_transfer           #BCAF6FFF
+
+# TAKE-UP of agricultural support ----
+#
+# Companion of the seven ratio analyses above, whose universe is restricted to
+# the recipients of a given support aggregate. Those answer "among households
+# that receive something, how much does programme X represent?"; these answer
+# "how many households receive anything at all, and does coverage vary across
+# the income distribution?".
+#
+# The pair matters because the two can point in opposite directions: a programme
+# concentrated on a handful of large farms shows a high ratio and a low take-up,
+# while a broad but shallow transfer shows the reverse. Reading either number
+# alone is what makes a support scheme look progressive or regressive at will.
+
+takeup_caption <- paste(
+  "Share of households of the decile receiving a strictly positive amount from",
+  "the support aggregate, within the universe stated above.",
+  "Read together with the corresponding ratio figures, which are estimated on",
+  "these recipients only.",
+  "Source: Based on ENIGH data.",
+  sep = "\n"
+)
+
+takeup_specs <- list(
+  list(
+    short = "support",
+    label = "any agricultural support (old, new or other programmes)"
+  ),
+  list(
+    short = "nvo_tot",
+    label = "the new programmes (repayable and non-repayable)"
+  ),
+  list(
+    short = "nvo_npago",
+    label = "the new non-repayable programmes"
+  )
+)
+
+for (sp in takeup_specs) {
+  for (u in list(
+    list(suffix = "broad", universe = "n_is_agri_broad", filter = "agri_broad"),
+    list(suffix = "narrow", universe = "n_is_agri", filter = "agri_narrow")
+  )) {
+    run_takeup_analysis(
+      design = mysvyr,
+      d = d,
+      recip_var = str_c("n_recip_", sp$short, "_", u$suffix),
+      strat = "n_deciles_total",
+      universe = u$universe,
+      filter = u$filter,
+      basename = str_c(sp$short, "_decile"),
+      title = str_c(
+        "Share of agricultural households receiving ",
+        sp$label,
+        ", by income decile"
+      ),
+      caption = takeup_caption,
+      col_bar = col_overall,
+      col_overall = "grey30"
+    )
+  }
+}

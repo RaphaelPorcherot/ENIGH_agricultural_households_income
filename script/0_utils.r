@@ -417,9 +417,20 @@ replace_negatives <- function(
   if (!is.finite(p) || !is.finite(var_p) || var_p <= 0 || p <= 0 || p >= 1) {
     return(c(NA_real_, NA_real_))
   }
+  # The design degrees of freedom of a DOMAIN can legitimately fall to zero or
+  # below once the universe is restricted (few households, spread over as many
+  # PSUs as strata). qt(alpha/2, 0) is NaN, which would propagate silently into
+  # the interval, so return a missing interval instead - the estimate is still
+  # reported, and n_obs / degf say why the interval is absent.
+  if (!is.finite(df) || df <= 0 || !is.finite(n_sub) || n_sub <= 1) {
+    return(c(NA_real_, NA_real_))
+  }
   n_eff <- p * (1 - p) / var_p
   n_eff <- n_eff *
     (stats::qt(alpha / 2, n_sub - 1) / stats::qt(alpha / 2, df))^2
+  if (!is.finite(n_eff) || n_eff <= 0) {
+    return(c(NA_real_, NA_real_))
+  }
   c(
     stats::qbeta(alpha / 2, n_eff * p, n_eff * (1 - p) + 1),
     stats::qbeta(1 - alpha / 2, n_eff * p + 1, n_eff * (1 - p))
@@ -1238,6 +1249,7 @@ get_share_micro <- function(
       IC_high = hi,
       n_obs = ds$n_obs[k],
       n_pop = ds$n_pop[k],
+      degf = df,
       p_zero = sum(w_k[x_k == 0]) / sum(w_k),
       ref = q_ref,
       ref_SE = ref_se,
@@ -2330,6 +2342,167 @@ run_median_band_composition_analysis <- function(
     show_plot(plot)
     custom_save(plot, str_c("plot_", name, "_", suffix), type = "fig")
   }
+}
+
+
+### TAKE-UP: what share of households receive anything at all ----
+#
+# The companion of a restricted-universe ratio. Once the support ratios are
+# estimated on the RECIPIENTS only (see the n_recip_* variables built in 1B),
+# the obvious missing number is how many households that universe actually
+# covers - and whether coverage itself varies across the income distribution.
+#
+# Together the two answer the policy question properly:
+#   take-up   : what fraction of decile g receives anything from the programme?
+#   ratio     : among those who do, how much does it represent?
+# A programme can look generous on the second and reach almost nobody on the
+# first; only the pair distinguishes the two cases.
+#
+# Estimated with get_proportion(), i.e. Korn-Graubard "beta" intervals, which
+# stay inside [0, 1] - a real constraint here, since take-up can be a few
+# percent in the upper deciles.
+make_takeup_plot <- function(
+  tbl,
+  strat_var,
+  overall_rate,
+  title,
+  subtitle,
+  caption,
+  col_bar,
+  col_overall,
+  level = 0.99
+) {
+  ggplot(tbl, aes(x = .data[[strat_var]], y = pct)) +
+    geom_col(width = 0.7, fill = col_bar, alpha = 0.9, colour = "white") +
+    geom_errorbar(
+      aes(ymin = pct_low, ymax = pct_upp),
+      width = 0.2,
+      colour = "grey30"
+    ) +
+    geom_hline(
+      yintercept = overall_rate,
+      colour = col_overall,
+      linetype = "dotted",
+      linewidth = 0.8
+    ) +
+    geom_label(
+      aes(label = paste0(round(pct, 1), "%")),
+      vjust = 1.4,
+      colour = "black",
+      fill = "white",
+      linewidth = 0.15,
+      size = 3.6,
+      fontface = "bold"
+    ) +
+    scale_y_continuous(
+      expand = expansion(mult = c(0, 0.08)),
+      labels = percent_format(scale = 1)
+    ) +
+    labs(
+      title = title,
+      subtitle = subtitle,
+      x = "Income decile",
+      y = "% of households",
+      caption = str_c(
+        caption,
+        paste0(
+          "Dotted line: overall take-up in this universe (",
+          round(overall_rate, 1),
+          " %)."
+        ),
+        paste0(
+          "Error bars are ",
+          round(level * 100),
+          "% Korn-Graubard intervals, which stay inside [0, 100]."
+        ),
+        sep = "\n"
+      )
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      panel.background = element_rect(fill = "white", color = NA),
+      plot.background = element_rect(fill = "white", color = NA),
+      axis.text.x = element_text(size = 11),
+      panel.grid.major.x = element_blank(),
+      plot.title = element_text(face = "bold"),
+      plot.subtitle = element_text(face = "italic"),
+      plot.caption = element_text(size = 10)
+    )
+}
+
+# recip_var : one of the n_recip_*_broad / n_recip_*_narrow flags built in 1B
+# universe / filter : the unrestricted universe the take-up is measured WITHIN
+run_takeup_analysis <- function(
+  design,
+  d,
+  recip_var,
+  strat,
+  universe,
+  filter,
+  basename,
+  title,
+  caption,
+  col_bar = "#1f78b4",
+  col_overall = "#D55E00",
+  level = 0.99
+) {
+  recip_level <- setdiff(unique(d[[recip_var]]), "other")
+  stopifnot(length(recip_level) == 1)
+
+  strat_lvl <- levels(as.factor(d[[strat]]))
+
+  tbl <- get_proportion(
+    design = design,
+    strat_var = strat,
+    target_var = recip_var,
+    filter_var = universe,
+    filter_value = filter,
+    level = level
+  ) |>
+    filter(.data[[recip_var]] == recip_level) |>
+    mutate(
+      pct = prop * 100,
+      pct_low = IC_low * 100,
+      pct_upp = IC_high * 100,
+      !!strat := factor(.data[[strat]], levels = strat_lvl)
+    ) |>
+    arrange(.data[[strat]])
+
+  # overall take-up in the same universe
+  overall <- get_proportion(
+    design = design,
+    strat_var = universe,
+    target_var = recip_var,
+    filter_var = universe,
+    filter_value = filter,
+    level = level
+  ) |>
+    filter(.data[[recip_var]] == recip_level)
+  overall_rate <- overall$prop[1] * 100
+
+  name <- str_c("takeup_", basename, "_", str_remove(filter, ".*_"))
+  custom_save(
+    tbl |>
+      select(all_of(strat), pct, pct_low, pct_upp, SE, n_obs) |>
+      mutate(overall_pct = round(overall_rate, 2)),
+    name
+  )
+
+  plot <- make_takeup_plot(
+    tbl = tbl,
+    strat_var = strat,
+    overall_rate = overall_rate,
+    title = title,
+    subtitle = str_c("Universe: ", filter),
+    caption = caption,
+    col_bar = col_bar,
+    col_overall = col_overall,
+    level = level
+  )
+  show_plot(plot)
+  custom_save(plot, str_c("plot_", name), type = "fig")
+
+  invisible(tbl)
 }
 
 ### ratio/share analysis ----

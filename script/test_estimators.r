@@ -29,72 +29,148 @@ options(survey.lonely.psu = "adjust")
 # ---------------------------------------------------------------- reference
 # Previous implementations, kept here as the reference to reproduce.
 
-ref_ratio_macro <- function(design, numerator, denominator, strat_var,
-                            filter_var = NULL, filter_value = NULL,
-                            level = 0.99) {
+ref_ratio_macro <- function(
+  design,
+  numerator,
+  denominator,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL,
+  level = 0.99
+) {
   z <- qnorm((1 + level) / 2)
   df <- if (!is.null(filter_var)) {
-    subset(design, !is.na(design$variables[[filter_var]]) &
-             design$variables[[filter_var]] == filter_value)
-  } else design
+    subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        design$variables[[filter_var]] == filter_value
+    )
+  } else {
+    design
+  }
   lv <- unique(as.character(df$variables[[strat_var]]))
   lv <- lv[!is.na(lv)]
   map_dfr(lv, function(l) {
-    ds <- subset(df, !is.na(df$variables[[strat_var]]) &
-                   as.character(df$variables[[strat_var]]) == l)
-    t2 <- svytotal(as.formula(paste0("~cbind(num = ", numerator,
-                                     ", den = ", denominator, ")")),
-                   design = ds, na.rm = TRUE)
-    co <- coef(t2); vc <- vcov(t2); X <- co[1]; Y <- co[2]
+    ds <- subset(
+      df,
+      !is.na(df$variables[[strat_var]]) &
+        as.character(df$variables[[strat_var]]) == l
+    )
+    t2 <- svytotal(
+      as.formula(paste0(
+        "~cbind(num = ",
+        numerator,
+        ", den = ",
+        denominator,
+        ")"
+      )),
+      design = ds,
+      na.rm = TRUE
+    )
+    co <- coef(t2)
+    vc <- vcov(t2)
+    X <- co[1]
+    Y <- co[2]
     SE <- sqrt(vc[1, 1] / Y^2 + (X^2 * vc[2, 2]) / Y^4 - 2 * X * vc[1, 2] / Y^3)
     tibble(strat = l, ratio = X / Y, SE = SE)
   })
 }
 
-ref_ratio_micro <- function(design, numerator, denominator, strat_var,
-                            filter_var = NULL, filter_value = NULL) {
+ref_ratio_micro <- function(
+  design,
+  numerator,
+  denominator,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL
+) {
   df <- if (!is.null(filter_var)) {
-    subset(design, !is.na(design$variables[[filter_var]]) &
-             design$variables[[filter_var]] == filter_value)
-  } else design
-  df <- update(df, .ratio = df$variables[[numerator]] /
-                 df$variables[[denominator]])
-  df$variables$.ratio <- ifelse(is.finite(df$variables$.ratio),
-                                df$variables$.ratio, NA_real_)
+    subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        design$variables[[filter_var]] == filter_value
+    )
+  } else {
+    design
+  }
+  df <- update(
+    df,
+    .ratio = df$variables[[numerator]] /
+      df$variables[[denominator]]
+  )
+  df$variables$.ratio <- ifelse(
+    is.finite(df$variables$.ratio),
+    df$variables$.ratio,
+    NA_real_
+  )
   lv <- unique(as.character(df$variables[[strat_var]]))
   lv <- lv[!is.na(lv)]
   map_dfr(lv, function(l) {
-    ds <- subset(df, !is.na(df$variables[[strat_var]]) &
-                   as.character(df$variables[[strat_var]]) == l)
+    ds <- subset(
+      df,
+      !is.na(df$variables[[strat_var]]) &
+        as.character(df$variables[[strat_var]]) == l
+    )
     m <- svymean(~.ratio, ds, na.rm = TRUE)
     tibble(strat = l, ratio = coef(m)[[1]], SE = SE(m)[[1]])
   })
 }
 
-ref_share_macro <- function(design, target_var, strat_var,
-                            filter_var = NULL, filter_value = NULL) {
+ref_share_macro <- function(
+  design,
+  target_var,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL
+) {
   df <- if (!is.null(filter_var)) {
-    subset(design, !is.na(design$variables[[filter_var]]) &
-             design$variables[[filter_var]] == filter_value)
-  } else design
+    subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        design$variables[[filter_var]] == filter_value
+    )
+  } else {
+    design
+  }
   lv <- unique(as.character(df$variables[[strat_var]]))
   lv <- lv[!is.na(lv)]
   map_dfr(lv, function(l) {
-    f <- as.formula(paste0("~cbind(part = ", target_var, " * (", strat_var,
-                           " == '", l, "'), total = ", target_var, ")"))
+    f <- as.formula(paste0(
+      "~cbind(part = ",
+      target_var,
+      " * (",
+      strat_var,
+      " == '",
+      l,
+      "'), total = ",
+      target_var,
+      ")"
+    ))
     t2 <- svytotal(f, design = df, na.rm = TRUE)
-    co <- coef(t2); vc <- vcov(t2); X <- co[1]; Y <- co[2]
+    co <- coef(t2)
+    vc <- vcov(t2)
+    X <- co[1]
+    Y <- co[2]
     SE <- sqrt(vc[1, 1] / Y^2 + (X^2 * vc[2, 2]) / Y^4 - 2 * X * vc[1, 2] / Y^3)
     tibble(strat = l, share = X / Y, SE = SE)
   })
 }
 
-ref_share_macro_overall <- function(design, strat_var,
-                                    filter_var = NULL, filter_value = NULL) {
+ref_share_macro_overall <- function(
+  design,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL
+) {
   df <- if (!is.null(filter_var)) {
-    subset(design, !is.na(design$variables[[filter_var]]) &
-             design$variables[[filter_var]] == filter_value)
-  } else design
+    subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        design$variables[[filter_var]] == filter_value
+    )
+  } else {
+    design
+  }
   lv <- unique(as.character(df$variables[[strat_var]]))
   lv <- lv[!is.na(lv)]
   n <- map_dfr(lv, function(l) {
@@ -105,51 +181,88 @@ ref_share_macro_overall <- function(design, strat_var,
   n |> mutate(ref_share = n / sum(n) * 100) |> select(-n)
 }
 
-ref_share_micro <- function(design, target_var, strat_var,
-                            filter_var = NULL, filter_value = NULL) {
+ref_share_micro <- function(
+  design,
+  target_var,
+  strat_var,
+  filter_var = NULL,
+  filter_value = NULL
+) {
   df <- if (!is.null(filter_var)) {
-    subset(design, !is.na(design$variables[[filter_var]]) &
-             design$variables[[filter_var]] == filter_value)
-  } else design
-  tot <- as.numeric(coef(svytotal(as.formula(paste0("~", target_var)),
-                                  design = df, na.rm = TRUE)))
+    subset(
+      design,
+      !is.na(design$variables[[filter_var]]) &
+        design$variables[[filter_var]] == filter_value
+    )
+  } else {
+    design
+  }
+  tot <- as.numeric(coef(svytotal(
+    as.formula(paste0("~", target_var)),
+    design = df,
+    na.rm = TRUE
+  )))
   df <- update(df, .share = df$variables[[target_var]] / tot)
-  df$variables$.share <- ifelse(is.finite(df$variables$.share),
-                                df$variables$.share, NA_real_)
+  df$variables$.share <- ifelse(
+    is.finite(df$variables$.share),
+    df$variables$.share,
+    NA_real_
+  )
   lv <- unique(as.character(df$variables[[strat_var]]))
   lv <- lv[!is.na(lv)]
   map_dfr(lv, function(l) {
-    ds <- subset(df, !is.na(df$variables[[strat_var]]) &
-                   as.character(df$variables[[strat_var]]) == l)
+    ds <- subset(
+      df,
+      !is.na(df$variables[[strat_var]]) &
+        as.character(df$variables[[strat_var]]) == l
+    )
     m <- svymean(~.share, ds, na.rm = TRUE)
     tibble(strat = l, share = coef(m)[[1]], SE = SE(m)[[1]])
   })
 }
 
-ref_proportion <- function(design, strat_var, target_var,
-                           filter_var = NULL, filter_value = NULL,
-                           level = 0.99) {
+ref_proportion <- function(
+  design,
+  strat_var,
+  target_var,
+  filter_var = NULL,
+  filter_value = NULL,
+  level = 0.99
+) {
   x <- design$variables[[strat_var]]
   y <- design$variables[[target_var]]
-  params <- crossing(strat = unique(as.character(x[!is.na(x)])),
-                     target = unique(as.character(y[!is.na(y)])))
+  params <- crossing(
+    strat = unique(as.character(x[!is.na(x)])),
+    target = unique(as.character(y[!is.na(y)]))
+  )
   pmap_dfr(params, function(strat, target) {
     ds <- if (!is.null(filter_var)) {
-      subset(design, !is.na(design$variables[[strat_var]]) &
-               as.character(design$variables[[strat_var]]) == strat &
-               !is.na(design$variables[[filter_var]]) &
-               as.character(design$variables[[filter_var]]) == filter_value)
+      subset(
+        design,
+        !is.na(design$variables[[strat_var]]) &
+          as.character(design$variables[[strat_var]]) == strat &
+          !is.na(design$variables[[filter_var]]) &
+          as.character(design$variables[[filter_var]]) == filter_value
+      )
     } else {
-      subset(design, !is.na(design$variables[[strat_var]]) &
-               as.character(design$variables[[strat_var]]) == strat)
+      subset(
+        design,
+        !is.na(design$variables[[strat_var]]) &
+          as.character(design$variables[[strat_var]]) == strat
+      )
     }
     ind <- as.character(ds$variables[[target_var]]) == target
     ind[is.na(ind)] <- FALSE
     ds <- update(ds, indicator = ind)
     p <- svyciprop(~indicator, ds, method = "beta", level = level)
     ic <- as.numeric(confint(p))
-    tibble(strat = strat, target = target, prop = as.numeric(coef(p)),
-           IC_low = ic[1], IC_high = ic[2])
+    tibble(
+      strat = strat,
+      target = target,
+      prop = as.numeric(coef(p)),
+      IC_low = ic[1],
+      IC_high = ic[2]
+    )
   })
 }
 
@@ -158,22 +271,28 @@ set.seed(42)
 n <- 15000
 nstrat <- 120
 strata <- sort(sample(seq_len(nstrat), n, TRUE))
-psu <- ave(strata, strata, FUN = function(z)
-  sample(seq_along(z) %% max(2, floor(length(z) / 9)) + 1))
-dat <- data.frame(strata = strata, upm = paste0(strata, "_", psu),
-                  w = runif(n, 50, 900))
+psu <- ave(strata, strata, FUN = function(z) {
+  sample(seq_along(z) %% max(2, floor(length(z) / 9)) + 1)
+})
+dat <- data.frame(
+  strata = strata,
+  upm = paste0(strata, "_", psu),
+  w = runif(n, 50, 900)
+)
 dat$num <- rgamma(n, 0.6, 1) * 1000
 dat$den <- rgamma(n, 2, 1) * 5000
 dat$num2 <- rgamma(n, 1.2, 1) * 800
-dat$num[sample(n, n * 0.45)] <- 0   # many households receive nothing
-dat$den[sample(n, 40)] <- 0         # zero denominators
-dat$num2[sample(n, 30)] <- NA       # missing values
-dat$dec <- factor(paste0("D", sample(1:10, n, TRUE)),
-                  levels = paste0("D", 1:10))
+dat$num[sample(n, n * 0.45)] <- 0 # many households receive nothing
+dat$den[sample(n, 40)] <- 0 # zero denominators
+dat$num2[sample(n, 30)] <- NA # missing values
+dat$dec <- factor(
+  paste0("D", sample(1:10, n, TRUE)),
+  levels = paste0("D", 1:10)
+)
 dat$univ <- sample(c("agri_broad", "not_agri"), n, TRUE, prob = c(.35, .65))
 dat$size <- factor(sample(c("s1", "s2", "s3", "s4"), n, TRUE))
 dat$size[sample(n, 200)] <- NA
-dat$dec[sample(n, 25)] <- NA        # households outside any decile
+dat$dec[sample(n, 25)] <- NA # households outside any decile
 
 des <- svydesign(ids = ~upm, strata = ~strata, weights = ~w, data = dat)
 
@@ -187,17 +306,24 @@ eval(parse(text = paste(src[i0:(i1 - 1)], collapse = "\n")), fun)
 
 ok <- TRUE
 chk <- function(label, a, b, tol = 1e-10) {
-  a <- as.numeric(a); b <- as.numeric(b)
+  a <- as.numeric(a)
+  b <- as.numeric(b)
   both <- is.finite(a) & is.finite(b)
   same_na <- identical(is.finite(a), is.finite(b))
   d <- if (any(both)) {
     max(abs(a[both] - b[both]) / pmax(abs(b[both]), 1e-12))
-  } else 0
+  } else {
+    0
+  }
   pass <- same_na && d < tol
   ok <<- ok && pass
-  cat(sprintf("%-48s %s  max rel diff = %.3e%s\n", label,
-              if (pass) "PASS" else "FAIL", d,
-              if (same_na) "" else "   [NA pattern differs]"))
+  cat(sprintf(
+    "%-48s %s  max rel diff = %.3e%s\n",
+    label,
+    if (pass) "PASS" else "FAIL",
+    d,
+    if (same_na) "" else "   [NA pattern differs]"
+  ))
 }
 
 FV <- "univ"
@@ -229,9 +355,12 @@ b <- fun$get_share_macro(des, "num", "dec", FV, FL)
 m <- left_join(a, as_tibble(b), by = c("strat" = "dec"))
 chk("get_share_macro : estimate", m$share.y, m$share.x)
 chk("get_share_macro : SE", m$SE.y, m$SE.x)
-cat(sprintf("%-48s %s  sum = %.12f\n", "get_share_macro : shares sum to 1",
-            if (abs(sum(b$share) - 1) < 1e-10) "PASS" else "FAIL",
-            sum(b$share)))
+cat(sprintf(
+  "%-48s %s  sum = %.12f\n",
+  "get_share_macro : shares sum to 1",
+  if (abs(sum(b$share) - 1) < 1e-10) "PASS" else "FAIL",
+  sum(b$share)
+))
 
 a <- ref_share_macro(des, "num2", "dec", FV, FL)
 b <- fun$get_share_macro(des, "num2", "dec", FV, FL)
@@ -264,22 +393,36 @@ chk("get_proportion : IC_high", m$IC_high.y, m$IC_high.x)
 r <- dat$num / dat$den
 r[!is.finite(r)] <- NA
 sub <- which(dat$dec == "D3" & dat$univ == "agri_broad" & is.finite(r))
-chk("wq_math vs survey qrule_math (p = .5)",
-    fun$.wq_math(r[sub], dat$w[sub], .5),
-    survey:::qrule_math(r[sub], dat$w[sub], .5))
-chk("wq_math vs survey qrule_math (p = .17)",
-    fun$.wq_math(r[sub], dat$w[sub], .17),
-    survey:::qrule_math(r[sub], dat$w[sub], .17))
+chk(
+  "wq_math vs survey qrule_math (p = .5)",
+  fun$.wq_math(r[sub], dat$w[sub], .5),
+  survey:::qrule_math(r[sub], dat$w[sub], .5)
+)
+chk(
+  "wq_math vs survey qrule_math (p = .17)",
+  fun$.wq_math(r[sub], dat$w[sub], .17),
+  survey:::qrule_math(r[sub], dat$w[sub], .17)
+)
 
 # 8. median ratio and its Woodruff interval, against survey::svyquantile()
 desr <- update(des, .r = ifelse(is.finite(num / den) & den > 0, num / den, NA))
 new_med <- fun$get_ratio_median(des, "num", "den", "dec", FV, FL, level = 0.99)
 ref <- map_dfr(levels(dat$dec), function(l) {
-  ds <- subset(desr, as.character(desr$variables$dec) == l &
-                 desr$variables$univ == FL)
-  qm <- unclass(svyquantile(~.r, ds, quantiles = 0.5, ci = TRUE, alpha = 0.01,
-                            interval.type = "beta", qrule = "math",
-                            na.rm = TRUE))[[1]]
+  ds <- subset(
+    desr,
+    as.character(desr$variables$dec) == l &
+      desr$variables$univ == FL
+  )
+  qm <- unclass(svyquantile(
+    ~.r,
+    ds,
+    quantiles = 0.5,
+    ci = TRUE,
+    alpha = 0.01,
+    interval.type = "beta",
+    qrule = "math",
+    na.rm = TRUE
+  ))[[1]]
   tibble(dec = l, q = qm[1, 1], lo = qm[1, 2], hi = qm[1, 3], se = qm[1, 4])
 })
 m <- left_join(as_tibble(new_med), ref, by = "dec")
@@ -296,8 +439,10 @@ build_M <- function(num, den, g, keep) {
   lv <- levels(dat$dec)
   lv <- lv[lv %in% unique(as.character(g[keep]))]
   M <- matrix(0, nrow = nrow(dat), ncol = 2L * length(lv))
-  colnames(M) <- as.vector(rbind(paste0("n", seq_along(lv)),
-                                 paste0("d", seq_along(lv))))
+  colnames(M) <- as.vector(rbind(
+    paste0("n", seq_along(lv)),
+    paste0("d", seq_along(lv))
+  ))
   for (k in seq_along(lv)) {
     sel <- keep & !is.na(g) & as.character(g) == lv[k]
     M[sel, 2L * k - 1L] <- num[sel]
@@ -305,8 +450,10 @@ build_M <- function(num, den, g, keep) {
   }
   list(M = M, lv = lv)
 }
-keep <- dat$univ == FL & !is.na(dat$dec) &
-  is.finite(dat$num) & is.finite(dat$den)
+keep <- dat$univ == FL &
+  !is.na(dat$dec) &
+  is.finite(dat$num) &
+  is.finite(dat$den)
 bm <- build_M(dat$num, dat$den, dat$dec, keep)
 tt <- svytotal(bm$M, des)
 G <- length(bm$lv)
@@ -368,23 +515,46 @@ chk("get_ratio_median : pooled ref IC_high", a$ref_IC_high[1], b$IC_high[1])
 #     reference term cancels and the slope is sum_g c_g * (n_g / d_g).
 cx <- (seq_len(G) - mean(seq_len(G))) / sum((seq_len(G) - mean(seq_len(G)))^2)
 e_trend <- str2lang(paste(
-  sprintf("(%.15g)*n%d/d%d", cx, seq_len(G), seq_len(G)), collapse = " + "))
+  sprintf("(%.15g)*n%d/d%d", cx, seq_len(G), seq_len(G)),
+  collapse = " + "
+))
 ct <- svycontrast(tt, list(slope = e_trend))
-chk("linear trend : slope vs svycontrast",
-    new_rm$trend_slope[1], as.numeric(coef(ct)))
-chk("linear trend : SE    vs svycontrast",
-    new_rm$trend_SE[1], as.numeric(SE(ct)), tol = 1e-6)
+chk(
+  "linear trend : slope vs svycontrast",
+  new_rm$trend_slope[1],
+  as.numeric(coef(ct))
+)
+chk(
+  "linear trend : SE    vs svycontrast",
+  new_rm$trend_SE[1],
+  as.numeric(SE(ct)),
+  tol = 1e-6
+)
 
 # 9. timing (the real design has 560 strata, where the gain is larger)
 cat("\n--- timing, 10 deciles, 15 000 units, 120 strata ---\n")
-t_old <- system.time(ref_ratio_macro(des, "num", "den", "dec", FV, FL))[["elapsed"]]
-t_new <- system.time(fun$get_ratio_macro(des, "num", "den", "dec", FV, FL))[["elapsed"]]
-cat(sprintf("get_ratio_macro   old %5.2fs   new %5.2fs   (x%.1f)\n",
-            t_old, t_new, t_old / t_new))
+t_old <- system.time(ref_ratio_macro(des, "num", "den", "dec", FV, FL))[[
+  "elapsed"
+]]
+t_new <- system.time(fun$get_ratio_macro(des, "num", "den", "dec", FV, FL))[[
+  "elapsed"
+]]
+cat(sprintf(
+  "get_ratio_macro   old %5.2fs   new %5.2fs   (x%.1f)\n",
+  t_old,
+  t_new,
+  t_old / t_new
+))
 t_old <- system.time(ref_proportion(des, "dec", "size", FV, FL))[["elapsed"]]
-t_new <- system.time(fun$get_proportion(des, "dec", "size", FV, FL))[["elapsed"]]
-cat(sprintf("get_proportion    old %5.2fs   new %5.2fs   (x%.1f)\n",
-            t_old, t_new, t_old / t_new))
+t_new <- system.time(fun$get_proportion(des, "dec", "size", FV, FL))[[
+  "elapsed"
+]]
+cat(sprintf(
+  "get_proportion    old %5.2fs   new %5.2fs   (x%.1f)\n",
+  t_old,
+  t_new,
+  t_old / t_new
+))
 
 cat("\n", if (ok) "ALL CHECKS PASSED\n" else "*** SOME CHECKS FAILED ***\n")
 quit(status = if (ok) 0L else 1L)

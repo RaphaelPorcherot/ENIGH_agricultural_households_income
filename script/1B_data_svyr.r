@@ -367,6 +367,61 @@ message("-----------------------\n\n")
 
 custom_save(edge_cases_after, type = "diagnostics")
 
+# RECIPIENT UNIVERSES for the support ratios ----
+#
+# Some ratios have a support aggregate as their DENOMINATOR, and that denominator
+# is zero for most agricultural households: n_support_agro is 0 for 71 % of them,
+# n_nvo_tot_agro for 86 %, n_nvo_npago_agro for 86 %. For those households the
+# household-level ratio is 0/0, i.e. undefined - they have no composition of
+# their support because they receive no support.
+#
+# The micro and median estimators therefore silently dropped them, so a figure
+# titled "the average agricultural household" was in fact describing the one
+# household in seven that receives anything. Rather than leave that implicit, the
+# universe is restricted explicitly: the variables below flag the RECIPIENTS, and
+# 2E uses them in place of the unrestricted agricultural universes. The
+# restriction then becomes part of the definition and the title is exact.
+#
+# The companion question - HOW MANY households receive anything - is answered
+# separately by the take-up analyses at the end of 2E (get_proportion on these
+# same variables). The two together tell the whole story: what share of
+# households are covered, and how much those covered receive.
+#
+# NOTE: these must be built AFTER the edge-case corrections above, which reassign
+# n_is_agri and n_is_agri_broad.
+for (.v in c("n_support_agro", "n_nvo_tot_agro", "n_nvo_npago_agro")) {
+  .short <- sub("_agro$", "", sub("^n_", "", .v))
+  d[[paste0("n_recip_", .short, "_broad")]] <- if_else(
+    d$n_is_agri_broad == "agri_broad" & coalesce(d[[.v]], 0) > 0,
+    "recipients_broad",
+    "other"
+  )
+  d[[paste0("n_recip_", .short, "_narrow")]] <- if_else(
+    d$n_is_agri == "agri_narrow" & coalesce(d[[.v]], 0) > 0,
+    "recipients_narrow",
+    "other"
+  )
+}
+rm(.v, .short)
+
+message("\n-----------------------\nTake-up of agricultural support (unweighted):")
+for (.nm in grep("^n_recip_", names(d), value = TRUE)) {
+  message(
+    "  ",
+    format(.nm, width = 28),
+    sum(d[[.nm]] != "other"),
+    " / ",
+    if (grepl("_narrow$", .nm)) {
+      sum(d$n_is_agri == "agri_narrow")
+    } else {
+      sum(d$n_is_agri_broad == "agri_broad")
+    },
+    " households"
+  )
+}
+rm(.nm)
+message("-----------------------\n")
+
 # GENERATE the survey object and add quantile based on equivaled income ----
 mysvyr <- d |> as_survey_design(upm, strata = est_dis, weights = factor)
 
