@@ -552,7 +552,7 @@ tbl_csv <- tbl |>
 household_char_agri_narrow <- as_tibble(tbl_csv, col_labels = TRUE)
 custom_save(household_char_agri_narrow)
 
-## ethny, age, gender ---- 
+## ethny, age, gender ----
 
 tbl_agri <- subset(tbl, n_is_agri_broad == "agricultural households")
 tbl_csv <- tbl_agri |>
@@ -696,5 +696,3 @@ custom_save(age, "household_char_agri_broad_by_age")
 
 # dr <- list(ethnic, age, gender)
 # names(dr) <- c("ethnic", "age", "gender")
-
-

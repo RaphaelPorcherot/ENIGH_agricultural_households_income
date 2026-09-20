@@ -85,9 +85,13 @@ list_cols[[length(list_cols) + 1]] <- cols
 # For each component: the median, across the households of the decile, of that
 # component's share of the household's OWN total. Answers "what does the budget
 # of the median household look like?", which the macro composition cannot say.
-# WARNING: medians are not additive, so the components do not sum to 100 % - the
-# function reports the actual sum and the figure is drawn side by side, never
-# stacked. Comment this call out to skip it.
+# WARNING: medians are not additive - each component median is read off a
+# different ordering of the households, so they do not sum to 100 % and the
+# figure is drawn side by side, never stacked. The function reports the actual
+# sum. If what you want is a composition that DOES sum to 100 %, that is the
+# run_median_band_composition_analysis() call just below, which describes the
+# budget of the households sitting around the median. Comment out either call
+# to skip it.
 run_median_composition_analysis(
   design = mysvyr,
   d = d,
@@ -245,9 +249,13 @@ list_cols[[length(list_cols) + 1]] <- cols
 # For each component: the median, across the households of the decile, of that
 # component's share of the household's OWN total. Answers "what does the budget
 # of the median household look like?", which the macro composition cannot say.
-# WARNING: medians are not additive, so the components do not sum to 100 % - the
-# function reports the actual sum and the figure is drawn side by side, never
-# stacked. Comment this call out to skip it.
+# WARNING: medians are not additive - each component median is read off a
+# different ordering of the households, so they do not sum to 100 % and the
+# figure is drawn side by side, never stacked. The function reports the actual
+# sum. If what you want is a composition that DOES sum to 100 %, that is the
+# run_median_band_composition_analysis() call just below, which describes the
+# budget of the households sitting around the median. Comment out either call
+# to skip it.
 run_median_composition_analysis(
   design = mysvyr,
   d = d,
@@ -387,9 +395,13 @@ list_cols[[length(list_cols) + 1]] <- cols
 # For each component: the median, across the households of the decile, of that
 # component's share of the household's OWN total. Answers "what does the budget
 # of the median household look like?", which the macro composition cannot say.
-# WARNING: medians are not additive, so the components do not sum to 100 % - the
-# function reports the actual sum and the figure is drawn side by side, never
-# stacked. Comment this call out to skip it.
+# WARNING: medians are not additive - each component median is read off a
+# different ordering of the households, so they do not sum to 100 % and the
+# figure is drawn side by side, never stacked. The function reports the actual
+# sum. If what you want is a composition that DOES sum to 100 %, that is the
+# run_median_band_composition_analysis() call just below, which describes the
+# budget of the households sitting around the median. Comment out either call
+# to skip it.
 run_median_composition_analysis(
   design = mysvyr,
   d = d,
@@ -542,9 +554,13 @@ list_cols[[length(list_cols) + 1]] <- cols
 # For each component: the median, across the households of the decile, of that
 # component's share of the household's OWN total. Answers "what does the budget
 # of the median household look like?", which the macro composition cannot say.
-# WARNING: medians are not additive, so the components do not sum to 100 % - the
-# function reports the actual sum and the figure is drawn side by side, never
-# stacked. Comment this call out to skip it.
+# WARNING: medians are not additive - each component median is read off a
+# different ordering of the households, so they do not sum to 100 % and the
+# figure is drawn side by side, never stacked. The function reports the actual
+# sum. If what you want is a composition that DOES sum to 100 %, that is the
+# run_median_band_composition_analysis() call just below, which describes the
+# budget of the households sitting around the median. Comment out either call
+# to skip it.
 run_median_composition_analysis(
   design = mysvyr,
   d = d,
@@ -591,7 +607,11 @@ run_median_band_composition_analysis(
 
 # of all transfers (bundled as npago et pago) from new policies to agriculture by decile ----
 
-#TODO: when a modality is 100%, get_ratio_micro a un soucis
+#FIXED: "when a modality is 100%, get_ratio_micro a un soucis" - the NaNs below
+# came from the delta-method variance going very slightly negative by rounding
+# when a component equals the whole denominator. The formula now lives in
+# .delta_ratio() in 0_utils.r and clamps it: sqrt(max(var_r, 0)). Kept here as a
+# record of the symptom.
 # Warning messages:
 # 1: In sqrt(VarX/Y^2 + (X^2 * VarY)/Y^4 - 2 * X * CovXY/Y^3) :
 #   NaNs produced
@@ -688,9 +708,13 @@ list_cols[[length(list_cols) + 1]] <- cols
 # For each component: the median, across the households of the decile, of that
 # component's share of the household's OWN total. Answers "what does the budget
 # of the median household look like?", which the macro composition cannot say.
-# WARNING: medians are not additive, so the components do not sum to 100 % - the
-# function reports the actual sum and the figure is drawn side by side, never
-# stacked. Comment this call out to skip it.
+# WARNING: medians are not additive - each component median is read off a
+# different ordering of the households, so they do not sum to 100 % and the
+# figure is drawn side by side, never stacked. The function reports the actual
+# sum. If what you want is a composition that DOES sum to 100 %, that is the
+# run_median_band_composition_analysis() call just below, which describes the
+# budget of the households sitting around the median. Comment out either call
+# to skip it.
 run_median_composition_analysis(
   design = mysvyr,
   d = d,

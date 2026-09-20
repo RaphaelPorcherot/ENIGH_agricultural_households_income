@@ -70,14 +70,27 @@ source(here("script", "1B_data_svyr.r"))
 
 # PART 2 : STATISTICAL TREATMENTS FOR THE PILOT STUDY ON MEXICO ----
 
-# TODO: For pairs of deciles where CIs overlap or differences are substantively
-# interesting, compute formal CIs on the difference (e.g. D1 - D10) using a
-# single svytotal() call on cbind(part_D1, part_D10, total) and delta method
-# on X1/Z - X2/Z with the full 3x3 variance matrix. This is especially
-# relevant given the negative covariance between shares (they sum to 1), which
-# makes the CI on the difference narrower than visual overlap suggests.
+# PARTLY DONE: every decile is now formally tested against the REFERENCE, by
+# exactly the mechanism this TODO described - one svytotal() on the whole set of
+# domain totals, delta method on the difference, using the full joint covariance
+# matrix so that Cov(decile, reference) is propagated. Each analysis produces a
+# companion plot_signif_*.pdf, and the tables carry diff / diff_SE / diff_IC_* /
+# p_value / p_value_adj / signif. The design-based linear trend across deciles is
+# reported too (trend_slope / trend_SE / trend_p).
+#
+# TODO, what remains: DECILE vs DECILE comparisons (e.g. D1 - D10). They are now
+# almost free - the full covariance matrix of all decile totals is already
+# computed inside every estimator call - but nothing exposes them yet. The
+# machinery is .test_contrast() in 0_utils.r: it takes arbitrary weight vectors
+# a_est / b_est / a_ref / b_ref, so a D1-vs-D10 contrast is just two unit vectors
+# instead of one unit vector and one pooled vector. Worth adding if the paper
+# needs to claim that two specific deciles differ.
 
-#WARN : when we compute the ratio or the share etc it is always a macro value for the aggragated (agri) household in a given decile
+#NOTE (was a WARN, no longer true): ratios and shares are no longer macro-only.
+# Every analysis is now computed with three estimators - macro (ratio of the
+# aggregates), micro (mean of the individual ratios) and median (median of the
+# individual ratios) - so the comparison below can be made directly from the
+# output instead of being asserted.
 #The aggregate share is substantially lower than the average household ratio, reflecting strong heterogeneity in farm size and a negative correlation between production scale and self-consumption
 # In fact the mean of individual ratio for self-consumption is consierably higher -> many, many small farmers heavily rely on self-consumption
 # We need to decide which we want (and we might want both, why not)
@@ -102,24 +115,31 @@ source(here("script", "1B_data_svyr.r"))
 
 #TODO : decile cut off point rajouter smg as line. actually lets compute please a real relative poverty line
 
-#TODO: les intervalles de confiance sont peut etre trop grand pour savoir combien précisément mais on peut savoir si relativement certains déciles ont plus que d'autres : si les intervalles de confiance ne sont pas superposés
-# pour aller dans cette direction :
-# * refaire compo avec un nombre réduit de modalités pour nvo_tot
-# * faire pour la modalité principale d'intérêt get_ratio (on y voit les intervalles)
+#DONE, and the premise was wrong: "si les intervalles de confiance ne sont pas
+# superposés" is NOT a test. Non-overlapping intervals do imply a difference, but
+# overlapping ones imply nothing - and here the estimates are correlated (shares
+# sum to 1, so they are strongly NEGATIVELY correlated), which makes the overlap
+# rule badly misleading. The difference is now estimated directly with its own
+# variance; see the plot_signif_*.pdf figures.
+#TODO, still open from this note: redo the composition with fewer modalities for
+# nvo_tot, so that the components are individually better estimated.
 
-#TODO: améliorer la détection des déciles significativement différents de la référence
-# Actuellement : unreliable = CV > cv_threshold (fiabilité de l'estimation seulement)
-# Ne répond pas à : "est-ce que le décile est significativement différent de la référence ?"
-# Pistes par cas :
-#   - ratio macro/micro   : test de différence décile vs overall via delta method
-#                           (chevauchement des IC est approximatif mais rapide)
-#   - macro_share         : nécessite d'abord d'ajouter des IC à ref_share_k dans
-#                           get_share_macro_overall (ratio de totaux pondérés → delta method dispo)
-#                           puis test de différence share_k vs ref_share_k
-#   - micro_share         : overall a déjà un IC (svymean) → test de différence directement faisable
-# Implémentation suggérée : ajouter un flag `significant` dans tbl en plus de `unreliable`,
-# et adapter fill_var dans make_decile_plot pour distinguer
-# "above/below significant" vs "above/below non-significant"
+#DONE: the three cases listed below are all implemented.
+#   - ratio macro/micro : delta-method test of the decile against the pooled
+#                         reference, using the full joint covariance matrix.
+#   - macro_share       : get_share_macro_overall() now returns ref_SE /
+#                         ref_IC_low / ref_IC_high, and each decile's share is
+#                         tested against its own demographic weight N_g / sum N.
+#   - micro_share       : same delta-method test against the overall mean.
+#   - medians           : survey version of Mood's median test (share of the
+#                         decile's households below the overall median vs 50 %).
+# A `signif` flag (plus signif_adj, Holm-corrected over the ten deciles) sits in
+# tbl next to `unreliable`, and every analysis produces a plot_signif_*.pdf.
+#TODO, the one sub-item not done as described: make_decile_plot() marks the
+# non-significant deciles with a small "ns" rather than splitting fill_var into
+# four levels (above/below x significant/non-significant). The four-level fill is
+# a one-line change if the paper wants it on the main figures rather than on the
+# companion ones.
 
 #TODO: get_proportion / get_number
 # reprendre get_proportion, utilisé pour la description des houeseholds et pour turnover / production type pour les fermes
@@ -342,7 +362,9 @@ col_overall <- "#D55E00"
 # stale file silently override the palette just computed by 2C.
 if (!exists("list_cols")) {
   list_cols <- readRDS(here("output", "list_cols_from_comp_analysis"))
-  message("\n\u2139\ufe0f  list_cols read back from output/ (2C was not run in this session)")
+  message(
+    "\n\u2139\ufe0f  list_cols read back from output/ (2C was not run in this session)"
+  )
 }
 
 if (exists("list_cols")) {
@@ -393,4 +415,4 @@ dict <- dict_raw |>
 source(here("script", "2D_stat_share_analysis.r"))
 source(here("script", "2E_stat_ratio_analysis.r"))
 
-# THE END --- 
+# THE END ---

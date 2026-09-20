@@ -766,7 +766,7 @@ caption_base <- paste(
   "Crédito Ganadero a la Palabra is an interest-free in-kind credit programme targeting small livestock producers (up to 35 animal units), providing breeding cattle, equipment, and veterinary inputs. ",
   # "Repayment is made in kind through the first offspring, with no collateral or credit history required. Launched in 2019 under SADER with an initial budget of MXN 4 billion.",
   "Support to agriculture comes from old, new or other programs (state and NGOs).",
- # "Farm net income is sales minus all costs, operational or else, net of production taxes. It is gross of fixed capital depreciation.",
+  # "Farm net income is sales minus all costs, operational or else, net of production taxes. It is gross of fixed capital depreciation.",
   "Bar colors indicate whether the decile is above (darker) or below (lighter) the overall mean of individual ratios.",
   "The dashed black line shows the LOESS trend across deciles.",
   "The red dotted line and shaded band represent the overall ratio and its 99% confidence interval.",
@@ -1061,12 +1061,12 @@ base_title <- str_c(
 )
 title_macro <- str_c("Ratio of ", base_title)
 title_micro <- str_c("Average individual ratio of ", base_title)
-  #TODO: CHECK THIS CAPTION. The caption shown here used to describe SEMBRANDO
-  # VIDA, copy-pasted along with the wrong basename. The first line below only
-  # restates the official programme name from dict_new_variables.csv; complete
-  # it at the same level of detail as the Sembrando Vida block (amount,
-  # targeting, number of beneficiaries), then delete the PLACEHOLDER line and
-  # this TODO.
+#TODO: CHECK THIS CAPTION. The caption shown here used to describe SEMBRANDO
+# VIDA, copy-pasted along with the wrong basename. The first line below only
+# restates the official programme name from dict_new_variables.csv; complete
+# it at the same level of detail as the Sembrando Vida block (amount,
+# targeting, number of beneficiaries), then delete the PLACEHOLDER line and
+# this TODO.
 caption_base <- paste(
   "Precios de Garantia a Productos Alimentarios Basicos is a non-repayable support scheme guaranteeing a minimum purchase price for basic food products.",
   "PLACEHOLDER - TO BE COMPLETED: amount paid, targeting criteria, launch year and number of beneficiaries of Precios de Garantia (n_precios_gar_agro).",

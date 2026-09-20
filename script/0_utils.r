@@ -1106,10 +1106,26 @@ get_share_micro <- function(
 #
 # WHAT A MEDIAN CANNOT DO
 #   Medians are NOT additive: the medians of the components of a total do not
-#   sum to the median of the total, and in general do not sum to 100 %.
-#   => never stack them in a 100 % bar chart. get_share_median_overall() below
-#   returns the components side by side and reports their sum precisely so that
-#   the gap is visible rather than hidden.
+#   sum to the median of the total, and in general do not sum to 100 %. The
+#   reason is that each component median is read off a DIFFERENT ordering of the
+#   households - the household that is median for one component is not the one
+#   that is median for another - so the collection is nobody's actual budget.
+#   => never stack the output of get_share_median_overall() in a 100 % bar chart.
+#   That function returns the components side by side and reports their sum
+#   precisely, so that the gap is visible rather than hidden.
+#
+#   This does NOT mean "a composition of the median household is impossible".
+#   It means the median of shares is not that object. If what you want is the
+#   budget of the households sitting at the median - which does sum to 100 %,
+#   because it describes real households - use get_share_median_band() further
+#   down: it keeps the households in a narrow band around the median and computes
+#   an ordinary MACRO composition inside that band, which is additive and can
+#   legitimately be stacked. The two answer different questions:
+#     get_share_median_overall() : "what is the typical share of each component?"
+#                                  (robust, has intervals, does not sum to 100 %)
+#     get_share_median_band()    : "what does the budget of the median household
+#                                  look like?" (sums to 100 %, needs a band
+#                                  because a single household has no variance)
 
 # Internal worker shared by the three public median functions.
 .median_domain <- function(

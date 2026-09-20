@@ -13,12 +13,19 @@
 #           Compared against the equal-distribution benchmark (proportional to decile size).
 #    Micro: what is the average individual household's share of the total, by decile?
 #           Compared against the mean individual share across all households in the universe.
+#    Median: same, for the median household rather than the average one.
+# Every analysis is also tested against its reference: see the companion
+# plot_signif_*.pdf figures and the diff / p_value / signif columns.
 
 #TODO: reprendre ratio pour voir ce qu'on peut regarder aussi
 # share of self-consumption in total self-consumption
 
-#TODO: il faut comprendre ce que prend share_macro 
-# est ce que ca filtre sur filter var ou ca prend la totalité de target var existante dans l'univers total ? 
+#ANSWERED: get_share_macro() restricts to filter_var == filter_value FIRST, then
+# splits that universe by strat_var. So the denominator is the total of target_var
+# over the FILTERED universe, not over the whole population, and the shares sum to
+# 1 across the non-missing levels of strat_var. Units with a missing strat_var or
+# a missing target_var leave both numerator and denominator. Full statement in the
+# function header in 0_utils.r.
 
 #TODO: reprendre la caption de share_macro mais aussi share_micro pour expliquer ce que ca veut dire d'être au-dessus ou en dessouss
 

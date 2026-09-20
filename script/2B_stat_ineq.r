@@ -309,7 +309,9 @@ print(plot_farm_turnover_decile_narrow_pct)
 # Income inequalities compared ----
 ## on agri_broad ----
 ### Gini ----
-if (!exists("myconv")) myconv <- mysvyr |> convey_prep()
+if (!exists("myconv")) {
+  myconv <- mysvyr |> convey_prep()
+}
 gini_result <- myconv |>
   group_by(n_is_agri_broad) |>
   summarise(
@@ -386,7 +388,9 @@ gini_lbl <- data.frame(
 # does not print top-level values.
 
 # convey_prep() rebuilds the whole design and is expensive; do it once.
-if (!exists("myconv")) myconv <- convey_prep(mysvyr)
+if (!exists("myconv")) {
+  myconv <- convey_prep(mysvyr)
+}
 # svylorenz(~ n_ing_equivaled,
 #   myconv,
 #   quantiles= seq(0,1,.05),
@@ -486,7 +490,9 @@ custom_save(plot_lorenz_agri_broad, type = "fig")
 ## on agri_narrow ----
 ### Gini ----
 
-if (!exists("myconv")) myconv <- mysvyr |> convey_prep()
+if (!exists("myconv")) {
+  myconv <- mysvyr |> convey_prep()
+}
 gini_result <- myconv |>
   group_by(n_is_self_employed_narrow) |>
   summarise(
@@ -557,7 +563,9 @@ gini_lbl <- data.frame(
 
 ### Lorenz plot and tbl ----
 
-if (!exists("myconv")) myconv <- convey_prep(mysvyr)
+if (!exists("myconv")) {
+  myconv <- convey_prep(mysvyr)
+}
 # svylorenz(~ n_ing_equivaled,
 #   myconv,
 #   quantiles= seq(0,1,.05),
@@ -1327,4 +1335,3 @@ plot_acc_alim1_decile_narrow <- ggplot(
 
 custom_save(plot_acc_alim1_decile_narrow, type = "fig")
 print(plot_acc_alim1_decile_narrow)
-

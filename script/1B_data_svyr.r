@@ -42,7 +42,6 @@ d <- d |>
       n_fni_agro_clean +
       n_ingr_noagro_clean,
 
-
     # human readable production types
     n_tipo_prod_agro = case_when(
       n_tipo_prod_agro == "0" ~ "No harvest yet",
@@ -404,7 +403,9 @@ for (.v in c("n_support_agro", "n_nvo_tot_agro", "n_nvo_npago_agro")) {
 }
 rm(.v, .short)
 
-message("\n-----------------------\nTake-up of agricultural support (unweighted):")
+message(
+  "\n-----------------------\nTake-up of agricultural support (unweighted):"
+)
 for (.nm in grep("^n_recip_", names(d), value = TRUE)) {
   message(
     "  ",
@@ -619,7 +620,7 @@ if (any(test_new_var)) {
 # ---------------------
 # CHECKING the consistency of our INCOME variable ----
 #NOTE: there are a bit TOO many households with strong divergence btw our reconstruction and enigh's income variable (in particular a 50000 MXN/year that becomes 0)
-# Could that be the case that this is because of normalized trimestrialisation at differing components of ing_cor ? 
+# Could that be the case that this is because of normalized trimestrialisation at differing components of ing_cor ?
 
 message("Checking consistency of income variable reconstruction:")
 
@@ -688,7 +689,14 @@ consistency_check |>
 
 flag_not_negative <- consistency_check |>
   filter(flag & n_ing_cor >= 0) |>
-  select(factor,n_is_agri, n_ing_cor, n_ing_cor_clean, n_ing_cor_enigh, diff_rel) |>
+  select(
+    factor,
+    n_is_agri,
+    n_ing_cor,
+    n_ing_cor_clean,
+    n_ing_cor_enigh,
+    diff_rel
+  ) |>
   arrange(desc(diff_rel)) |>
   head(20)
 flag_not_negative
@@ -698,7 +706,6 @@ consistency_check |>
   filter(flag) |>
   count(n_deciles_total) |>
   arrange(n_deciles_total)
-
 
 #NOTE: 63% of households with >5% divergence between n_ing_cor_clean and n_ing_cor_enigh
 # are in D1-D3. Micro ratio estimates for these deciles should be interpreted with caution,

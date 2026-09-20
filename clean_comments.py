@@ -4,7 +4,9 @@ Prépare le dépôt pour la release publique (Zenodo).
 
 Deux opérations :
 
-1. Dans les fichiers .R : supprime les blocs #TODO / #NOTE / #INFO / #WARN.
+1. Dans les fichiers .R : supprime les blocs de notes de travail, repérés par
+   #TODO / #NOTE / #INFO / #WARN ainsi que les marqueurs de résolution
+   #DONE / #FIXED / #ANSWERED / #PARTLY.
    Un bloc commence par une ligne portant un marqueur et continue tant que les
    lignes suivantes sont des commentaires (#).
 
@@ -24,7 +26,12 @@ import re
 import sys
 from pathlib import Path
 
-MARKERS = re.compile(r'^\s*#\s*(TODO|NOTE|INFO|WARN)\b', re.IGNORECASE)
+# DONE / FIXED / ANSWERED / PARTLY marquent un point résolu : ce sont des notes
+# de travail au même titre que TODO, elles n'ont pas à être publiées.
+MARKERS = re.compile(
+    r'^\s*#\s*(TODO|NOTE|INFO|WARN|DONE|FIXED|ANSWERED|PARTLY)\b',
+    re.IGNORECASE,
+)
 COMMENT = re.compile(r'^\s*#')
 
 # Titre de la première section interne du README : ce titre et tout ce qui le
