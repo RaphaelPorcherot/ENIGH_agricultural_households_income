@@ -1,3 +1,5 @@
+_local/
+
 src/*
 !src/.gitkeep
 !src/filelist.md
@@ -6,8 +8,4 @@ src/*
 .RData
 .Rproj.user/
 
-renv/library/
-renv/staging/
-
 output/
-report.md
