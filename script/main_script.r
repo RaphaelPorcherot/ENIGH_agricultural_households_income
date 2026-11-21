@@ -278,9 +278,9 @@ dict_raw <- tibble(
     "farm total resources",
     "total current income",
 
-    "total current income",
-    "total current income",
-    "farm total resources",
+    "total current income",   # ratio_support_agro_ing_cor_decile
+    "farm total resources",   # ratio_support_agro_ftr1_decile
+    "farm net income",        # ratio_support_agro_fni_decile
     #"support from new policies to all activities",
 
     "farm net income",
@@ -343,6 +343,30 @@ dict_raw <- tibble(
   ungroup()
 if (any(dict_raw$n_den > 4)) {
   stop("trop de dénominateurs (>4 hors self) pour au moins une variable")
+}
+
+# Garde-fou : den_name (libellé affiché dans les titres des graphiques) doit être
+# cohérent avec den (la variable réellement utilisée comme dénominateur, via
+# set_attribute() -> run_ratio_analysis() -> get_ratio_*_macro/micro/median).
+# Un mismatch ici ne change aucun chiffre, mais affiche le mauvais label sur
+# les figures (ex. "farm total resources" sur un ratio calculé sur n_fni).
+.den_label <- c(
+  "self" = "self",
+  "n_size_val1_agro" = "farm total production",
+  "n_ftr1_agro" = "farm total resources",
+  "n_ing_cor_clean" = "total current income",
+  "n_fni_agro_clean" = "farm net income",
+  "n_support_agro" = "support (all policies)",
+  "n_nvo_npago_agro" = "support from new policies",
+  "n_nvo_tot_agro" = "all transfers (repayable and non-repayable) to agriculture"
+)
+.bad_lab <- dict_raw$den != "self" &
+  dict_raw$den_name != unname(.den_label[dict_raw$den])
+if (any(.bad_lab)) {
+  stop(
+    "den_name incohérent avec den pour : ",
+    paste(dict_raw$base[.bad_lab], collapse = ", ")
+  )
 }
 dict_raw <- dict_raw |>
   group_by(target_or_num) |>

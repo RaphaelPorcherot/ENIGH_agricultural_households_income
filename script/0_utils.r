@@ -174,22 +174,23 @@ custom_save <- function(
 # Negative self-employment income (farm and non-farm) has to be dealt with before
 # the income deciles are built, because negative values break the Gini, the
 # Lorenz curve and any log transform. Three treatments are available; switch with
-#   options(enigh.negative_income = "zero" | "draw" | "keep")
+#   options(enigh.negative_income = "draw" | "zero" | "keep")
 #
-# "zero" (DEFAULT) - bottom-coding at 0. Standard practice (LIS, OECD, Eurostat).
-#   Deterministic, reproducible, and it cannot create impossible households.
+# "draw" (DEFAULT) - replace each negative by a random draw (with replacement)
+#   from the bottom 2.5 % of the POSITIVE values of the whole population, i.e.
+#   the first 2.5 % of the first decile (Von Kerm-style imputation). Unlike a
+#   floor at 0, this does not pile mass exactly at zero. The seed is fixed just
+#   below, so a full run from a fresh session is reproducible.
+#   Caveat: the draw ignores the household's own scale, so a very small farm can
+#   still receive a draw larger than its own total resources. With the previous
+#   25 % (bottom quartile) threshold this happened for 498 households (4.3 %
+#   weighted) on ENIGH 2022, with individual ratios up to 51 190 %; the 2.5 %
+#   tail draws much smaller values, but re-run that diagnostic if the threshold
+#   is changed again.
 #
-# "draw" (the previous behaviour) - replace each negative by a random draw from
-#   the bottom quartile of the POSITIVE values of the whole population. Kept only
-#   so that the sensitivity check "zero vs draw" can be run without editing code.
-#   Measured consequence on ENIGH 2022: 498 households (4.3 % weighted) ended up
-#   with n_fni_agro_clean > n_ftr1_agro, i.e. a farm net income larger than the
-#   farm's total resources, which cannot exist. 94.6 % of them were loss-making
-#   farms. The mechanism is that the draw ignores the household's own scale: a
-#   micro-farm with 29 pesos of output could be assigned 4 895 pesos of income,
-#   166x its total resources. Those households then contaminate every ratio built
-#   on n_fni_agro_clean (max observed individual ratio: 51 190 %) and, through
-#   n_ing_cor_clean, the income deciles themselves.
+# "zero" - bottom-coding at 0. Standard practice (LIS, OECD, Eurostat);
+#   deterministic, cannot create impossible households. Kept for the sensitivity
+#   check "zero vs draw": options(enigh.negative_income = "zero").
 #
 # "keep" - no treatment, negatives left as they are. Will break convey/Gini.
 #
@@ -203,7 +204,7 @@ custom_save <- function(
 set.seed(123)
 replace_negatives <- function(
   x,
-  method = getOption("enigh.negative_income", "zero")
+  method = getOption("enigh.negative_income", "draw")
 ) {
   method <- match.arg(method, c("zero", "draw", "keep"))
 
@@ -215,13 +216,15 @@ replace_negatives <- function(
     return(x)
   }
 
-  # method == "draw" : previous behaviour, kept for the sensitivity check
+  # method == "draw" : each negative is replaced by a random draw from the
+  # bottom 2.5 % of the POSITIVE values of the whole population (the first
+  # 2.5 % of the first decile) - one decimal point moved vs the old 0.25.
   pos <- x[x > 0]
   if (length(pos) == 0) {
     return(x)
   } # pas de positifs
-  q1 <- quantile(pos, 0.25, na.rm = TRUE)
-  candidates <- pos[pos <= q1]
+  q <- quantile(pos, 0.025, na.rm = TRUE)
+  candidates <- pos[pos <= q]
   neg_idx <- which(x < 0)
   x[neg_idx] <- sample(candidates, length(neg_idx), replace = TRUE)
   x
